@@ -141,8 +141,11 @@ export function aboutHeadline(text: string, h: BriefingHeadline): boolean {
     .filter(w => (/[가-힣]/.test(w) ? w.length >= 2 : w.length >= 3));
   if (words.length === 0) return true;
   const stem = (w: string) => w.replace(/(은|는|이|가|을|를|의|에|와|과|로|도)$/, '');
+  // 낱말 하나만 맞으면 통과하던 것을 고쳤다(2026-10-20: "성과·고객" 같은 일반 낱말 하나 때문에
+  // 엔비디아 내용을 쓴 대본이 스파크클로 기사 칸에 통과했다). 고유 낱말이 둘 이상 맞아야 한다.
   const head = text.slice(0, 150).toLowerCase();
-  return words.some(w => head.includes(stem(w).toLowerCase()));
+  const hits = words.filter(w => head.includes(stem(w).toLowerCase())).length;
+  return hits >= Math.min(2, words.length);
 }
 
 /** 인사·마무리 문구 — 데일리가 기본, 뉴스데스크(newsdesk.ts)는 자기 문구를 넘긴다. */
