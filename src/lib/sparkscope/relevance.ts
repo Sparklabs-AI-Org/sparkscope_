@@ -324,7 +324,21 @@ export function filterReason(a: RelevanceInput): FilterReason | null {
 
   if (AD_NOISE_KEYWORDS.some(w => title.includes(w))) return 'ad_noise';
 
+  // AC·VC 섹션은 투자·스타트업 업무에 쓸 기사만 — 증시·주가 시황과 해외 빅테크 소식은 뺀다
+  // (2026-10 설문: "일반 증권시장이나 해외 플랫폼 관련 뉴스가 섞여 있다").
+  if (a.category === 'competitor' && isCompetitorNoise(title, a.primaryKeyword)) return 'irrelevant';
+
   return null;
+}
+
+// AC·VC 섹션에서 빼는 증시·주가 시황 용어 (제목 기준, 부분일치)
+const COMPETITOR_MARKET_NOISE = /증시|코스피|코스닥|나스닥|다우|뉴욕증시|특징주|목표가|투자의견|최선호주|시황|환율|자사주|주가|어닝쇼크|반도체주/;
+// VC가 아니어서 AC·VC 섹션에 둘 이유가 없는 키워드 — 해외 플랫폼·빅테크라 기사가 대부분 주가·제품 뉴스다.
+const NON_VC_COMPETITOR_KEYWORDS = ['메타', 'AWS'];
+
+function isCompetitorNoise(title: string, primaryKeyword?: string | null): boolean {
+  if (primaryKeyword && NON_VC_COMPETITOR_KEYWORDS.includes(primaryKeyword)) return true;
+  return COMPETITOR_MARKET_NOISE.test(title);
 }
 
 export function isRelevant(a: RelevanceInput): boolean {
