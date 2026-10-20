@@ -160,6 +160,7 @@ model Article {
   oneLiner         String?
   ourTake          String? // 본부 관점 한 줄
   relatedCompanies String? // JSON 배열
+  bodyText         String? // 수집 시 읽은 본문 앞부분(최대 3000자) — 본문 기준 매칭·검수용
   pitchScore       Int? // 0-100, 기획기사 피칭 기회 점수
   pitchTopic       String?
   // 영어 화면(EN)용 번역 캐시 — 화면에 뜰 때 채우고 재사용한다.

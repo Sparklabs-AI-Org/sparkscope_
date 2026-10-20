@@ -346,7 +346,7 @@ async function loadDashboardData(
         ? { ...where, category: 'sparklabs_self' as string, matchedKeyword: { in: GV_SELF_KEYWORDS } }
         : {
             ...where,
-            OR: [{ category: 'sparklabs_self' as string }, { title: { contains: '스파크랩' } }],
+            OR: [{ category: 'sparklabs_self' as string }, { title: { contains: '스파크랩' } }, { relatedCompanies: { contains: '스파크랩' } }],
             NOT: { matchedKeyword: { in: OVERSEAS_SELF_KEYWORDS } },
           };
   // 그 지사 탭에서 볼 수 있는 기사 전체 — 상단 KPI('총 수집 기사'·'피칭 기회')의 범위다.
@@ -442,7 +442,7 @@ async function loadDashboardData(
     // 경쟁사 모니터링 섹션용: 기간 내 competitor 기사 전체(matchedKeyword=실제 경쟁사명별 집계)
     needCompetitor ? prisma.article.findMany({ where: { pubDate: { gte: since, lte: until }, isNoise: false, category: 'competitor' }, orderBy: { pubDate: 'desc' }, select: { id: true, title: true, titleEn: true, titleKo: true, source: true, pubDate: true, link: true, tone: true, matchedKeyword: true }, take: 3000 }) : EMPTY,
     // 경쟁사 비교 기준선: 기간 내 '스파크랩' 언급 기사 수 (엔티티 자체 + 제목 언급)
-    needCompetitor ? prisma.article.count({ where: { pubDate: { gte: since, lte: until }, isNoise: false, OR: [{ category: 'sparklabs_self' }, { title: { contains: '스파크랩' } }] } }) : 0,
+    needCompetitor ? prisma.article.count({ where: { pubDate: { gte: since, lte: until }, isNoise: false, OR: [{ category: 'sparklabs_self' }, { title: { contains: '스파크랩' } }, { relatedCompanies: { contains: '스파크랩' } }] } }) : 0,
     // 가장 많이 언급된 포트폴리오사 TOP 15 (기간 내 노출 건수) — 업계 키워드 제외
     needPortfolio ? prisma.article.groupBy({ by: ['matchedKeyword'], where: { ...portfolioWhere, matchedKeyword: { notIn: INDUSTRY_TREND_KEYWORDS } }, _count: { _all: true }, orderBy: { _count: { matchedKeyword: 'desc' } }, take: 15 }) : EMPTY,
     // 포트폴리오 부정 기사 (기간 내 부정 논조 — 회사·제목 확인용)

@@ -194,7 +194,7 @@ async function computeCompetitorTrends() {
     take: 3000,
   });
   const sparklabsMentions = await prisma.article.count({
-    where: { pubDate: { gte: since, lte: now }, isNoise: false, OR: [{ category: 'sparklabs_self' }, { title: { contains: '스파크랩' } }] },
+    where: { pubDate: { gte: since, lte: now }, isNoise: false, OR: [{ category: 'sparklabs_self' }, { title: { contains: '스파크랩' } }, { relatedCompanies: { contains: '스파크랩' } }] },
   });
 
   type Agg = { count: number; negCount: number; titles: string[] };
