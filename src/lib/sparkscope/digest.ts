@@ -245,6 +245,8 @@ ${SIGNAL_EMAIL_CSS}
     </div>
   </div>
 
+  ${opts.subscriberToken ? renderBriefingLink(data.date, base, opts.subscriberToken) : ''}
+
   ${data.weeklyFlow ? `
   <div class="weekly-flow">
     <div class="weekly-label">📈 지난 주 흐름 (월요일 추가 섹션)</div>
@@ -293,7 +295,6 @@ ${SIGNAL_EMAIL_CSS}
     ${data.industryArticles.map(a => renderArticle(a, {})).join('\n')}
   </div>` : ''}
 
-  ${opts.subscriberToken ? renderBriefingLink(data.date, base, opts.subscriberToken) : ''}
 
 
   <div class="footer">
