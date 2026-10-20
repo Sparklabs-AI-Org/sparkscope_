@@ -79,6 +79,16 @@ function TitleOnlyBadge({ t }: { t: Translate }) {
 export function ArticlesTable({ articles, canScrap = false, canBookmark = false, canReport = false, canRequestReport = false, emptyText, showCategoryColumn = true, showKeywordColumn = false, showPitchColumn = true, showInternal = true }: { articles: Article[]; canScrap?: boolean; canBookmark?: boolean; canReport?: boolean; canRequestReport?: boolean; emptyText?: string; showCategoryColumn?: boolean; showKeywordColumn?: boolean; showPitchColumn?: boolean; showInternal?: boolean }) {
   const t = useT();
   const locale = useLocale();
+  // 펼쳐진 클러스터(대표 기사 id) 집합 — "+N개 매체 더보기" 토글 상태.
+  // 훅은 모든 조건 분기(빈 목록 early return) 전에 있어야 한다. 검색 결과가 0건이 되면
+  // 여기서 return 해 훅 개수가 달라지고, 모바일 검색에서 "Rendered fewer hooks" 로 화면이 죽었다.
+  const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  const toggle = (id: string) => setExpanded(prev => {
+    const next = new Set(prev);
+    if (next.has(id)) next.delete(id); else next.add(id);
+    return next;
+  });
+
   if (articles.length === 0) {
     return <p className="text-sm text-gray-400 py-8 text-center">{emptyText ?? t('선택 기간 내 기사가 없습니다.')}</p>;
   }
@@ -88,14 +98,6 @@ export function ArticlesTable({ articles, canScrap = false, canBookmark = false,
   // 몇 달 뒤 같은 회사 기사가 우연히 묶이는 것과, 그날의 악재가 다른 긍정 기사 더미에
   // 묻혀 안 보이는 것(톤이 다르면 안 묶음) 둘 다 방지.
   const clusters = clusterArticles(articles, { maxDateDiffDays: 3 });
-
-  // 펼쳐진 클러스터(대표 기사 id) 집합 — "+N개 매체 더보기" 토글 상태.
-  const [expanded, setExpanded] = useState<Set<string>>(new Set());
-  const toggle = (id: string) => setExpanded(prev => {
-    const next = new Set(prev);
-    if (next.has(id)) next.delete(id); else next.add(id);
-    return next;
-  });
 
   return (
     <>
