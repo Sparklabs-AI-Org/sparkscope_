@@ -942,18 +942,6 @@
     "notes": null
   },
   {
-    "name": "메타",
-    "englishName": null,
-    "category": "competitor",
-    "status": "ACTIVE",
-    "tier": null,
-    "primaryKeyword": "메타",
-    "helperKeywords": null,
-    "excludeWords": null,
-    "contextWords": null,
-    "notes": null
-  },
-  {
     "name": "모비인사이드",
     "englishName": null,
     "category": "competitor",
@@ -1252,18 +1240,6 @@
     "excludeWords": null,
     "contextWords": null,
     "notes": "동남권 특화 AC"
-  },
-  {
-    "name": "신용보증기금",
-    "englishName": null,
-    "category": "competitor",
-    "status": "ACTIVE",
-    "tier": null,
-    "primaryKeyword": "신용보증기금",
-    "helperKeywords": null,
-    "excludeWords": null,
-    "contextWords": null,
-    "notes": null
   },
   {
     "name": "신한벤처투자",
@@ -1674,18 +1650,6 @@
     "notes": null
   },
   {
-    "name": "한국산업은행",
-    "englishName": "Korea Development Bank (KDB)",
-    "category": "competitor",
-    "status": "ACTIVE",
-    "tier": "1",
-    "primaryKeyword": "한국산업은행",
-    "helperKeywords": "박상진",
-    "excludeWords": null,
-    "contextWords": null,
-    "notes": "정책금융기관, 직접투자 + 펀드 출자 병행"
-  },
-  {
     "name": "한국액셀러레이터협회",
     "englishName": null,
     "category": "competitor",
@@ -1752,18 +1716,6 @@
     "status": "ACTIVE",
     "tier": null,
     "primaryKeyword": "효성벤처스",
-    "helperKeywords": null,
-    "excludeWords": null,
-    "contextWords": null,
-    "notes": null
-  },
-  {
-    "name": "AWS",
-    "englishName": null,
-    "category": "competitor",
-    "status": "ACTIVE",
-    "tier": null,
-    "primaryKeyword": "AWS",
     "helperKeywords": null,
     "excludeWords": null,
     "contextWords": null,
