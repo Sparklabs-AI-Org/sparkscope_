@@ -228,8 +228,13 @@ async function recentlyBriefedUrls(): Promise<{ urls: Set<string>; titles: Set<s
  * 버젓이 실린 스파크랩 기사 3건(9/21~22)이 추천에서는 빠졌다.
  * 검수 화면 미리보기와 같은 조립(review.ts buildReviewDigest)을 쓴다 — 편집자가 보는 메일이 기준.
  */
+/** 데일리는 메일과 같은 수집 시각 창(review.ts sendArticleWindow), 위클리는 발행 시각 창. */
+function digestWindow(w: BroadcastWindow) {
+  return { since: w.since, until: w.until, byCollected: w.program === 'daily' };
+}
+
 async function buildDigestForBriefing(w: BroadcastWindow): Promise<DigestData> {
-  const candidates = await loadDigestCandidates(w);
+  const candidates = await loadDigestCandidates(digestWindow(w));
   return attachAiSignals(await attachInterDigest(buildReviewDigest(candidates)));
 }
 
@@ -342,7 +347,7 @@ export async function pickByTiers(w: BroadcastWindow): Promise<{ picked: Briefin
   const [briefed, data, candidates] = await Promise.all([
     recentlyBriefed(),
     buildDigestForBriefing(w),
-    loadDigestCandidates(w),
+    loadDigestCandidates(digestWindow(w)),
   ]);
   const idByLink = new Map(candidates.map(a => [a.link, a.id]));
   const rankOf = (a: { importance?: string }) => IMPORTANCE_RANK[a.importance ?? ''] ?? 0;

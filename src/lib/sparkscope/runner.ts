@@ -18,7 +18,7 @@ import { attachInterDigest } from './inter-digest';
 import { attachAiSignals } from './signal-digest';
 import { attachResolvedLinks } from './digest-links';
 import { publishSignalFeed } from './signal-publish';
-import { buildDigestKeyMap, buildDigestContextMap, passesDigestGuard, sendWindowStart } from './review';
+import { buildDigestKeyMap, buildDigestContextMap, passesDigestGuard, sendWindowStart, sendArticleWindow } from './review';
 import { sendDigestEmail, buildSubject, isSendDomainVerified, sendOwnerAlert } from './mailer';
 import { sendDigestToSubscribers } from './digest-send';
 import { collectInterNews } from './inter-collect';
@@ -98,7 +98,7 @@ export async function loadSendArticles(): Promise<RawArticle[]> {
     // 창 시작은 검수 화면과 같은 함수(review.ts sendWindowStart) — 미리보기와 실제 메일이 갈리지 않게.
     const existing = await prisma.article.findMany({
       where: {
-        pubDate: { gte: sendWindowStart() },
+        ...sendArticleWindow(sendWindowStart()),
         isNoise: false,
         category: { not: 'unrelated' },
         analyzedAt: { not: null },

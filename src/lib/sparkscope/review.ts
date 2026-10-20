@@ -37,6 +37,21 @@ export function sendWindowStart(): Date {
   return new Date(Date.UTC(y, m - 1, d - back, SEND_KST.h - 9, SEND_KST.m));
 }
 
+/**
+ * 메일 창 조건: 직전 발송 이후에 "수집된" 기사.
+ * 발행 시각(pubDate)으로 자르면 두 가지가 빠진다(2026-10-19 사례):
+ *  - 발송 직후 수집된 기사(수집은 07시대, 발송은 09시 반 — 그 사이 발행분은 발송 때 DB에 없다)
+ *  - 날짜만 있는 기사는 발행 시각이 09:00으로 찍혀, 다음 날 창 시작(09:30)보다 앞서 영영 빠진다.
+ * 수집 시각으로 자르면 기사는 정확히 한 번 한 메일에 들어간다. 72시간보다 오래된 발행분은
+ * 밀린 백로그로 보고 제외한다(수집이 며칠 밀려도 옛 기사가 한꺼번에 나가지 않게).
+ */
+export function sendArticleWindow(since: Date, until?: Date) {
+  return {
+    collectedAt: { gte: since, ...(until ? { lt: until } : {}) },
+    pubDate: { gte: new Date(since.getTime() - 72 * 3600e3) },
+  };
+}
+
 export interface ReviewArticle extends AnalyzedArticle {
   id: string;
   isScrapped: boolean;
@@ -159,14 +174,19 @@ export function passesDigestGuard(
  * 최근 창의 비노이즈 기사 + 포트폴리오 관련성 가드 적용 후보 로드.
  * window를 주면 그 기간(브리핑 — briefing.ts broadcastFor), 없으면 메일 창(72시간).
  */
-export async function loadDigestCandidates(window?: { since: Date; until?: Date }): Promise<ReviewArticle[]> {
+export async function loadDigestCandidates(window?: { since: Date; until?: Date; byCollected?: boolean }): Promise<ReviewArticle[]> {
   const since = window?.since ?? sendWindowStart();
   const until = window?.until;
+  // 메일 창(window 없음)과 데일리 브리핑(byCollected)은 수집 시각 기준 — loadSendArticles와 같은 조건.
+  // 위클리 브리핑은 발행 시각 기준 — 주간 창이 일요일 밤 기사도 담아야 하므로.
+  const range = window && !window.byCollected
+    ? { pubDate: { gte: since, ...(until ? { lt: until } : {}) } }
+    : sendArticleWindow(since, until);
 
   const [rows, targets] = await Promise.all([
     prisma.article.findMany({
       // 발송 재료(loadSendArticles)와 같은 조건 — 분석 끝난 관련 기사만, 최대 500건.
-      where: { pubDate: { gte: since, ...(until ? { lt: until } : {}) }, isNoise: false, category: { not: 'unrelated' }, analyzedAt: { not: null } },
+      where: { ...range, isNoise: false, category: { not: 'unrelated' }, analyzedAt: { not: null } },
       orderBy: [{ priorityScore: 'desc' }, { pubDate: 'desc' }],
       take: 500,
     }),
