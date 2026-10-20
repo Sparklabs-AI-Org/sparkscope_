@@ -6,7 +6,7 @@
  */
 import { prisma } from '@/lib/prisma';
 import { buildDigestData } from './digest';
-import { matchesAsToken, isBlockedNoise, NAME_MATCH_CATEGORIES } from './relevance';
+import { matchesAsToken, isBlockedNoise, NAME_MATCH_CATEGORIES, normalizeTitleKey } from './relevance';
 import { isKnownMedia } from './media';
 import { broadcastFor, SEND_KST } from './briefing';
 import type { AnalyzedArticle, Category, Importance, Tone, DigestData } from './types';
@@ -50,6 +50,25 @@ export function sendArticleWindow(since: Date, until?: Date) {
     collectedAt: { gte: since, ...(until ? { lt: until } : {}) },
     pubDate: { gte: new Date(since.getTime() - 72 * 3600e3) },
   };
+}
+
+/**
+ * 최근 실제 발송된 메일 본문(정규화 텍스트). 어제 나간 기사를 오늘 메일에 또 넣지 않으려고 대조한다.
+ * 수신자 2명 이상만 — 테스트 발송(관리자 1명)은 구독자가 받은 게 아니므로 제외에 쓰지 않는다.
+ */
+export async function recentSentMailText(days = 2): Promise<string> {
+  const rows = await prisma.digest.findMany({
+    where: { sentAt: { gte: new Date(Date.now() - days * 864e5) }, recipients: { gte: 2 } },
+    select: { htmlBody: true },
+  });
+  const text = rows.map(r => r.htmlBody.replace(/<[^>]+>/g, ' ').replace(/&[#\w]+;/g, ' ')).join('\n');
+  return normalizeTitleKey(text);
+}
+
+/** 제목 앞 18자(정규화)가 발송 본문에 있으면 이미 나간 기사. 매체마다 제목 끝이 달라서 앞부분만 본다. */
+export function alreadySentInMail(title: string, sentText: string): boolean {
+  const key = normalizeTitleKey(title).slice(0, 18);
+  return key.length >= 12 && sentText.includes(key);
 }
 
 export interface ReviewArticle extends AnalyzedArticle {
@@ -199,8 +218,11 @@ export async function loadDigestCandidates(window?: { since: Date; until?: Date;
   const keyMap = buildDigestKeyMap(targets);
   const contextMap = buildDigestContextMap(targets);
 
+  // 메일·데일리 영상은 어제 나간 기사를 다시 넣지 않는다(2026-10-21 소윤 요청). 위클리는 한 주 정리라 대상 아님.
+  const sentText = !window || window.byCollected ? await recentSentMailText() : '';
   return rows
     .filter(a => passesDigestGuard(a, keyMap, contextMap))
+    .filter(a => !sentText || !alreadySentInMail(a.title, sentText))
     .map(toReviewArticle);
 }
 

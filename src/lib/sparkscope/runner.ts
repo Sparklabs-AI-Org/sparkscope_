@@ -18,7 +18,7 @@ import { attachInterDigest } from './inter-digest';
 import { attachAiSignals } from './signal-digest';
 import { attachResolvedLinks } from './digest-links';
 import { publishSignalFeed } from './signal-publish';
-import { buildDigestKeyMap, buildDigestContextMap, passesDigestGuard, sendWindowStart, sendArticleWindow } from './review';
+import { buildDigestKeyMap, buildDigestContextMap, passesDigestGuard, sendWindowStart, sendArticleWindow, recentSentMailText, alreadySentInMail } from './review';
 import { sendDigestEmail, buildSubject, isSendDomainVerified, sendOwnerAlert } from './mailer';
 import { sendDigestToSubscribers } from './digest-send';
 import { collectInterNews } from './inter-collect';
@@ -130,7 +130,11 @@ export async function loadSendArticles(): Promise<RawArticle[]> {
   const exitNames = new Set((await prisma.monitoringTarget.findMany({
     where: { portfolioStatus: { in: ['Exit', 'Written-off'] } }, select: { name: true },
   })).map(t => t.name));
-  return existing.map((a: any) => ({ ...a, isExit: exitNames.has(a.matchedKeyword) })) as any;
+  // 어제 나간 기사는 오늘 메일에서 뺀다(review.ts recentSentMailText) — 검수 후보와 같은 기준.
+  const sentText = await recentSentMailText();
+  return existing
+    .filter((a: any) => !alreadySentInMail(a.title, sentText))
+    .map((a: any) => ({ ...a, isExit: exitNames.has(a.matchedKeyword) })) as any;
 }
 
 /**
