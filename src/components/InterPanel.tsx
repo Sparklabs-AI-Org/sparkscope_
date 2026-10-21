@@ -310,16 +310,24 @@ export function InterPanel({
               hideMatches={portfolioView}
               onSelect={topicKey => focusSector(`sec-${topicKey}`)}
             />
-            <InsightPanel
-              sectors={data.sectors}
-              overview={data.overview}
-              onSelect={focusSector}
-              hideMatches={portfolioView}
-            />
+            {/* 공개 화면은 인사이트 패널이 두 줄뿐이라 오른쪽이 비므로, AI 종합 요약을 그 아래로 올린다. */}
+            <div className="flex flex-col">
+              <InsightPanel
+                sectors={data.sectors}
+                overview={data.overview}
+                onSelect={focusSector}
+                hideMatches={portfolioView}
+              />
+              {portfolioView && (
+                <div className="mt-4">
+                  <ColoredSummaryCard summary={data.summary} overview={data.overview} trendOnly />
+                </div>
+              )}
+            </div>
           </div>
 
           {/* AI 요약 — 위 매트릭스의 숫자를 그대로 되풀이하지 않고, 그래서 뭘 해야 하는지로 마무리 */}
-          <ColoredSummaryCard summary={data.summary} overview={data.overview} trendOnly={portfolioView} />
+          {!portfolioView && <ColoredSummaryCard summary={data.summary} overview={data.overview} />}
 
           {/* 분야별 카드 — 급한 순(급증→기회→주요→조용)으로 위아래 배치.
               2열로 나눠봤더니 카드마다 탭·매치 목록이 들어가 좌우로 눈이 튀어 읽기 어려웠다(2026-08-06).
