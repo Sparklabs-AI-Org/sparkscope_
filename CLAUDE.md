@@ -10,13 +10,12 @@
 - ✅ 모든 변경사항 직접 main에 푸시
 
 **그 외 인턴:**
-- ✅ main에 **직접 커밋 & 푸시 가능**
-- ✅ 자신의 브랜치(leeryeong-Branch 등)에서 작업
-- ✅ **자신의 브랜치 → Intern-Branch로 PR 생성** (자동 병합)
+- ✅ main에 **직접 커밋 & 푸시 가능** (작업 전 `git pull --ff-only`로 최신 상태 확인)
+- ✅ 자신의 브랜치(leeryeong-Branch 등)에서 작업해도 됨 (선택)
+- ✅ 자신의 브랜치 → Intern-Branch로 PR 생성 (자동 병합) — 여러 사람이 함께 볼 큰 변경일 때 선택
 - ✅ Intern-Branch → main은 **직접 푸시 가능**
 - ❌ 다른 사람의 브랜치로 push 금지
-- ❌ force push 절대 금지
-- ❌ main에서 직접 작업 금지 (반드시 자신의 브랜치에서 PR로)
+- ❌ force push 절대 금지 (main 포함)
 
 ### 원격 저장소 — `Sparklabs-AI-Org/sparkscope_` 한 곳
 
