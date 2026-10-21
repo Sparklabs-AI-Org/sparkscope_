@@ -43,8 +43,23 @@ export type SessionUser = {
  */
 export const PREVIEW_COOKIE = 'sparkscope-preview-as';
 
+/**
+ * 포트폴리오사 게스트 — 로그인 화면의 '포트폴리오사' 버튼(/api/guest-enter)이 심는 쿠키(2026-10-21).
+ * 로그인 없이 공개 화면만 본다. 세션이 없을 때만 쓰이고, PORTFOLIO 등급이라 내부 화면·쓰기 API는
+ * 그대로 막힌다(requireInternal·requireAdmin). 챗봇 API는 세션 메일을 따로 확인하므로 열리지 않는다.
+ */
+export const GUEST_COOKIE = 'sparkscope-guest';
+export const GUEST_ID = 'guest';
+
 export async function getSessionUser(): Promise<SessionUser | null> {
   const real = await getRealSessionUser();
+  if (!real) {
+    let guest: string | undefined;
+    try { guest = cookies().get(GUEST_COOKIE)?.value; } catch { return null; }
+    return guest
+      ? { id: GUEST_ID, email: '포트폴리오사 게스트', name: null, role: 'PORTFOLIO', companyId: null, companyName: null, active: true }
+      : null;
+  }
   if (!real || real.role === 'PORTFOLIO') return real;
   let on: string | undefined;
   try { on = cookies().get(PREVIEW_COOKIE)?.value; } catch { return real; }

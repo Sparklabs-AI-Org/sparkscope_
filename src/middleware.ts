@@ -40,9 +40,11 @@ const PUBLIC_API = ['/api/auth', '/api/cron', '/api/partner'];
  * 없고, 메일 푸터의 토큰 링크로 구독을 바꾼다. 토큰을 모르면 아무 행도 못 건드리므로
  * (라우트가 token 또는 세션으로 자기 행 하나만 찾는다) 열어 둬도 남의 설정은 못 바꾼다.
  */
-const PUBLIC_API_EXACT = ['/api/session-reset', '/api/subscription', '/api/briefing/view'];
+const PUBLIC_API_EXACT = ['/api/session-reset', '/api/subscription', '/api/briefing/view', '/api/guest-enter'];
 
-const SESSION_COOKIES = ['next-auth.session-token', '__Secure-next-auth.session-token'];
+// 포트폴리오사 게스트 쿠키도 통과시킨다 — 쿠키 유무만 보는 건 다른 세션 쿠키와 같고,
+// 실제 판단(공개 화면만, 쓰기 불가)은 authz.ts getSessionUser 가 한다.
+const SESSION_COOKIES = ['next-auth.session-token', '__Secure-next-auth.session-token', 'sparkscope-guest'];
 
 export default function middleware(req: NextRequest) {
   if (OPEN_ACCESS) return NextResponse.next();

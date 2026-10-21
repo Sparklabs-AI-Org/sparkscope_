@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
-import { getSessionUser } from '@/lib/authz';
+import { getSessionUser, GUEST_ID } from '@/lib/authz';
 import { ROLE_BADGE } from '@/lib/roles';
 import { hasStaleSession } from '@/lib/session-cookie';
 import { countPending, canApproveAccess } from '@/lib/sparkscope/access-request';
@@ -26,7 +26,8 @@ export default async function DashboardLayout({ children }: { children: React.Re
   // 들어 있어서, 회사 계정에 보이면 남의 개인정보가 새는 것이다.
   // (그 화면 자체가 requireAdmin + canApproveAccess 로 막고 있다.)
 
-  const initial = user.email[0].toUpperCase();
+  const isGuest = user.id === GUEST_ID;
+  const initial = isGuest ? 'P' : user.email[0].toUpperCase();
   const badge = ROLE_BADGE[user.role];
   const badgeLabel = getLocale() === 'en' ? badge.labelEn : badge.label;
   // 접근 요청은 메일로 알리지만, 메일은 실패할 수 있다. 본부가 매일 보는
@@ -58,7 +59,8 @@ export default async function DashboardLayout({ children }: { children: React.Re
           </Link>
           <span className="hidden sm:inline h-3.5 w-px bg-spark-border" />
           <span className="hidden sm:inline text-xs font-medium text-spark-muted">{t('본부 인사이트 대시보드')}</span>
-          <Link href="/chat" className="hidden sm:inline text-xs font-semibold text-spark-muted hover:text-spark-purple transition">💬 {t('챗봇')}</Link>
+          {/* 챗봇은 내부 분석(피칭·위기·본부 코멘트)을 다루는 도구라 게스트에겐 열지 않는다. */}
+          {!isGuest && <Link href="/chat" className="hidden sm:inline text-xs font-semibold text-spark-muted hover:text-spark-purple transition">💬 {t('챗봇')}</Link>}
           <DashboardTutorial />
           {pending > 0 && (
             <Link
@@ -93,7 +95,9 @@ export default async function DashboardLayout({ children }: { children: React.Re
           </span>
           <span className="hidden md:inline text-[13px]">{user.email}</span>
           <div className="w-7 h-7 rounded-full bg-spark-purple text-white grid place-items-center text-xs font-bold">{initial}</div>
-          <SignOutButton />
+          {isGuest
+            ? <a href="/api/guest-enter?off=1" className="text-[13px] text-spark-muted hover:text-spark-ink">{t('나가기')}</a>
+            : <SignOutButton />}
         </div>
       </nav>
       {/* 폭 상한을 1280px(max-w-7xl)에서 1800px로 넓혔다(2026-09-09).

@@ -1452,4 +1452,6 @@ export const EN: Record<string, string> = {
   '톤 분석': 'Tone analysis',
   '수집 기사 DB': 'Article database',
   '스파크랩이 어디에, 어떤 논조로 보도되는가': 'Where and how SparkLabs is covered',
+  '로그인 없이 바로 둘러봅니다': 'Browse without signing in',
+  '나가기': 'Leave',
 };

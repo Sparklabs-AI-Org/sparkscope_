@@ -164,7 +164,20 @@ function LoginFormInner({ googleEnabled }: { googleEnabled: boolean }) {
           </>
         )}
 
-        {/* 로그인 화면은 사내 두 입구뿐이다.
+        {/* 포트폴리오사 — 로그인 없이 공개 화면으로 들어간다(2026-10-21 소윤 결정).
+            구글 키와 무관하게 항상 보인다. */}
+        <a
+          href="/api/guest-enter"
+          className="w-full flex items-center gap-3 text-left px-4 py-3.5 rounded-xl border border-gray-200 bg-white hover:border-spark-purple transition group"
+        >
+          <span className="flex-none w-8 h-8 rounded-lg bg-spark-subtle border border-spark-border grid place-items-center text-[16px]">🏢</span>
+          <span className="min-w-0">
+            <span className="block font-semibold text-[15px] group-hover:text-spark-purple">{t('포트폴리오사')}</span>
+            <span className="block text-[12.5px] text-gray-500 mt-0.5">{t('로그인 없이 바로 둘러봅니다')}</span>
+          </span>
+        </a>
+
+        {/* (예전 메모) 로그인 화면은 사내 두 입구뿐이었다.
             포트폴리오사 입구와 접근 요청 화면은 2026-09-23에 지웠다 — 방식을 다시
             정하기로 했고, 그 시점에 실제 포트폴리오사 계정도 접근 요청도 0건이라
             막히는 사람이 없었다. 되살릴 때는 이 자리에 버튼을 다시 놓으면 된다.
