@@ -173,7 +173,7 @@ function LoginFormInner({ googleEnabled }: { googleEnabled: boolean }) {
           <span className="flex-none w-8 h-8 rounded-lg bg-spark-subtle border border-spark-border grid place-items-center text-[16px]">🏢</span>
           <span className="min-w-0">
             <span className="block font-semibold text-[15px] group-hover:text-spark-purple">{t('포트폴리오사')}</span>
-            <span className="block text-[12.5px] text-gray-500 mt-0.5">{t('로그인 없이 바로 둘러봅니다')}</span>
+            <span className="block text-[12.5px] text-gray-500 mt-0.5">{t('스파크랩 포트폴리오사 전용 화면')}</span>
           </span>
         </a>
 
