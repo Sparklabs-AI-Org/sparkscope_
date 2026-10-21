@@ -310,20 +310,14 @@ export function InterPanel({
               hideMatches={portfolioView}
               onSelect={topicKey => focusSector(`sec-${topicKey}`)}
             />
-            {/* 공개 화면은 인사이트 패널이 두 줄뿐이라 오른쪽이 비므로, AI 종합 요약을 그 아래로 올린다. */}
-            <div className="flex flex-col">
-              <InsightPanel
-                sectors={data.sectors}
-                overview={data.overview}
-                onSelect={focusSector}
-                hideMatches={portfolioView}
-              />
-              {portfolioView && (
-                <div className="mt-4">
-                  <ColoredSummaryCard summary={data.summary} overview={data.overview} trendOnly />
-                </div>
-              )}
-            </div>
+            {/* 공개 화면은 인사이트 패널이 두 줄뿐이라 오른쪽이 비므로, AI 트렌드 요약을 같은 카드 안에 넣는다. */}
+            <InsightPanel
+              sectors={data.sectors}
+              overview={data.overview}
+              onSelect={focusSector}
+              hideMatches={portfolioView}
+              summary={portfolioView ? data.summary : undefined}
+            />
           </div>
 
           {/* AI 요약 — 위 매트릭스의 숫자를 그대로 되풀이하지 않고, 그래서 뭘 해야 하는지로 마무리 */}
@@ -992,10 +986,13 @@ function InsightPanel({
   overview,
   onSelect,
   hideMatches = false,
+  summary,
 }: {
   sectors: SectorBlock[];
   overview: InterOverview;
   onSelect: (id: string) => void;
+  /** 주면 패널 안에 'AI 트렌드 요약' 줄을 덧붙인다(공개 화면 — 별도 요약 카드 대신). */
+  summary?: DomainSummary;
   /** 포트폴리오사 화면 — '우리 위치'·'액션'·'가장 많이 걸린 포트폴리오사'(전부 매치 기반)를 뺀다. */
   hideMatches?: boolean;
 }) {
@@ -1050,6 +1047,16 @@ function InsightPanel({
               t('눈에 띄게 예외적인 분야는 없습니다.')
             )}
           </InsightRow>
+          {summary && (
+            <InsightRow k={t('AI 트렌드 요약')}>
+              {renderHighlighted(summary.trend)}
+              <span className="mt-1 block text-[11px] text-gray-400">
+                {summary.source === 'fallback'
+                  ? t('⚙️ 기본 요약 · AI 분석 대기 중(다음 수집 때 자동 갱신)')
+                  : t('🤖 AI 요약 · {time} 기준', { time: fmtKstTime(summary.computedAt!) })}
+              </span>
+            </InsightRow>
+          )}
           {!hideMatches && <InsightRow k={t('액션')}>
             {topMatch && topMatch.metrics.matchCount > 0 ? (
               <>
