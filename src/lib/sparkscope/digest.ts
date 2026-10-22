@@ -305,8 +305,8 @@ ${SIGNAL_EMAIL_CSS}
 
 /**
  * 오늘 브리핑 영상 링크 — 구독자 토큰을 붙여서 사람별 시청을 잴 수 있게 한다.
- * 날짜는 발송 시각의 한국 날짜(09:30 발송이므로 그날 브리핑 키와 맞는다).
- * 영상은 09:32 이후에 올라가므로, 메일을 연 시점에 영상이 없으면 페이지가 404가 된다 — 그때는 잔디 링크를 쓴다.
+ * 날짜는 발송 시각의 한국 날짜(08:30 전후 발송이므로 그날 브리핑 키와 맞는다).
+ * 메일은 영상이 올라간 뒤에 나간다(hold) — 영상 페이지가 비어 있는 일은 없다.
  */
 function renderBriefingLink(date: Date, base: string, token: string): string {
   const dateKey = new Date(date.getTime() + 9 * 3600 * 1000).toISOString().slice(0, 10);

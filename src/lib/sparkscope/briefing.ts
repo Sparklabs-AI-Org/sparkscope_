@@ -70,8 +70,8 @@ const CATEGORY_LABEL: Record<string, string> = {
 
 // ── 방송 일정과 기사 기간 (2026-10-01 소윤 결정) ─────────────────────
 //
-//   월    09:30 메일 · 09:45 잔디 — 위클리(Claw-e 뉴스데스크). 지난주 화 00:00 ~ 일 24:00 기사에서 8개
-//   화~금 09:30 메일 · 09:45 잔디 — 데일리. 전날 09:30(지난 메일) 이후 기사에서 8개   (2026-10-07 소윤 결정)
+//   월    08:30 메일·잔디 — 위클리(Claw-e 뉴스데스크). 지난주 화 00:00 ~ 일 24:00 기사에서 8개
+//   화~금 08:30 메일·잔디 — 데일리. 전날 08:10(지난 메일 확정) 이후 기사에서 10개   (2026-10-07 소윤 결정, 10-22 시각·개수 변경)
 //   지난 7일 브리핑에 나간 기사는 데일리에 다시 넣지 않는다(briefing-reco recentlyBriefed).
 //
 // 검수 화면·추천·영상·메일 크론이 모두 이 함수 하나로 "다음 방송"을 정한다.
@@ -79,7 +79,8 @@ const CATEGORY_LABEL: Record<string, string> = {
 export type BriefingProgram = 'daily' | 'weekly';
 /** 방송별 기사 수 — 데일리는 기사당 15~20초로 10건(3분 30초 내외, 2026-10-22), 위클리(뉴스데스크)는 기존 8건 */
 export const BRIEFING_COUNT: Record<BriefingProgram, number> = { daily: 10, weekly: 8 };
-export const SEND_KST = { h: 9, m: 30 };
+// 메일 크론이 헤드라인·기사 창을 확정하는 시각(첫 실행). 도착은 영상이 나온 뒤 08:20~08:30(2026-10-22, 이전 09:30).
+export const SEND_KST = { h: 8, m: 10 };
 
 export interface BroadcastWindow {
   program: BriefingProgram;

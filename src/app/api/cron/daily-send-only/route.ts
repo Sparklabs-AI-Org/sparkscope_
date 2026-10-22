@@ -1,5 +1,5 @@
 // 발송 전용 엔드포인트 (이미 분류된 데이터를 빠르게 발송)
-// 시간: 자동 발송(월·수·금 09:00 KST) 또는 수동 트리거
+// 시간: 자동 발송(월~금 08:10~08:50 KST, 영상이 나오면 발송 — 08:30 도착 목표) 또는 수동 트리거
 // 특징: 수집/분석 생략 → 초고속(5초), 타임아웃 불가
 import { NextResponse } from 'next/server';
 import { runDailyDigest } from '@/lib/sparkscope/runner';
@@ -21,13 +21,13 @@ export async function GET(req: Request) {
 
   const baseUrl = process.env.NEXTAUTH_URL ?? new URL(req.url).origin;
 
-  // hold=1: 영상이 완성된 뒤에만 보낸다(09:30 이후 여러 번 불려도 한 번만 나간다). 10시가 지나면 보내지 않는다.
+  // hold=1: 영상이 완성된 뒤에만 보낸다(08:10 이후 여러 번 불려도 한 번만 나간다 — 08:30 도착 목표, 2026-10-22). 9시가 지나면 보내지 않는다.
   const hold = new URL(req.url).searchParams.get('hold') === '1';
   if (hold) {
     const kstNow = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Seoul' }));
     const minutes = kstNow.getHours() * 60 + kstNow.getMinutes();
-    if (minutes >= 10 * 60) {
-      return NextResponse.json({ ok: true, status: 'deadline-passed', message: '10시 이후라 발송하지 않습니다' });
+    if (minutes >= 9 * 60) {
+      return NextResponse.json({ ok: true, status: 'deadline-passed', message: '9시 이후라 발송하지 않습니다' });
     }
     const today = new Date(kstNow.getFullYear(), kstNow.getMonth(), kstNow.getDate(), 0, 0, 0, 0);
     const sent = await prisma.digest.findUnique({ where: { date: today }, select: { sentAt: true } });

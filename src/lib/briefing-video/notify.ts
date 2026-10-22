@@ -1,5 +1,5 @@
 /**
- * 브리핑 알림 — 잔디 Incoming Webhook으로 토픽에 링크를 보낸다(월·수·금 09:45 — 09:30 메일 뒤, 못 보냈으면 10:15). 월요일은 위클리, 수·금은 데일리.
+ * 브리핑 알림 — 잔디 Incoming Webhook으로 토픽에 링크를 보낸다(월~금 08:30 — 메일과 같은 때, 못 보냈으면 09:00). 월요일은 위클리, 화~금은 데일리.
  *
  * 잔디 웹훅 주소 — 데일리는 JANDI_WEBHOOK_URL, 위클리(월)는 JANDI_WEBHOOK_URL_WEEKLY(2026-10-02, 방을 따로 쓰려고).
  * 위클리 주소가 비어 있으면 데일리 주소로 보낸다(안 나가는 것보다 낫다). 주소는 토픽 관리자가 잔디 토픽 → 커넥트 → Incoming Webhook에서
@@ -19,7 +19,7 @@ export type NotifyResult =
   | { status: 'sent'; withVideo: boolean }
   | { status: 'already-sent' | 'waiting-for-video' | 'no-webhook' | 'nothing-to-send' };
 
-/** final=false(09:45)면 영상이 없을 때 기다리고, final=true(10:15)면 헤드라인만이라도 보낸다. */
+/** final=false(08:30)면 영상이 없을 때 기다리고, final=true(09:00)면 헤드라인만이라도 보낸다. */
 export async function notifyBriefing(opts: { final: boolean; baseUrl: string }): Promise<NotifyResult> {
   const dateKey = kstDateKey();
   const done = await prisma.dashboardInsight.findUnique({ where: { kind_key: { kind: KIND_NOTIFIED, key: dateKey } } });
