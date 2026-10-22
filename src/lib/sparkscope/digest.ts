@@ -214,7 +214,7 @@ function mergeResidualDuplicates(list: AnalyzedArticle[]): AnalyzedArticle[] {
 export function renderDigestHtml(
   data: DigestData,
   baseUrl?: string,
-  opts: { prefs?: SectionPrefs; subscriberToken?: string } = {},
+  opts: { prefs?: SectionPrefs; subscriberToken?: string; videoPending?: boolean } = {},
 ): string {
   const pStat = data.stats;
   const prefs = opts.prefs ?? ALL_SECTIONS;
@@ -240,7 +240,7 @@ ${SIGNAL_EMAIL_CSS}
     ${renderHeaderStats(pStat, prefs, data.inter)}
   </div>
 
-  ${opts.subscriberToken ? renderBriefingLink(data.date, base, opts.subscriberToken) : ''}
+  ${opts.subscriberToken ? renderBriefingLink(data.date, base, opts.subscriberToken, !!opts.videoPending) : ''}
   ${SHOW_SUBSCRIPTION_UI ? renderSubscriptionTip(base, opts.subscriberToken) : ''}
 
   ${data.weeklyFlow ? `
@@ -306,11 +306,23 @@ ${SIGNAL_EMAIL_CSS}
 /**
  * 오늘 브리핑 영상 링크 — 구독자 토큰을 붙여서 사람별 시청을 잴 수 있게 한다.
  * 날짜는 발송 시각의 한국 날짜(08:30 전후 발송이므로 그날 브리핑 키와 맞는다).
- * 메일은 영상이 올라간 뒤에 나간다(hold) — 영상 페이지가 비어 있는 일은 없다.
+ * 메일은 보통 영상이 올라간 뒤에 나간다(hold). 08:45까지 영상이 없으면 pending으로 먼저 나가는데, 그때는 썸네일 대신
+ * "준비 중" 안내를 넣고 링크는 남긴다 — 메일은 고칠 수 없어서, 링크를 빼면 영상이 나중에 나와도 볼 길이 없다.
  */
-function renderBriefingLink(date: Date, base: string, token: string): string {
+function renderBriefingLink(date: Date, base: string, token: string, pending = false): string {
   const dateKey = new Date(date.getTime() + 9 * 3600 * 1000).toISOString().slice(0, 10);
   const url = `${base}/briefing/${dateKey}?s=${escape(token)}`;
+  if (pending) {
+    return `
+  <div class="section" style="text-align:left">
+    <div style="font-size:16px;font-weight:700;color:#1A1A2E;margin:0 0 12px;text-align:left">🎬 오늘의 브리핑 영상</div>
+    <div style="padding:18px 20px;background:#F6F5FF;border:1px solid #E5E3F8;border-radius:12px;font-size:14px;color:#374151;line-height:1.6">
+      오늘 브리핑 영상은 준비가 늦어지고 있습니다. 죄송합니다.<br>
+      <b>10시 이후</b> 아래 링크에서 보실 수 있어요.
+    </div>
+    <a href="${url}" style="display:block;width:100%;box-sizing:border-box;margin-top:14px;padding:15px 20px;background:#FFFFFF;border:2px solid #5046E5;color:#5046E5 !important;text-decoration:none;border-radius:8px;font-size:14px;font-weight:700;text-align:center">브리핑 페이지 열기 (10시 이후)</a>
+  </div>`;
+  }
   // 썸네일은 사이트 공개 폴더의 고정 이미지(public/briefing/daily-thumb.png)를 쓴다 — 영상과 무관하게 바로 열린다.
   // 월요일은 위클리(뉴스데스크) 썸네일, 화~금은 데일리 썸네일 — 요일은 브리핑 날짜 기준.
   const isMonday = new Date(`${dateKey}T00:00:00Z`).getUTCDay() === 1;

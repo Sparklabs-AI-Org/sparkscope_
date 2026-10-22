@@ -1,5 +1,5 @@
 // 메일·영상·잔디가 제시각에 안 나간 날 SparkScope 관리자(ADMIN_EMAILS)에게 알린다(2026-10-22 소윤 요청).
-// 셋은 반드시 같이 나가고 하나라도 늦으면 셋 다 12시까지 재시도한다 — 그래서 "늦어진 날"을 사람이 알 수 있어야 한다.
+// 메일은 08:45까지 영상을 기다리다 없으면 "준비 중" 안내로 먼저 나가고, 영상·잔디는 12시까지 재시도한다 — 늦어진 날을 사람이 알 수 있어야 한다.
 //   09:00 KST(stage=late)  아직 안 나감 → 상태 알림(자동 재시도 중)
 //   12:00 KST(stage=final) 끝내 안 나감 → 오늘은 발송하지 않았다는 알림
 // 같은 날 같은 단계는 한 번만 보낸다(DashboardInsight briefing_delay_alert). ?dry=1이면 보내지 않고 내용만 돌려준다.
@@ -45,8 +45,8 @@ export async function GET(req: Request) {
   const program = broadcastFor().program === 'weekly' ? '위클리' : '데일리';
   const lines = [
     stage === 'final'
-      ? `오늘(${dateKey}) ${program} 브리핑 메일·영상·잔디가 12시까지 나가지 않았습니다. 오늘 자동 발송은 중단됐습니다.`
-      : `오늘(${dateKey}) ${program} 브리핑 메일·영상·잔디가 아직 나가지 않았습니다(평소 08:30). 12시까지 15분마다 자동 재시도합니다.`,
+      ? `오늘(${dateKey}) ${program} 브리핑 중 12시까지 나가지 않은 것이 있습니다. 오늘 자동 재시도는 끝났습니다.`
+      : `오늘(${dateKey}) ${program} 브리핑 중 아직 나가지 않은 것이 있습니다(평소 08:30). 영상은 10:00까지 다시 만들고, 메일·잔디는 12시까지 자동 재시도합니다.`,
     '',
     `- 영상: ${video ? `완료(${hhmm(new Date(video.publishedAt))})` : '없음'}`,
     `- 메일: ${mail?.sentAt ? `발송(${hhmm(mail.sentAt)})` : `미발송${mail?.errorMsg ? ` — ${mail.errorMsg.slice(0, 120)}` : ''}`}`,

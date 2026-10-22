@@ -44,6 +44,9 @@ export interface RunOptions {
 // 시작될 때 너무 오래된 RUNNING을 죽은 것으로 간주해 정리한다. 지금까지 가장 오래 걸린
 // 수집이 84.8분이었던 걸 감안해 3시간을 기준으로 잡았다(2026-08-06, DB에 10건 방치돼있던 걸 발견).
 const STALE_RUN_THRESHOLD_MS = 3 * 60 * 60 * 1000;
+
+/** 메일이 영상을 기다리는 마지막 시각(KST 분) — 08:45. 지나면 "영상 준비 중" 안내로 메일을 먼저 보낸다. */
+const VIDEO_WAIT_UNTIL_MIN = 8 * 60 + 45;
 async function cleanupStaleRunLogs() {
   const cutoff = new Date(Date.now() - STALE_RUN_THRESHOLD_MS);
   const { count } = await prisma.runLog.updateMany({
@@ -494,7 +497,11 @@ export async function runDailyDigest(opts: RunOptions = {}) {
     let mailResult: any = null;
     let skipped: string | undefined;
     // 영상이 먼저 — holdUntilVideo면 오늘 영상이 없을 때 발송만 미룬다(헤드라인 스냅샷은 위에서 이미 저장됨).
-    const holdNow = !!opts.holdUntilVideo && !(await loadBriefingVideo(kstDateKey()).catch(() => null));
+    // 단 08:45까지만 기다린다. 그 뒤엔 메일을 제시각에 보내고 영상 자리에 "준비 중" 안내를 넣는다 —
+    // 영상 하나 때문에 다이제스트 전체가 늦어지지 않게(2026-10-22 소윤 결정). 잔디는 영상이 나온 뒤에 따로 간다.
+    const videoReady = !!(await loadBriefingVideo(kstDateKey()).catch(() => null));
+    const kstMinutes = kstNow.getHours() * 60 + kstNow.getMinutes();
+    const holdNow = !!opts.holdUntilVideo && !videoReady && kstMinutes < VIDEO_WAIT_UNTIL_MIN;
     if (holdNow) skipped = 'waiting-for-video';
     // BCC는 DIGEST_BCC가 명시적으로 설정된 경우에만. (TEST_RECIPIENT로 폴백하면 중복 수신 위험)
     const bcc = opts.bcc ?? process.env.DIGEST_BCC ?? undefined;
@@ -529,7 +536,7 @@ export async function runDailyDigest(opts: RunOptions = {}) {
           const useSubscribers = process.env.DIGEST_USE_SUBSCRIBERS === 'true';
           const perSubscriber = opts.testRecipient || !useSubscribers
             ? null
-            : await sendDigestToSubscribers({ data, subject, baseUrl: opts.baseUrl });
+            : await sendDigestToSubscribers({ data, subject, baseUrl: opts.baseUrl, videoPending: !videoReady });
 
           if (perSubscriber) {
             mailResult = perSubscriber;

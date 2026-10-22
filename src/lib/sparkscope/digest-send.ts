@@ -52,8 +52,10 @@ export async function sendDigestToSubscribers(params: {
   baseUrl?: string;
   /** true면 실제로 보내지 않고 몇 통이 어떻게 나갈지만 계산한다. */
   dryRun?: boolean;
+  /** 오늘 영상이 아직 없을 때 — 영상 블록을 "준비 중" 안내로 바꾼다 */
+  videoPending?: boolean;
 }): Promise<SubscriberSendResult | null> {
-  const { data, subject, baseUrl, dryRun } = params;
+  const { data, subject, baseUrl, dryRun, videoPending } = params;
 
   const subscribers = await prisma.digestSubscriber.findMany({
     where: { active: true },
@@ -83,6 +85,7 @@ export async function sendDigestToSubscribers(params: {
     const html = renderDigestHtml(scoped, baseUrl, {
       prefs,
       subscriberToken: SUBSCRIBER_TOKEN_PLACEHOLDER,
+      videoPending,
     });
     for (const p of people) {
       mails.push({
