@@ -220,6 +220,68 @@ export function itemSlide(dateLabel: string, h: BriefingHeadline, index: number,
   return canvas.toBuffer('image/png');
 }
 
+/**
+ * 헤드라인 보드 — 데일리 영상의 기사 화면(더벨 형식 벤치마킹, 2026-10-21).
+ * 오늘 다룰 헤드라인 전체를 깔아 두고 지금 읽는 기사만 강조해, 전체 흐름과 남은 분량이 한눈에 보이게 한다.
+ * active가 -1이면 전부 같은 톤(오프닝 직후 인사 화면). 지난 기사는 흐리게, 앞으로 나올 기사는 보통 톤.
+ */
+export function boardSlide(dateLabel: string, headlines: BriefingHeadline[], active: number): Buffer {
+  const { canvas, ctx } = base(dateLabel);
+  const n = headlines.length;
+  const top = 118;
+  const bottom = H - 34;
+  const step = Math.min(66, Math.floor((bottom - top) / Math.max(1, n)));
+  const rowH = step - 6;
+  const size = n > 10 ? 25 : n > 7 ? 29 : 34;
+  const textLeft = 132;
+  const labelW = 190;
+  const textW = W - textLeft - 64 - labelW - 24;
+  headlines.forEach((h, i) => {
+    const y = top + i * step;
+    const isNow = i === active;
+    const isPast = active >= 0 && i < active;
+    if (isNow) {
+      ctx.fillStyle = C.purple;
+      ctx.beginPath();
+      ctx.roundRect(48, y, W - 96, rowH, 14);
+      ctx.fill();
+    }
+    const cy = y + rowH / 2;
+    // 순번 원
+    ctx.fillStyle = isNow ? C.white : isPast ? '#D9D5DE' : C.purple;
+    ctx.beginPath();
+    ctx.arc(84, cy, Math.min(17, rowH / 2 - 3), 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = isNow ? C.purple : C.white;
+    ctx.font = `${Math.round(size * 0.68)}px "Pretendard Bold"`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(String(i + 1), 84, cy + 1);
+    // 헤드라인
+    ctx.textAlign = 'left';
+    const text = hangulize(h.headline ?? h.title);
+    const weight = isNow ? 'ExtraBold' : 'SemiBold';
+    const t = fitText(ctx, text, textW, 1, [size, size - 2, size - 4, size - 6, size - 8], weight, true);
+    ctx.font = `${t.size}px "Pretendard ${weight}"`;
+    ctx.fillStyle = isNow ? C.white : isPast ? '#B5B1BC' : C.ink;
+    ctx.fillText(t.lines.join(' '), textLeft, cy + 1);
+    // 오른쪽 분류
+    const label = hangulize(h.label.replace(/^[\p{Extended_Pictographic}\p{Regional_Indicator}\uFE0F\s]+/u, ''));
+    ctx.font = `${Math.round(size * 0.62)}px "Pretendard SemiBold"`;
+    ctx.fillStyle = isNow ? 'rgba(255,255,255,0.85)' : isPast ? '#C9C5CF' : C.muted;
+    ctx.textAlign = 'right';
+    ctx.fillText(label, W - 64, cy + 1);
+    ctx.textAlign = 'left';
+  });
+  ctx.textBaseline = 'alphabetic';
+  // 진행 막대
+  ctx.fillStyle = '#E7E3DB';
+  ctx.fillRect(0, H - 8, W, 8);
+  ctx.fillStyle = C.purple;
+  ctx.fillRect(0, H - 8, (W * (Math.max(active, -1) + 1)) / Math.max(1, n), 8);
+  return canvas.toBuffer('image/png');
+}
+
 export function outroSlide(dateLabel: string, o: SlideOpts = {}): Buffer {
   const { canvas, ctx } = base(dateLabel, o.program);
   ctx.textAlign = 'center';
@@ -238,7 +300,7 @@ export function outroSlide(dateLabel: string, o: SlideOpts = {}): Buffer {
  * 대시보드 보라색 바탕에 프로그램 이름과 날짜. 위클리는 타이틀 GIF가 이 역할을 한다.
  */
 /** 타이틀 화면. 썸네일은 저장소가 JPEG만 받아서 mime을 넘길 수 있게 했다(기본 PNG — 영상 프레임용). */
-export function openingSlide(dateLabel: string, program = '데일리 브리핑', mime: 'image/png' | 'image/jpeg' = 'image/png'): Buffer {
+export function openingSlide(dateLabel: string, program = '데일리 브리핑', mime: 'image/png' | 'image/jpeg' = 'image/png', subtitle = '스파크랩 · 포트폴리오 · AI 트렌드'): Buffer {
   ensureFonts();
   const canvas = createCanvas(W, H);
   const ctx = canvas.getContext('2d');
@@ -270,7 +332,7 @@ export function openingSlide(dateLabel: string, program = '데일리 브리핑',
   ctx.fillText(dateLabel, 96, 490);
   ctx.globalAlpha = 0.75;
   ctx.font = '24px "Pretendard SemiBold"';
-  ctx.fillText('스파크랩 · 포트폴리오 · AI 트렌드', 96, 540);
+  ctx.fillText(subtitle, 96, 540);
   ctx.globalAlpha = 1;
   return mime === 'image/jpeg' ? canvas.toBuffer('image/jpeg', 0.92) : canvas.toBuffer('image/png');
 }

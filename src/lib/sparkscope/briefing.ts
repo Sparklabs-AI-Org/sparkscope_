@@ -18,7 +18,7 @@ import type { AnalyzedArticle, DigestData } from './types';
 import { restoreTitle } from './title-restore';
 import type { InterDigestCard } from './inter-digest';
 
-export const BRIEFING_MAX = 8; // 2026-10-07 5 → 8 (AI 3 고정 + 스파크랩·포트폴리오 5)
+export const BRIEFING_MAX = 10; // 저장·편집 상한(데일리 기준). 2026-10-07 5 → 8, 10-22 데일리 10 (설문·대표님 피드백)
 /** 자동 선정일 때 해외 카드를 몇 개까지 넣을지 — 국내 TOP3 뒤를 채운다. */
 const DEFAULT_INTER_SLOTS = 2;
 
@@ -40,6 +40,12 @@ export interface BriefingHeadline {
   label: string;
   /** 해외 카드에 연결된 우리 포트폴리오사 이름 (대본에서 "우리 ○○와 연결" 한마디용) */
   companies?: string[];
+  /** 영상 화면·잔디용 브리핑 헤드라인(30자 안팎, 숫자 앞세움). 영상을 만들 때 채워지고, 없으면 title을 쓴다. */
+  headline?: string;
+  /** 글로 읽는 리드 한 문장(핵심 요약). 영상을 만들 때 채워진다. */
+  brief?: string;
+  /** 라벨을 단 사실 2~3개 — 더벨 데일리 브리핑 형식("투자 규모: …"). 영상을 만들 때 채워진다. */
+  points?: { label: string; text: string }[];
 }
 
 export interface BriefingSnapshot {
@@ -71,6 +77,8 @@ const CATEGORY_LABEL: Record<string, string> = {
 // 검수 화면·추천·영상·메일 크론이 모두 이 함수 하나로 "다음 방송"을 정한다.
 
 export type BriefingProgram = 'daily' | 'weekly';
+/** 방송별 기사 수 — 데일리는 기사당 15~20초로 10건(3분 30초 내외, 2026-10-22), 위클리(뉴스데스크)는 기존 8건 */
+export const BRIEFING_COUNT: Record<BriefingProgram, number> = { daily: 10, weekly: 8 };
 export const SEND_KST = { h: 9, m: 30 };
 
 export interface BroadcastWindow {

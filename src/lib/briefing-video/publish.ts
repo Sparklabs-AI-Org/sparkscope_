@@ -20,7 +20,9 @@ export interface BriefingVideoRecord {
   program?: 'daily' | 'weekly';
   url: string;
   seconds: number;
-  headlines: { title: string; url: string; label: string; source: string }[];
+  headlines: { title: string; url: string; label: string; source: string; headline?: string; brief?: string; points?: { label: string; text: string }[] }[];
+  /** 더벨 형식 개요 한 문단 */
+  overview?: string;
   script: string[];
   publishedAt: string;
 }
@@ -57,7 +59,8 @@ export async function publishBriefingVideo(built: BuiltBriefing): Promise<string
     program: built.snapshot.program ?? 'daily',
     url,
     seconds: Math.round(built.seconds),
-    headlines: built.snapshot.headlines.map(h => ({ title: h.title, url: h.url, label: h.label, source: h.source })),
+    headlines: built.snapshot.headlines.map(h => ({ title: h.title, url: h.url, label: h.label, source: h.source, headline: h.headline, brief: h.brief, points: h.points })),
+    overview: built.overview,
     script: built.segments.map(s => s.text),
     publishedAt: new Date().toISOString(),
   };
@@ -88,4 +91,26 @@ export async function loadBriefingVideo(dateKey: string): Promise<BriefingVideoR
   });
   if (!row) return null;
   try { return JSON.parse(row.value) as BriefingVideoRecord; } catch { return null; }
+}
+
+/** 지난 영상 목록 — 최근 날짜순. 브리핑 페이지의 "지난 영상" 보관함이 읽는다. */
+export interface BriefingVideoSummary {
+  dateKey: string;
+  program?: 'daily' | 'weekly';
+  seconds: number;
+  count: number;
+}
+
+export async function listBriefingVideos(limit = 30): Promise<BriefingVideoSummary[]> {
+  const rows = await prisma.dashboardInsight.findMany({
+    where: { kind: KIND_VIDEO }, orderBy: { key: 'desc' }, take: limit, select: { value: true },
+  });
+  const out: BriefingVideoSummary[] = [];
+  for (const r of rows) {
+    try {
+      const v = JSON.parse(r.value) as BriefingVideoRecord;
+      out.push({ dateKey: v.dateKey, program: v.program, seconds: v.seconds, count: v.headlines?.length ?? 0 });
+    } catch { /* 깨진 기록은 건너뛴다 */ }
+  }
+  return out;
 }

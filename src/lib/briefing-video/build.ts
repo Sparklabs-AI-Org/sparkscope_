@@ -7,14 +7,18 @@ import { loadSendArticles, buildDigestForSend } from '../sparkscope/runner';
 import { publishBriefingSnapshot, loadBriefingSnapshot, kstDateKey, type BriefingSnapshot } from '../sparkscope/briefing';
 import { getBriefingRecommendation } from '../sparkscope/briefing-reco';
 import type { AnalyzedArticle } from '../sparkscope/types';
-import { writeBriefingScript, checkAlignment, spokenDate, type ScriptSegment } from './script';
+import { writeBriefingScript, checkAlignment, spokenDate, longDate, DAILY_LENGTH, type ScriptSegment } from './script';
+import type { BriefingHeadline } from '../sparkscope/briefing';
 import { synthesizeAll } from './tts';
-import { introSlide, itemSlide, outroSlide, openingSlide } from './slides';
+import { boardSlide, outroSlide, openingSlide } from './slides';
 import { renderVideo, probeSeconds, silentWav, GAP_SECONDS, type Clip } from './render';
 
 /** 오프닝 배경음악 — scripts/make-news-bgm.py로 만든 자체 제작 음원(저작권 걱정 없음). 다른 음원을 쓰려면 이 파일만 바꾸면 된다. */
 export const NEWS_BGM = path.join(process.cwd(), 'assets/briefing/news-bgm.wav');
 export const OPENING_SECONDS = 3.2;
+/** 영상 전체 상한 — 목표 3분 30초 내외, 4분(240초)을 넘으면 우선순위가 낮은(뒤 칸) 기사부터 뺀다(2026-10-22). */
+export const MAX_VIDEO_SECONDS = 240;
+const MIN_ITEMS = 6;
 
 /**
  * 오늘 헤드라인 스냅샷을 새로 만든다 — 09:30 메일과 같은 재료·같은 조립(buildDigestForSend)에서
@@ -39,6 +43,8 @@ export interface BuiltBriefing {
   segments: ScriptSegment[];
   file: string;
   seconds: number;
+  /** 더벨 데일리 브리핑 형식의 개요 한 문단(영상 설명·페이지용) */
+  overview?: string;
 }
 
 /**
@@ -57,8 +63,59 @@ export function dedupeHeadlines<T extends { url: string; title: string }>(hs: T[
   });
 }
 
-export async function buildBriefingVideo(opts: { outDir: string; prepare?: boolean }): Promise<BuiltBriefing> {
-  const loaded = opts.prepare
+/** "2026년 10월 22일 (목)" — 오프닝 타이틀 날짜. */
+function openingDate(dateKey: string): string {
+  const [y, m, d] = dateKey.split('-').map(Number);
+  const wd = ['일', '월', '화', '수', '목', '금', '토'][new Date(Date.UTC(y, m - 1, d)).getUTCDay()];
+  return `${y}년 ${m}월 ${d}일 (${wd})`;
+}
+
+/** 더벨 형식 개요 — "○○ 주요 뉴스의 핵심 내용은? A, B, … 그리고 N." 제목을 그대로 나열하므로 새 사실이 들어가지 않는다. */
+export function buildOverview(dateKey: string, headlines: BriefingHeadline[]): string {
+  const titles = headlines.map(h => h.headline ?? h.title);
+  const list = titles.length > 1 ? `${titles.slice(0, -1).join(', ')}, 그리고 ${titles[titles.length - 1]}` : titles[0] ?? '';
+  return `${longDate(dateKey)} 스파크스코프 주요 뉴스의 핵심 내용은? ${list} 소식입니다.`;
+}
+
+/** 영상 총 길이 추정 — render.ts와 같은 규칙(장면마다 음성 + GAP). 오프닝 포함. */
+function estimateSeconds(speeches: { seconds: number }[]): number {
+  return OPENING_SECONDS + GAP_SECONDS + speeches.reduce((n, sp) => n + sp.seconds + GAP_SECONDS, 0);
+}
+
+/**
+ * 5분 상한 맞추기. 기사는 칸 순서(스파크랩 → 국내 포폴 → 해외 포폴 → AI → 스타트업계)로 정렬돼 있어
+ * 뒤에서부터 빼면 우선순위가 낮은 것부터 빠진다. 최소 MIN_ITEMS건은 남긴다.
+ * 빠진 기사에 붙어 있던 섹션 전환 멘트는 그 기사와 함께 사라지므로 남은 칸의 대본은 그대로 맞는다.
+ */
+export function trimToLimit<T extends { seconds: number }>(
+  headlines: BriefingHeadline[], segments: ScriptSegment[], speeches: T[],
+): { headlines: BriefingHeadline[]; segments: ScriptSegment[]; speeches: T[] } {
+  let keep = headlines.map((_, i) => i);
+  const pick = () => {
+    const kept = new Set(keep);
+    const idx = segments.map((s, i) => ({ s, i })).filter(({ s }) => s.kind !== 'item' || kept.has(s.index!));
+    return idx;
+  };
+  let cur = pick();
+  while (estimateSeconds(cur.map(({ i }) => speeches[i])) > MAX_VIDEO_SECONDS && keep.length > MIN_ITEMS) {
+    const dropped = keep[keep.length - 1];
+    keep = keep.slice(0, -1);
+    cur = pick();
+    console.warn(`[briefing] 5분 상한 — ${dropped + 1}번째 기사 제외(${headlines[dropped].title.slice(0, 30)})`);
+  }
+  const remap = new Map(keep.map((old, n) => [old, n] as [number, number]));
+  return {
+    headlines: keep.map(i => headlines[i]),
+    segments: cur.map(({ s }) => (s.kind === 'item' ? { ...s, index: remap.get(s.index!)! } : s)),
+    speeches: cur.map(({ i }) => speeches[i]),
+  };
+}
+
+export async function buildBriefingVideo(opts: { outDir: string; prepare?: boolean; snapshot?: BriefingSnapshot }): Promise<BuiltBriefing> {
+  // snapshot을 직접 넘기면 DB를 읽거나 쓰지 않는다(시험 제작용).
+  const loaded = opts.snapshot
+    ? opts.snapshot
+    : opts.prepare
     ? await prepareSnapshot()
     : (await loadBriefingSnapshot()) ?? (await prepareSnapshot());
   const snapshot = { ...loaded, headlines: dedupeHeadlines(loaded.headlines) };
@@ -70,26 +127,39 @@ export async function buildBriefingVideo(opts: { outDir: string; prepare?: boole
     return buildNewsdeskVideo({ outDir: opts.outDir, snapshot });
   }
 
-  const segments = await writeBriefingScript(snapshot);
-  console.log(`[briefing] 대본 ${segments.reduce((n, s) => n + s.text.length, 0)}자`);
+  const written = await writeBriefingScript(snapshot, { length: DAILY_LENGTH, withHeadline: true });
+  console.log(`[briefing] 대본 ${written.reduce((n, s) => n + s.text.length, 0)}자`);
   // 화면과 말이 어긋나면 영상을 만들지 않는다 — 잘못된 영상이 잔디·브리핑 페이지로 나가는 것을 막는다.
-  const problems = checkAlignment(segments, snapshot.headlines);
+  const problems = checkAlignment(written, snapshot.headlines);
   if (problems.length > 0) {
     throw new Error(`대본·화면 대조 실패 — 발행 중단:\n${problems.join('\n')}`);
   }
 
   const dateLabel = spokenDate(snapshot.dateKey);
-  const total = snapshot.headlines.length;
   // 음성은 하나씩 — 동시에 보내면 Gemini TTS 분당 한도(429)에 걸린다(tts.ts synthesizeAll).
-  const { speeches, voice } = await synthesizeAll(segments.map(s => s.text));
-  console.log(`[briefing] 음성 ${voice}`);
+  const synth = await synthesizeAll(written.map(s => s.text));
+  console.log(`[briefing] 음성 ${synth.voice}`);
+  // 5분 상한 — 넘으면 뒤 칸(우선순위 낮은) 기사부터 뺀다. 이미 만든 음성을 그대로 쓰므로 다시 합성하지 않는다.
+  const trimmed = trimToLimit(snapshot.headlines, written, synth.speeches);
+  const { segments, speeches } = trimmed;
+  // 화면용 헤드라인·글용 요약을 헤드라인에 붙인다 — 슬라이드·브리핑 페이지·잔디가 이 값을 읽는다.
+  trimmed.headlines = trimmed.headlines.map(h => ({ ...h }));
+  segments.forEach(s => {
+    if (s.kind !== 'item') return;
+    const h = trimmed.headlines[s.index!];
+    if (s.headline) h.headline = s.headline;
+    if (s.brief) h.brief = s.brief;
+    if (s.points) h.points = s.points;
+  });
+  const overview = buildOverview(snapshot.dateKey, trimmed.headlines);
+  snapshot.headlines = trimmed.headlines;
   const clips: Clip[] = [
     // 오프닝 — 말 없이 뉴스 배경음악 + 타이틀 화면(OPENING_SECONDS), 이어지는 인사 동안 음악을 낮게 깔고 끝에서 줄인다.
-    { png: openingSlide(dateLabel), wav: silentWav(OPENING_SECONDS), seconds: OPENING_SECONDS, bgm: { file: NEWS_BGM, start: 0, volume: 0.9 } },
+    { png: openingSlide(openingDate(snapshot.dateKey), '데일리 브리핑', 'image/png', '스파크스코프 주요 뉴스'), wav: silentWav(OPENING_SECONDS), seconds: OPENING_SECONDS, bgm: { file: NEWS_BGM, start: 0, volume: 0.9 } },
     ...segments.map((s, i): Clip => ({
-      png: s.kind === 'intro' ? introSlide(dateLabel, snapshot.headlines)
+      png: s.kind === 'intro' ? boardSlide(dateLabel, trimmed.headlines, -1)
         : s.kind === 'outro' ? outroSlide(dateLabel)
-        : itemSlide(dateLabel, snapshot.headlines[s.index!], s.index!, total),
+        : boardSlide(dateLabel, trimmed.headlines, s.index!),
       wav: speeches[i].wav,
       seconds: speeches[i].seconds,
       ...(s.kind === 'intro' ? { bgm: { file: NEWS_BGM, start: OPENING_SECONDS + GAP_SECONDS, volume: 0.15, fadeOut: true } } : {}),
@@ -105,5 +175,6 @@ export async function buildBriefingVideo(opts: { outDir: string; prepare?: boole
   }
   console.log(`[briefing] 싱크 확인 통과 — 파일 ${actual.toFixed(2)}초`);
   console.log(`[briefing] 영상 ${seconds.toFixed(1)}초 → ${file}`);
-  return { snapshot, segments, file, seconds };
+  if (seconds > MAX_VIDEO_SECONDS) console.warn(`[briefing] 상한 초과(${Math.round(seconds)}초) — 기사 ${MIN_ITEMS}건까지 줄여도 상한을 넘었다`);
+  return { snapshot, segments, file, seconds, overview };
 }

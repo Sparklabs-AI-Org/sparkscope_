@@ -322,6 +322,7 @@ function renderBriefingLink(date: Date, base: string, token: string): string {
       <img src="${thumb}" alt="오늘의 브리핑 영상 보기" width="600" style="display:block;width:100%;max-width:600px;height:auto;border:0;border-radius:12px">
     </a>
     <a href="${url}" style="display:block;width:100%;box-sizing:border-box;margin-top:14px;padding:15px 20px;background:#5046E5;color:#FFFFFF !important;text-decoration:none;border-radius:8px;font-size:14px;font-weight:700;text-align:center">영상 바로 보기</a>
+    <div style="margin-top:10px;text-align:center;font-size:12px"><a href="${base}/briefing?s=${escape(token)}" style="color:#6B7280;text-decoration:underline">지난 영상 보기</a></div>
   </div>`;
 }
 

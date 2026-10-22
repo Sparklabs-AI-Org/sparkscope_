@@ -14,7 +14,7 @@
  */
 import OpenAI from 'openai';
 import { prisma } from '@/lib/prisma';
-import { buildClusteredPool } from './digest';
+import { buildClusteredPool, isAchievement } from './digest';
 import { loadDigestCandidates, buildReviewDigest } from './review';
 import { attachInterDigest } from './inter-digest';
 import { attachAiSignals } from './signal-digest';
@@ -22,7 +22,7 @@ import type { AnalyzedArticle, DigestData } from './types';
 import { buildSignalFeed } from './signal-feed';
 import { ensureArticleKo } from './translate-content';
 import { isBlockedNoise } from './relevance';
-import { BRIEFING_MAX, broadcastFor, kstDateKey, type BriefingHeadline, type BroadcastWindow, type BriefingProgram } from './briefing';
+import { BRIEFING_COUNT, broadcastFor, kstDateKey, type BriefingHeadline, type BroadcastWindow, type BriefingProgram } from './briefing';
 
 const KIND_RECO = 'briefing_reco';
 const RANK_MODEL = 'gpt-4.1';
@@ -274,25 +274,30 @@ const GROUP_NAME: Record<Group, string> = {
 };
 
 /**
- * 칸 수 — 데일리·위클리 공통, 항상 8개(2026-10-07 소윤 결정, 5개 규칙을 대체):
+ * 칸 수 — 데일리 10개·위클리 8개(2026-10-07 소윤 결정 8개, 10-22 데일리 10개). 아래는 8개 기준 설명이고 10개는 포폴 칸이 2개 늘어난다:
  *   AI 트렌드 3칸 고정(G — 해외 우선, 국내 AI는 [국내] 표시로 섞여 해외 매체급일 때만)
  *   나머지 5칸: 스파크랩(최대 1, 한국·대만·글로벌벤처스) → 포트폴리오
  *     스파크랩 있으면 국내 포폴 2 · 해외 포폴 2, 없으면 국내 3 · 해외 2 (D = 해외 포트폴리오: 대만·GV)
  *     한쪽 포폴이 모자라면 다른 쪽으로, 그래도 비면 AI 트렌드를 더 → 마지막으로 스타트업계
  */
-function quotas(avail: Record<Group, number>): Record<Group, number> {
+function quotas(avail: Record<Group, number>, total: number): Record<Group, number> {
+  // 12건 이상이면 AI 4칸·해외 포폴 3칸, 그 아래(데일리 10·위클리 8)는 AI 3칸·해외 포폴 2칸.
+  const aiBase = total >= 12 ? 4 : 3;
+  const dBase = total >= 12 ? 3 : 2;
   const q: Record<Group, number> = { S: 0, P: 0, D: 0, G: 0, T: 0 };
-  q.G = Math.min(3, avail.G);
+  q.G = Math.min(aiBase, avail.G);
   q.S = Math.min(1, avail.S);
-  let room = BRIEFING_MAX - 3 - q.S;            // 포폴 몫 4(스파크랩 있음) 또는 5
-  q.D = Math.min(2, avail.D);
-  q.P = Math.min(room - 2, avail.P);
+  let room = total - aiBase - q.S;              // 포폴 몫
+  q.D = Math.min(dBase, avail.D);
+  q.P = Math.min(room - dBase, avail.P);
   room -= q.P + q.D;
   const moreP = Math.min(room, avail.P - q.P); q.P += moreP; room -= moreP;
   const moreD = Math.min(room, avail.D - q.D); q.D += moreD; room -= moreD;
-  room += 3 - q.G;                              // AI가 3개 안 되면 그 칸도 남는다
-  const moreG = Math.min(room, avail.G - q.G); q.G += moreG; room -= moreG;
-  q.T = Math.min(room, avail.T);
+  room += aiBase - q.G;                         // AI가 모자라면 그 칸도 남는다
+  // 남은 자리는 AI와 스타트업계가 나눈다 — AI가 전부 가져가면 포트폴리오가 적은 날 목록이 AI로만 찬다.
+  const moreG = Math.min(Math.ceil(room / 2), avail.G - q.G); q.G += moreG; room -= moreG;
+  q.T = Math.min(room, avail.T); room -= q.T;
+  q.G += Math.min(room, avail.G - q.G);
   return q;
 }
 
@@ -303,6 +308,7 @@ const RANK_SYSTEM = `당신은 스파크랩(한국의 스타트업 액셀러레�
 - 스파크랩·포트폴리오사에 직접 영향을 주는 사건 > 업계 전반에 큰 사건 > 일반 소식.
 - 투자 유치·인수합병·상장·대형 계약·신제품 출시·규제 변화처럼 "사건"이 있는 기사를 우선합니다.
 - 주가 등락·행사 스케치·인터뷰·칼럼은 뒤로 미룹니다.
+- "스타트업계" 그룹은 투자 유치·인수합병·상장·자금조달처럼 금액과 투자사가 드러나는 딜 소식을 우선합니다(더벨 데일리 브리핑 방식). 일반 시황·정책 해설·행사 소식은 뒤로 미룹니다.
 - 같은 사건을 다룬 기사는 그룹이 달라도 하나만 고릅니다(국내 기사와 해외 기사가 같은 사건일 수 있음).
 - "글로벌 AI" 그룹은 해외 AI 소식을 우선합니다(OpenAI·Anthropic·구글·메타·엔비디아 등). [국내] 표시 기사는
   해외 주요 매체(로이터·블룸버그·TechCrunch 등)도 다룰 만큼 큰 사건일 때만 고르고, 아니면 해외 기사를 고르세요.
@@ -350,6 +356,12 @@ export async function pickByTiers(w: BroadcastWindow): Promise<{ picked: Briefin
     loadDigestCandidates(digestWindow(w)),
   ]);
   const idByLink = new Map(candidates.map(a => [a.link, a.id]));
+  // 엑싯(Exit·Written-off)한 포트폴리오사 — 기사가 많이 나오지만 우선순위를 낮춘다(대표님 피드백 2026-10).
+  // 국내·해외 포폴 칸에서 빼고(성과 기사는 예외), 빈 자리는 아래 칸 규칙대로 AI·스타트업계가 채운다.
+  const exitNames = new Set((await prisma.monitoringTarget.findMany({
+    where: { portfolioStatus: { in: ['Exit', 'Written-off'] } }, select: { name: true },
+  })).map(t => t.name));
+  const notExit = (c: { company?: string; title: string }) => !c.company || !exitNames.has(c.company) || isAchievement(c.title);
   const rankOf = (a: { importance?: string }) => IMPORTANCE_RANK[a.importance ?? ''] ?? 0;
   const weekly = w.program === 'weekly';
   const fresh = (c: BriefingCandidate) => weekly || !briefed.has(c.url, c.title);
@@ -370,7 +382,7 @@ export async function pickByTiers(w: BroadcastWindow): Promise<{ picked: Briefin
     .map(a => (STOCK_TICKER.test(a.title) || !isKorean(a.title) ? byCompany(a.matchedKeyword) : a))
     .filter((a): a is NonNullable<typeof a> => !!a)
     .map(a => fromArticle(a, idByLink))
-    .filter(a => !briefedCompanies.has(a.company) && fresh(a))
+    .filter(a => !briefedCompanies.has(a.company) && fresh(a) && notExit(a))
     .sort((x, y) => rankOf(y) - rankOf(x))
     .slice(0, 8);
 
@@ -397,7 +409,7 @@ export async function pickByTiers(w: BroadcastWindow): Promise<{ picked: Briefin
     .sort((x, y) => rankOf(y) - rankOf(x) || y.priorityScore - x.priorityScore)
     .filter(a => (seenOverseas.has(a.matchedKeyword) ? false : (seenOverseas.add(a.matchedKeyword), true)))
     .map(a => ({ ...fromArticle(a as unknown as AnalyzedArticle & { id: string }, idByLink), title: a.titleKo || a.title }))
-    .filter(a => !briefedCompanies.has(a.company) && fresh(a))
+    .filter(a => !briefedCompanies.has(a.company) && fresh(a) && notExit(a))
     .slice(0, 8);
 
   // 국내 AI — 72시간 후보 중 AI 주제의 국내 기사(업계·경쟁사), 같은 사건 묶고 중요도 순.
@@ -432,7 +444,8 @@ export async function pickByTiers(w: BroadcastWindow): Promise<{ picked: Briefin
   const GA = [...G, ...DA];
   const pools: Record<Group, BriefingCandidate[]> = { S, P, D, G: GA, T };
   const counts = { S: S.length, P: P.length, D: D.length, G: GA.length, T: T.length };
-  const q = quotas(counts);
+  const total = BRIEFING_COUNT[w.program];
+  const q = quotas(counts, total);
   const aiEither = false; // 국내·글로벌 AI "둘 중 하나" 칸은 없어졌다(10-06부터 한 그룹)
 
   let chosen: Record<Group, BriefingCandidate[]> | null = null;
@@ -470,7 +483,7 @@ export async function pickByTiers(w: BroadcastWindow): Promise<{ picked: Briefin
   // 빈칸이 남으면(해외 포폴을 AI가 덜 골랐을 때 등) 국내 포폴 → AI 트렌드 → 스타트업계 순으로 채운다.
   for (const g of ['P', 'G', 'T'] as Group[]) {
     for (const c of [...(chosen?.[g] ?? []), ...pools[g]]) {
-      if (picked.length >= BRIEFING_MAX) break;
+      if (picked.length >= total) break;
       take(g, c);
     }
   }

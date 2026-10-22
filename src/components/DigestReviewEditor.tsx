@@ -6,7 +6,8 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import type { BriefingHeadline } from '@/lib/sparkscope/briefing';
 import type { BriefingCandidate, BriefingRecommendation } from '@/lib/sparkscope/briefing-reco';
 
-const BRIEFING_MAX = 5;
+const BRIEFING_MAX_DAILY = 10; // briefing.ts BRIEFING_COUNT와 같은 값(서버 전용 모듈이라 복사)
+const BRIEFING_MAX_WEEKLY = 8;
 
 interface Cand {
   id: string;
@@ -84,6 +85,7 @@ export function DigestReviewEditor({
   const [reco, setReco] = useState<BriefingRecommendation | null>(initialReco);
   const [suggested, setSuggested] = useState<BriefingHeadline[]>(suggestedBriefing);
   // 추천 기사 url → 몇 단계(1 스파크랩 · 2 포트폴리오 HIGH · 3 AI 트렌드 · 4 해외 트렌드)에서 뽑혔나
+  const BRIEFING_MAX = reco?.program === 'weekly' ? BRIEFING_MAX_WEEKLY : BRIEFING_MAX_DAILY;
   const recoTier = useMemo(() => new Map((reco?.headlines ?? []).map((h, i) => [h.url, reco?.tiers?.[i] ?? 0])), [reco]);
   const [recoBusy, setRecoBusy] = useState(false);
   const [briefing, setBriefing] = useState<BriefingHeadline[]>(savedBriefing.length > 0 ? savedBriefing : suggestedBriefing);

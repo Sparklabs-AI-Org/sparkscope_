@@ -19,6 +19,10 @@ export interface ScriptSegment {
   text: string;
   /** item일 때 스냅샷 헤드라인 순번(0부터) */
   index?: number;
+  /** item일 때 화면용 브리핑 헤드라인·글용 한 줄 요약(데일리만 — frame.withHeadline) */
+  headline?: string;
+  brief?: string;
+  points?: { label: string; text: string }[];
 }
 
 const WEEKDAY = ['일', '월', '화', '수', '목', '금', '토'];
@@ -28,6 +32,12 @@ export function spokenDate(dateKey: string): string {
   const [y, m, d] = dateKey.split('-').map(Number);
   const wd = WEEKDAY[new Date(Date.UTC(y, m - 1, d)).getUTCDay()];
   return `${m}월 ${d}일 ${wd}요일`;
+}
+
+/** "2026-10-22" → "2026년 10월 22일" */
+export function longDate(dateKey: string): string {
+  const [y, m, d] = dateKey.split('-').map(Number);
+  return `${y}년 ${m}월 ${d}일`;
 }
 
 /**
@@ -96,7 +106,9 @@ JSON으로만 답하세요: {"items":[{"index":0,"text":"..."}]}`;
 // 해외 트렌드 카드의 "연결된 포트폴리오사"(내부 매칭)는 넘기지 않는다 — 영상·페이지는 로그인 없이 열리는데,
 // 초안에서 "포트폴리오사 센스톤, 옥타코 등…"처럼 내부 매칭이 대본에 그대로 나왔다(2026-10-07, CLAUDE.md 공개 규칙).
 function describe(h: BriefingHeadline, i: number, body: string): string {
-  return `[${h.label}] 제목: ${h.title} / 요약: ${h.summary} / 출처: ${h.source}${body ? `\n   본문 발췌: ${body}` : ''}`;
+  // 해외 트렌드(inter) 카드의 summary는 "AI버티컬 × 연구성과" 같은 분류 라벨이다 — 요약으로 주면 회사 이름으로 읽는다(2026-10-22).
+  const sum = h.kind === 'inter' ? `(분류 라벨, 사실 아님·회사 이름 아님) ${h.summary}` : h.summary;
+  return `[${h.label}] 제목: ${h.title} / 요약: ${sum} / 출처: ${h.source}${body ? `\n   본문 발췌: ${body}` : ''}`;
 }
 
 /**
@@ -136,25 +148,91 @@ async function rewriteCliches(byIndex: Map<number, string>, heads: BriefingHeadl
  * 제목 앞쪽 낱말만 보면 "부산영화제·무대서·소개된"처럼 일반 낱말뿐인 제목에서 정상 본문까지 버린다
  * (2026-10-13 비마이프렌즈 — 원문이 맞는데 제목만 읽는 대본이 됐다). 그래서 제목 전체 낱말을 본다.
  */
-export function aboutHeadline(text: string, h: BriefingHeadline): boolean {
+export function aboutHeadline(text: string, h: BriefingHeadline, window = 150): boolean {
   const words = h.title.replace(/\[[^\]]*\]/g, ' ').replace(/[^0-9a-zA-Z가-힣\s]/g, ' ').split(/\s+/)
     .filter(w => (/[가-힣]/.test(w) ? w.length >= 2 : w.length >= 3));
   if (words.length === 0) return true;
   const stem = (w: string) => w.replace(/(은|는|이|가|을|를|의|에|와|과|로|도)$/, '');
   // 낱말 하나만 맞으면 통과하던 것을 고쳤다(2026-10-20: "성과·고객" 같은 일반 낱말 하나 때문에
   // 엔비디아 내용을 쓴 대본이 스파크클로 기사 칸에 통과했다). 고유 낱말이 둘 이상 맞아야 한다.
-  const head = text.slice(0, 150).toLowerCase();
+  const head = text.slice(0, window).toLowerCase();
   const hits = words.filter(w => head.includes(stem(w).toLowerCase())).length;
   return hits >= Math.min(2, words.length);
 }
 
 /** 인사·마무리 문구 — 데일리가 기본, 뉴스데스크(newsdesk.ts)는 자기 문구를 넘긴다. */
 export interface ScriptFrame {
-  intro: string;
-  outro: string;
+  intro?: string;
+  outro?: string;
+  /** true면 기사마다 화면용 헤드라인(30자 안팎)과 글용 한 줄 요약도 함께 쓴다(데일리) */
+  withHeadline?: boolean;
   /** 기사별 길이 지시를 바꿀 때(위클리 — 8개 전체 3분 30초~4분, 최대 5분, 2026-10-08 소윤) */
   length?: string;
 }
+
+const HEADLINE_ASK = `
+[추가로 쓸 것] 더벨 데일리 브리핑 형식으로 정리합니다. JSON을 {"items":[{"index":0,"text":"대본","headline":"...","lead":"...","points":[{"label":"...","text":"..."}]}]} 형태로 답하세요.
+ - headline: 기사 제목처럼 쉼표로 끊는 짧은 헤드라인, 20~32자(예: "롯데손보, 신한EZ손보 합병 전망, 규모의 경제로", "넥센서, 300억 프리IPO 착수"). 핵심 숫자가 있으면 넣고, 따옴표·마침표는 쓰지 않습니다. 기사에 없는 사실은 쓰지 않습니다.
+ - lead: 기사 핵심을 담은 한 문장 요약(60~100자). "~했다", "~이다"로 끝나는 평서문, 주체·사건·핵심 숫자를 담습니다.
+ - points: 사실 2~3개. label은 "투자 규모", "추진 배경", "향후 일정"처럼 4~10자 명사구, text는 한 문장(40~90자) 사실로 숫자·일정·상대방을 구체적으로 씁니다. 원문에 있는 것만, 해석·전망은 쓰지 않습니다.`;
+
+/** 헤드라인 정리 — 따옴표·마침표 제거, 너무 짧거나 길면 버린다(화면은 원문 제목으로 대신한다). */
+function cleanLine(t: string | undefined, min: number, max: number): string | undefined {
+  const v = (t ?? '').replace(/^["'“”‘’\s]+|["'“”‘’.\s]+$/g, '').replace(/\s+/g, ' ');
+  return v.length >= min && v.length <= max ? v : undefined;
+}
+
+/** 합니다체 → 평서형(~했다). 더벨 데일리 브리핑의 글 형식에 맞춘다 — 헤드라인 아래 리드·사실 문장용. */
+export function toPlainStyle(text: string): string {
+  return text
+    .replace(/아닙니다/g, '아니다')
+    .replace(/입니다/g, '이다')
+    .replace(/습니다/g, '다')
+    .replace(/([가-힣])니다/g, (m, ch: string) => {
+      const code = ch.charCodeAt(0) - 0xac00;
+      return code % 28 === 17 ? `${String.fromCharCode(0xac00 + code - 17 + 4)}다` : m; // 합→한, 됩→된
+    });
+}
+
+/**
+ * 원문 대조 — 대본·헤드라인·리드·사실 문장에 원문(제목·요약·본문 발췌)에 없는 이름·숫자·날짜·사실이 있으면 찾아낸다.
+ * 2026-10-22 사고: "영국·미국 연구진" 기사 헤드라인에 없는 회사("AI버티컬")가 들어갔다. 실패하면 검수를 건너뛴다(발행을 막지 않는다).
+ */
+async function findUngrounded(h: BriefingHeadline, body: string, narration: string, extra?: { headline?: string; brief?: string; points?: { label: string; text: string }[] }): Promise<string[]> {
+  try {
+    const written = [narration, extra?.headline, extra?.brief, ...(extra?.points ?? []).map(p => `${p.label}: ${p.text}`)].filter(Boolean).join('\n');
+    const resp = await openai.chat.completions.create({
+      model: MODEL,
+      temperature: 0,
+      response_format: { type: 'json_object' },
+      messages: [
+        { role: 'system', content: '원문 대조 검수자입니다. [작성물]에 [원문]에 없는 이름(회사·기관·인물·제품)이나 숫자·날짜·사실이 있으면 모두 찾아내세요. [원문]의 제목·요약·출처·본문 발췌에 나오는 모든 표현은 원문에 있는 것입니다(출처 매체 이름 포함). 표현을 바꿔 쓴 것, 원문에서 직접 알 수 있는 것도 허용합니다. 확실히 근거가 없는 고유명사·숫자·날짜만 지적하고, 의심만 되면 지적하지 마세요. 다만 "분류 라벨"로 표시된 말은 사실이 아니므로 그것을 회사나 기관 이름처럼 쓴 것은 지적하세요. JSON으로만: {"bad":["문제 표현", ...]} — 문제가 없으면 빈 배열.' },
+        { role: 'user', content: `[원문]\n제목: ${h.title}\n요약: ${h.kind === 'inter' ? `(분류 라벨, 사실 아님·회사 이름 아님) ${h.summary}` : h.summary}\n출처: ${h.source}\n${body ? `본문 발췌: ${body}` : ''}\n\n[작성물]\n${written}` },
+      ],
+    });
+    const bad = (JSON.parse(resp.choices[0]?.message?.content ?? '{}').bad ?? []) as unknown[];
+    // 원문에 글자 그대로 있는 표현은 검수 모델이 잘못 지적한 것이다(2026-10-22: 제목에 있는 "Flutterwave"를 지적).
+    const norm = (t: string) => t.toLowerCase().replace(/[^0-9a-z가-힣]/g, '');
+    const src = norm(`${h.title} ${h.summary} ${h.source} ${body}`);
+    return bad.map(String).filter(b => b && !src.includes(norm(b))).slice(0, 6);
+  } catch (e) {
+    console.warn('[script] 원문 대조 실패(건너뜀):', e);
+    return [];
+  }
+}
+
+/**
+ * 데일리 길이·문체 지시 — 기사 12건을 5분 안에 담으려고 기사당 약 20초로 줄인다(2026-10-21 설문·대표님 피드백).
+ * 더벨 데일리 브리핑 최근 10건 분석: 누가·무엇을·얼마를 먼저 말하고, 맥락은 한 구절, 상투적 전망 문장 없음.
+ */
+/** 데일리 대본이 이보다 짧으면(본문 재료가 있을 때) 한 번 더 길게 쓴다 */
+const MIN_DAILY_CHARS = 120;
+
+export const DAILY_LENGTH = `위의 구성·길이·해석 지시는 모두 무시하고, 더벨 데일리 브리핑처럼 씁니다. 기사마다 약 140~155자(130자보다 짧거나 170자보다 길게 쓰지 않습니다), 2~3문장(읽는 데 약 18~20초). 영상 전체 3분 10~20초 기준(2026-10-22). 재료가 있으면 기사에 나온 일정·규모·상대방을 더 담아 길이를 채우되, 없는 사실을 지어내지는 않습니다.
+ ① 첫 문장: 누가·무엇을·얼마(금액·지분·규모 같은 숫자)를 말하는 핵심 사실.
+ ② 나머지 문장: 기사에 나온 목적·배경·일정·조건을 덧붙입니다. 기사가 밝힌 목적이나 업계 관측("~를 위한 방안으로 관측됩니다", "~하려는 구상입니다")은 써도 됩니다.
+ 우리 쪽 해석은 쓰지 않습니다 — "포트폴리오사 입장에선", "의미가 있다", "시사한다", "지켜볼 변수" 같은 문장은 넣지 마세요.
+ 예시: 롯데손해보험과 신한EZ손해보험의 합병은 신한금융의 손해보험 부문 규모를 키우기 위한 방안으로 관측됩니다. 양사는 중복 비용을 줄이고 판매 채널과 디지털 역량을 공유해 수익성과 자본 건전성을 높이려는 구상입니다.`;
 
 export async function writeBriefingScript(snapshot: BriefingSnapshot, frame?: ScriptFrame): Promise<ScriptSegment[]> {
   const heads = snapshot.headlines;
@@ -162,7 +240,8 @@ export async function writeBriefingScript(snapshot: BriefingSnapshot, frame?: Sc
   // 본문이 제목과 다른 기사이면(원문 주소가 엉뚱한 페이지로 풀린 경우) 버리고 제목·요약만 쓴다.
   const bodies = await Promise.all(heads.map(async h => {
     const b = await articleExcerpt(h.url, h.title);
-    if (b && !aboutHeadline(b, h)) {
+    // 본문은 앞에 기자명·날짜·사진 설명이 붙는 일이 많아 150자 안에서만 보면 맞는 본문도 버린다 — 앞 600자에서 본다.
+    if (b && !aboutHeadline(b, h, 600)) {
       console.warn(`[script] 원문이 제목과 다름 — 본문 버림: ${h.title.slice(0, 30)}`);
       return '';
     }
@@ -171,33 +250,67 @@ export async function writeBriefingScript(snapshot: BriefingSnapshot, frame?: Sc
   // 기사 하나씩 따로 쓴다 — 한 번에 8개를 쓰게 했더니 순번이 밀려 4번 화면에 8번 기사 대본이 붙었다(2026-10-07 초안).
   // 다른 기사 목록은 주지 않는다 — 번호 붙은 목록을 같이 줬더니 "4. 원소프트다임…"처럼 엉뚱한 기사를 썼다(10-08 방송 사고).
   // 쓴 대본에 그 기사의 핵심 낱말이 없으면 한 번 더 쓰고, 그래도 아니면 제목·요약으로 대신한다.
-  const writeOne = async (h: BriefingHeadline, i: number): Promise<string> => {
+  const extras = new Map<number, { headline?: string; brief?: string; points?: { label: string; text: string }[] }>();
+  const writeOne = async (h: BriefingHeadline, i: number, feedback = ''): Promise<string> => {
     const resp = await openai.chat.completions.create({
       model: MODEL,
       temperature: 0.3,
       response_format: { type: 'json_object' },
       messages: [
         { role: 'system', content: SYSTEM },
-        { role: 'user', content: `이 기사 하나만 씁니다. 다른 기사 내용을 섞지 마세요.${frame?.length ? `\n[길이] ${frame.length}` : ''}\n${describe(h, i, bodies[i])}` },
+        { role: 'user', content: `이 기사 하나만 씁니다. 다른 기사 내용을 섞지 마세요.${frame?.length ? `\n[길이] ${frame.length}` : ''}${frame?.withHeadline ? HEADLINE_ASK : ''}${feedback}\n${describe(h, i, bodies[i])}` },
       ],
     });
-    const parsed = JSON.parse(resp.choices[0]?.message?.content ?? '{}') as { items?: { text: string }[]; text?: string };
-    return (parsed.items?.[0]?.text ?? parsed.text ?? '').trim().replace(/^\s*\d+\s*[.)]\s*/, '');
+    type Item = { text: string; headline?: string; lead?: string; brief?: string; points?: { label?: string; text?: string }[] };
+    const parsed = JSON.parse(resp.choices[0]?.message?.content ?? '{}') as Item & { items?: Item[] };
+    const first = parsed.items?.[0] ?? parsed;
+    const points = (first.points ?? [])
+      .map(pt => ({ label: cleanLine(pt.label, 2, 14) ?? '', text: toPlainStyle(cleanLine(pt.text, 10, 130) ?? '') }))
+      .filter(pt => pt.label && pt.text)
+      .slice(0, 3);
+    extras.set(i, {
+      headline: cleanLine(first.headline, 6, 48),
+      brief: toPlainStyle(cleanLine(first.lead ?? first.brief, 15, 140) ?? '') || undefined,
+      points: points.length >= 1 ? points : undefined,
+    });
+    return (first.text ?? '').trim().replace(/^\s*\d+\s*[.)]\s*/, '');
   };
   const texts = await Promise.all(heads.map(async (h, i) => {
+    let feedback = '';
+    let shortButGood: { text: string; extra?: ReturnType<typeof extras.get> } | null = null;
     for (let attempt = 0; attempt < 2; attempt++) {
       try {
-        const t = await writeOne(h, i);
-        if (t && aboutHeadline(t, h)) return t;
+        const t = await writeOne(h, i, feedback);
+        if (t && aboutHeadline(t, h)) {
+          if (!frame?.withHeadline) return t;
+          // 데일리는 헤드라인·리드·사실까지 원문과 대조한다 — 없는 이름·숫자가 있으면 한 번 더 쓴다.
+          const bad = await findUngrounded(h, bodies[i], t, extras.get(i));
+          // 너무 짧으면(본문 재료가 있을 때만) 한 번 더 길게 쓴다 — 글자 수 지시를 자주 어겨 영상이 목표보다 짧아졌다(2026-10-22).
+          if (bad.length === 0 && attempt === 0 && t.length < MIN_DAILY_CHARS && bodies[i]) {
+            console.warn(`[script] ${i}번 대본이 ${t.length}자로 짧음 — 본문 재료를 더 담아 다시 씀`);
+            shortButGood = { text: t, extra: extras.get(i) };
+            feedback = `\n[수정 요청] 직전 대본이 ${t.length}자로 너무 짧았습니다. 본문 발췌에 있는 일정·규모·상대방·목적을 더 담아 140~155자로 다시 쓰세요. 없는 사실은 쓰지 마세요.`;
+            continue;
+          }
+          if (bad.length === 0) return t;
+          console.warn(`[script] ${i}번 원문에 없는 표현 — 다시 씀(${attempt + 1}/2): ${bad.join(' / ').slice(0, 120)}`);
+          feedback = `\n[수정 요청] 직전 작성물에 원문에 없는 표현이 있었습니다: ${bad.join(', ')}. 이런 이름·숫자·사실은 쓰지 말고, 이름을 모르면 원문 표현(예: "연구진")을 그대로 쓰세요.`;
+          continue;
+        }
         console.warn(`[script] ${i}번 대본이 제목과 안 맞음 — 다시 씀(${attempt + 1}/2)`);
       } catch (e) {
         console.warn(`[script] ${i}번 대본 실패:`, e);
       }
     }
+    if (shortButGood) { // 길게 다시 쓴 것이 실패하면 처음의 짧지만 정상인 대본을 쓴다
+      if (shortButGood.extra) extras.set(i, shortButGood.extra);
+      return shortButGood.text;
+    }
+    extras.delete(i); // 끝내 못 맞춘 칸은 헤드라인·요약을 쓰지 않고 원문 제목·요약으로 대신한다
     return '';
   }));
   const byIndex = new Map(texts.map((t, i) => [i, t] as [number, string]).filter(([, t]) => t));
-  await rewriteCliches(byIndex, heads);
+  if (!frame?.withHeadline) await rewriteCliches(byIndex, heads); // 데일리는 해석 없이 사실만 — 상투구를 "누구에게" 해석으로 고쳐 쓰지 않는다
 
   const segments: ScriptSegment[] = [{
     kind: 'intro',
@@ -214,7 +327,7 @@ export async function writeBriefingScript(snapshot: BriefingSnapshot, frame?: Sc
     const sec = sectionOf(h);
     const lead = sec === prev ? '' : prev === 'S' && sec === 'P' ? '이어서 포트폴리오 소식입니다.' : SECTION_LEAD[sec][prev ? 1 : 0];
     prev = sec;
-    segments.push({ kind: 'item', index: i, text: lead ? `${lead} ${body}` : body });
+    segments.push({ kind: 'item', index: i, text: lead ? `${lead} ${body}` : body, ...(frame?.withHeadline ? extras.get(i) : {}) });
   });
   segments.push({
     kind: 'outro',
