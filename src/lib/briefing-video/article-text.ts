@@ -4,6 +4,7 @@
  * 1,500자 정도 읽어 온다. 실패하면 빈 문자열 — 그때는 제목·요약만으로 쓴다(대본이 사실을 지어내지 않게).
  */
 import { resolveGoogleNewsUrl } from '../sparkscope/google-news-resolver';
+import { prisma } from '@/lib/prisma';
 
 const ENT = { nbsp: ' ', quot: '"', apos: "'", amp: '&', lt: '<', gt: '>', lsquo: '‘', rsquo: '’', ldquo: '“', rdquo: '”', middot: '·', hellip: '…', ndash: '–', mdash: '—' };
 const strip = (s: string) => s
@@ -97,6 +98,11 @@ async function otherCoverage(title: string, max: number): Promise<string> {
  * 2026-10-07 소윤: "스카이랩스처럼 각 뉴스가 이 정도로 길어야" — 재료가 없으면 대본이 한 줄로 끝나서 넓혀 찾는다.
  */
 export async function articleExcerpt(url: string, title = '', max = 1800): Promise<string> {
+  // 수집 때 저장해 둔 본문(Article.bodyText)을 먼저 쓴다 — 원문 페이지를 다시 읽으면 구글 뉴스 경유·구독벽·자바스크립트
+  // 페이지에서 대부분 실패해, 10건 중 3건만 본문이 잡혀 대본이 짧고 빈약했다(2026-10-22 측정).
+  const stored = await prisma.article.findFirst({ where: { link: url, bodyText: { not: null } }, select: { bodyText: true } })
+    .then(r => r?.bodyText?.trim() ?? '').catch(() => '');
+  if (stored.length >= 150 && (!title || matchesTitle(stored, title))) return stored.slice(0, max);
   let real = url;
   if (url.includes('news.google.com')) real = (await resolveGoogleNewsUrl(url).catch(() => null)) ?? '';
   const direct = real && !WALLED.test(real) ? await readPage(real, max, title) : '';

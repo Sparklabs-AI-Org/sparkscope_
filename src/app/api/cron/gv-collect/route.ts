@@ -24,6 +24,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { collectGvArticles, GV_SELF_NAME, GV_CATEGORY } from '@/lib/sparkscope/gv-collect';
 import { analyzeArticles } from '@/lib/sparkscope/analyzer';
+import { fillMissingBodies } from '@/lib/sparkscope/collector';
 import { ensureArticleKo, ensureArticleEn } from '@/lib/sparkscope/translate-content';
 import { prisma } from '@/lib/prisma';
 
@@ -54,6 +55,9 @@ export async function GET(request: NextRequest) {
       where: { OR: [{ category: GV_CATEGORY }, { name: GV_SELF_NAME }] },
       select: { name: true },
     });
+    // 본문을 읽어 둔다 — 분석 재료이자 영상 대본 재료(Article.bodyText). 예전엔 해외 수집은 본문을 저장하지 않았다(2026-10-22).
+    const filledBodies = await fillMissingBodies(raw);
+    console.log(`[cron:gv-collect] 본문 채움 ${filledBodies}/${raw.length}건`);
     const analyzed = await analyzeArticles(raw, universe.map(u => u.name), []);
 
     let saved = 0;
@@ -81,10 +85,12 @@ export async function GET(request: NextRequest) {
             relatedCompanies: a.relatedCompanies?.length ? JSON.stringify(a.relatedCompanies) : null,
             riskFlag: a.riskFlag ?? null,
             // analyzedAt이 없으면 백필 스크립트가 매번 같은 행을 다시 집어온다.
+            bodyText: a.body ? a.body.slice(0, 3000) : null,
             analyzedAt: new Date(),
           },
           // 이미 있는 기사는 건드리지 않는다 — 사람이 스크랩·노이즈 표시한 걸 덮어쓰면 안 된다.
-          update: {},
+          // 본문만은 채운다(비어 있던 기존 행 보충) — 다른 칸은 그대로.
+          update: a.body ? { bodyText: a.body.slice(0, 3000) } : {},
         });
         saved++;
       } catch (e) {

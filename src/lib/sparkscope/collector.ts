@@ -300,7 +300,30 @@ export async function collectAllArticles(opts: CollectOptions = {}): Promise<Raw
   // 링크가 원문 주소로 풀린 뒤에 잘린 제목("…서울 DDP...")을 원문 og:title로 되살린다(title-restore.ts).
   const restored = await restoreTruncatedTitles(filtered);
   console.log(`[collector] 잘린 제목 되살림 ${restored}건`);
+  const filled = await fillMissingBodies(filtered);
+  console.log(`[collector] 본문 채움 ${filled}건 (본문 없는 기사 ${filtered.filter(a => !a.body).length}건 남음)`);
   return filtered;
+}
+
+/** 한 번의 수집에서 본문을 새로 읽을 최대 건수 — 평소 하루 저장량(약 500건)보다 넉넉하게. */
+const MAX_BODY_FILL = 900;
+
+/**
+ * 저장될 기사 중 본문이 없는 것을 채운다. 위 대상별 단계는 제외어·문맥어가 있는 대상과 경쟁사만 본문을 읽어서
+ * 저장 기사의 70%가 본문 없이 들어갔다(2026-10-22 측정: 10/20 이후 1,416건 중 424건만 본문 — 포트폴리오 11%,
+ * 스타트업계 4%). 본문은 영상 대본·분석의 재료라 저장되는 기사는 전부 읽는다.
+ * 걸러내고 링크를 원문으로 푼 뒤에만 도는 이유는 비용 — 버려질 기사까지 읽으면 수집이 크게 늘어난다.
+ */
+export async function fillMissingBodies(items: RawArticle[]): Promise<number> {
+  const missing = items.filter(a => !a.body).slice(0, MAX_BODY_FILL);
+  if (missing.length === 0) return 0;
+  const bodies = await scrapeBodiesFor(missing);
+  let n = 0;
+  for (const a of missing) {
+    const text = bodies.get(a.link)?.text;
+    if (text) { a.body = text; n++; }
+  }
+  return n;
 }
 
 /**

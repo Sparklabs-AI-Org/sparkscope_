@@ -363,7 +363,8 @@ export async function runDailyDigest(opts: RunOptions = {}) {
               oneLiner: a.oneLiner,
               ourTake: a.ourTake,
               relatedCompanies: JSON.stringify(a.relatedCompanies),
-              bodyText: a.body ? a.body.slice(0, 3000) : null,
+              // 이번에 본문을 못 읽었으면 저장된 본문을 지우지 않는다(예전엔 null로 덮어썼다).
+              ...(a.body ? { bodyText: a.body.slice(0, 3000) } : {}),
               pitchScore: a.pitchScore,
               pitchTopic: a.pitchTopic,
               riskFlag: a.riskFlag,
