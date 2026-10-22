@@ -328,8 +328,15 @@ export function filterReason(a: RelevanceInput): FilterReason | null {
   // (2026-10 설문: "일반 증권시장이나 해외 플랫폼 관련 뉴스가 섞여 있다").
   if (a.category === 'competitor' && isCompetitorNoise(title, a.primaryKeyword)) return 'irrelevant';
 
+  // 포트폴리오사 이름이 코인 이름과 같으면 코인 시세 기사 본문 목록에 걸린다(2026-10 플루언트·아스타 — "[코인 갱신 일지]").
+  // 제목에 회사명이 있으면 진짜 그 회사 기사이므로 둔다(암호화폐 업종 포트폴리오사 보호).
+  if (a.category?.startsWith('portfolio') && CRYPTO_MARKET_NOISE.test(title) && !keys.some(k => matchesAsToken(title, k))) return 'irrelevant';
+
   return null;
 }
+
+// 코인·가상자산 시세 기사 제목 (부분일치)
+const CRYPTO_MARKET_NOISE = /코인|가상자산|암호화폐|비트코인|이더리움|알트코인|신고점|신저점|업비트|빗썸|바이낸스|김치 ?프리미엄|시세/;
 
 // AC·VC 섹션에서 빼는 증시·주가 시황 용어 (제목 기준, 부분일치)
 const COMPETITOR_MARKET_NOISE = /증시|코스피|코스닥|나스닥|다우|뉴욕증시|특징주|목표가|투자의견|최선호주|시황|환율|자사주|주가|어닝쇼크|반도체주/;
