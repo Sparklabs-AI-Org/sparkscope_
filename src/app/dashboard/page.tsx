@@ -5,6 +5,8 @@ import { ensureArticleEnDeep, ensureArticleKoDeep } from '@/lib/sparkscope/trans
 import { articleTitle } from '@/lib/sparkscope/article-title';
 import { prisma } from '@/lib/prisma';
 import { ArticleListView } from '@/components/ArticleListView';
+import { FamilyNews } from '@/components/FamilyNews';
+import { SHOW_SUBSCRIPTION_UI } from '@/lib/sparkscope/digest';
 import { PortfolioFilter } from '@/components/PortfolioFilter';
 import { ToneBreakdown } from '@/components/ToneBreakdown';
 import { CrisisPanel } from '@/components/CrisisPanel';
@@ -928,13 +930,9 @@ export default async function DashboardPage({ searchParams }: { searchParams: { 
   const portfolioView = !isStaffAccount;
   // 공개 화면은 기사 목록만 읽으면 된다(포트폴리오 분석 쿼리를 돌리지 않는다).
   if (portfolioView) tab = DB_TAB;
-  const [data, ...publicSelf] = await Promise.all([
-    loadDashboardData(range.from, range.to, company, range.isDefaultRange, categoryOfRegion(region), region, tab, portfolioView),
-    // 공개 화면의 스파크랩 직접 언급 — 지사 세 곳을 한 화면에 나란히 그린다.
-    ...(portfolioView
-      ? REGIONS.map(r => loadDashboardData(range.from, range.to, undefined, range.isDefaultRange, r.category as PortfolioCategory, r.id, 'sparklabs', true))
-      : []),
-  ]);
+  const data = await loadDashboardData(range.from, range.to, company, range.isDefaultRange, categoryOfRegion(region), region, tab, portfolioView);
+  // 공개 화면 '어제 놓친 소식' — 어제(KST 0시~24시) 기사만. 기간 선택과 무관하다.
+  const [missedFamily, missedInter] = portfolioView && scope !== 'inter' ? await loadMissedNews() : [[], []];
   // 관리 화면 링크는 canManageContent(위)로 — 들어갈 수 없는 사람에게 보이면
   // "보이는데 안 되는" 상태가 되고, 그게 아예 안 보이는 것보다 나쁘다.
   const canBookmark = !!userId && isStaffAccount;
@@ -950,7 +948,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: { 
   // ensureArticleKo가 원문이 한국어인 기사를 걸러내므로, 국내만 보는 화면에서는 호출이 0건이다.
   const translatableGroups = () => [
     articlesWithBookmark,
-    ...publicSelf.map(d => d.toneArticles),
+    missedFamily,
     companyArticlesWithBookmark,
     data.pitches,
     data.toneArticles,
@@ -1057,7 +1055,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: { 
             );
           })}
         </div>
-        <p className="mt-2 text-[11.5px] text-spark-muted">{tr(activeScope.desc)}</p>
+        {!portfolioView && <p className="mt-2 text-[11.5px] text-spark-muted">{tr(activeScope.desc)}</p>}
       </div>
 
       {/* 헤더(오늘 날짜 · 제목 · 스크랩함) — Intra/Inter 두 스코프에서 동일하게 보인다.
@@ -1068,17 +1066,18 @@ export default async function DashboardPage({ searchParams }: { searchParams: { 
             {scope === 'inter' ? 'Global Trend Intelligence' : 'Daily Media Intelligence'}
           </div>
           <h1 className="text-2xl sm:text-[28px] font-extrabold tracking-tight text-spark-ink leading-none">{todayLabel}</h1>
-          <p className="text-[13px] text-spark-muted mt-2">
+          {!portfolioView && <p className="text-[13px] text-spark-muted mt-2">
             {scope === 'inter' ? tr('{range} 해외 매체·논문 데이터 기준', { range: range.label }) : tr('{range} 데이터 기준', { range: range.label })}
             {data.lastCollectTime && (
               <span> · {tr('{time} 기준 수집', { time: data.lastCollectTime.toLocaleTimeString(intlLocale, { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'Asia/Seoul' }) })}</span>
             )}
-          </p>
+          </p>}
         </div>
         <div data-tour="header-actions" className="flex items-center gap-2">
           {canScrap && !portfolioView && <Link href="/dashboard/scraps" className="rounded-lg border border-spark-border bg-white px-3 py-1.5 text-sm font-semibold text-spark-ink-soft hover:border-spark-purple/40 hover:text-spark-purple transition-colors whitespace-nowrap">⭐ {tr('스크랩함')}</Link>}
           {canBookmark && <Link href="/dashboard/bookmarks" className="rounded-lg border border-spark-border bg-white px-3 py-1.5 text-sm font-semibold text-spark-ink-soft hover:border-spark-purple/40 hover:text-spark-purple transition-colors whitespace-nowrap">🔖 {tr('내 북마크')}</Link>}
-          <Link href="/dashboard/subscriptions" className="rounded-lg border border-spark-border bg-white px-3 py-1.5 text-sm font-semibold text-spark-ink-soft hover:border-spark-purple/40 hover:text-spark-purple transition-colors whitespace-nowrap">✉️ {tr('구독 설정')}</Link>
+          {/* 구독 설정은 지금 숨김(digest.ts SHOW_SUBSCRIPTION_UI) — 다시 띄울 때 그 스위치만 켜면 된다. */}
+          {!portfolioView && SHOW_SUBSCRIPTION_UI && <Link href="/dashboard/subscriptions" className="rounded-lg border border-spark-border bg-white px-3 py-1.5 text-sm font-semibold text-spark-ink-soft hover:border-spark-purple/40 hover:text-spark-purple transition-colors whitespace-nowrap">✉️ {tr('구독 설정')}</Link>}
           {canManageContent && !portfolioView && <Link href="/digest/review" className="rounded-lg border border-spark-border bg-white px-3 py-1.5 text-sm font-semibold text-spark-ink-soft hover:border-spark-purple/40 hover:text-spark-purple transition-colors whitespace-nowrap">📤 {tr('다이제스트 검수')}</Link>}
           {canManageContent && !portfolioView && <Link href="/dashboard/keywords" className="rounded-lg border border-spark-border bg-white px-3 py-1.5 text-sm font-semibold text-spark-ink-soft hover:border-spark-purple/40 hover:text-spark-purple transition-colors whitespace-nowrap">⚙️ {tr('키워드 관리')}</Link>}
           {canManageContent && !portfolioView && <Link href="/dashboard/briefing-stats" className="rounded-lg border border-spark-border bg-white px-3 py-1.5 text-sm font-semibold text-spark-ink-soft hover:border-spark-purple/40 hover:text-spark-purple transition-colors whitespace-nowrap">👀 {tr('SparkScope 본부별 참여 현황')}</Link>}
@@ -1091,7 +1090,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: { 
         // '확인'을 눌러야 조회되는 흐름이라 두 컨트롤이 한 카드에 있어야 한다.
         <InterPanel from={range.from} to={range.to} min={MIN_DATE} max={fmt(getKstNow())} canScrap={canScrap && !portfolioView} portfolioView={portfolioView} />
       ) : portfolioView ? (
-      // ── 공개 화면 Intra ── 탭 없이 한 장: 스파크랩 직접 언급(지사 세 곳) → 수집 기사 DB
+      // ── 공개 화면 Intra ── 탭 없이 한 장: 어제 놓친 소식(패밀리 뉴스 · AI 트렌드) → SparkLabs Family News
       <>
         <div data-tour="date-range" className="mb-6">
           <DateRangePicker
@@ -1101,41 +1100,27 @@ export default async function DashboardPage({ searchParams }: { searchParams: { 
           />
         </div>
 
-        <SectionTitle title={`🏢 ${tr('스파크랩 직접 언급')}`} sub={tr('스파크랩이 어디에, 어떤 논조로 보도되는가')} />
-        <div className="flex flex-col gap-6 mb-8">
-          {REGIONS.map((r, i) => {
-            const d = publicSelf[i];
-            // 대만·글로벌벤처스는 그 기간 기사가 없으면 통째로 뺀다(빈 카드만 남으므로). 한국은 항상 그린다.
-            if (r.id !== 'kr' && d.toneArticles.length === 0) return null;
-            return (
-              <section key={r.id}>
-                <div className="mb-3 text-[15px] font-extrabold text-spark-ink">{tr(REGION_LABEL[r.id])}</div>
-                <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
-                  <div className="bg-white p-5 rounded-2xl border border-spark-border shadow-card">
-                    <div className="font-bold mb-4">📰 {tr('매체별 노출 분포')}</div>
-                    <MediaPanel data={d.sources} defaultCount={8} />
-                  </div>
-                  <div className="bg-white p-5 rounded-2xl border border-spark-border shadow-card">
-                    <div className="font-bold mb-4">💬 {tr('톤 분석')}</div>
-                    <ToneBreakdown articles={d.toneArticles as any} />
-                  </div>
-                </div>
-              </section>
-            );
-          })}
+        <SectionTitle title={`🗞️ ${tr('어제 놓친 소식')}`} />
+        <div data-tour="missed-news" className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8 items-start">
+          <MissedNewsCard
+            title={`🏢 ${tr('스파크랩 패밀리 뉴스')}`}
+            items={missedFamily}
+            accent="purple"
+            empty={tr('어제는 스파크랩·포트폴리오사 소식이 없었습니다.')}
+          />
+          <MissedNewsCard
+            title={`🤖 ${tr('INTER · AI 트렌드 소식')}`}
+            items={missedInter}
+            accent="emerald"
+            empty={tr('어제 수집된 해외 AI 트렌드 기사가 없습니다.')}
+          />
         </div>
 
-        <SectionTitle title={`🗄️ ${tr('수집 기사 DB')}`} sub={tr('{range} · 분류·검색·정렬로 탐색', { range: range.label })} />
+        <SectionTitle title={`🗄️ SparkLabs Family News`} />
         <div data-tour="article-table" className="bg-white p-5 rounded-2xl border border-spark-border shadow-card mb-8">
-          <ArticleListView
-            hideCounts
+          <FamilyNews
             articles={articlesWithBookmark.map(({ importance, tone, pitchScore, portfolioStatus, ...a }: any) => ({ ...a, importance: null, tone: null, pitchScore: null })) as any}
             canBookmark={canBookmark}
-            showSearch={true}
-            showCategory={true}
-            showPitchColumn={false}
-            showInternal={false}
-            csvName={tr('최근수집기사')}
             emptyText={tr('{range} 내 기사가 없습니다.', { range: range.label })}
           />
         </div>
@@ -1580,6 +1565,99 @@ function DbLink({ href, label }: { href: string; label?: string }) {
     >
       🗄️ {tr(label ?? '수집 기사 DB에서 보기')} →
     </Link>
+  );
+}
+
+type MissedItem = { id: string; title: string; titleKo?: string | null; titleEn?: string | null; link: string; source: string; pubDate: Date; tag: string; mediaCount: number };
+
+/**
+ * 공개 화면 '어제 놓친 소식' — 어제(KST) 나온 스파크랩·포트폴리오사 기사와 해외 AI 트렌드 기사.
+ * 같은 소식을 여러 매체가 쓴 건 한 건으로 묶고(cluster.ts), 많이 다룬 순으로 세운다 —
+ * 맨 위 한 건이 "가장 많이 보도된 소식"이다. 새로 계산하는 AI 호출은 없다.
+ */
+async function loadMissedNews(): Promise<[MissedItem[], MissedItem[]]> {
+  const now = getKstNow();
+  const y = new Date(now.getTime() - 86400000).toISOString().slice(0, 10);
+  // getKstNow()는 UTC 필드에 KST 벽시계를 담고 있으므로 날짜만 떼어 KST 시각으로 다시 만든다.
+  const since = new Date(`${y}T00:00:00+09:00`);
+  const until = new Date(`${y}T23:59:59+09:00`);
+  const [family, inter] = await Promise.all([
+    prisma.article.findMany({
+      where: {
+        pubDate: { gte: since, lte: until }, isNoise: false,
+        OR: [{ category: 'sparklabs_self' }, { category: { startsWith: 'portfolio_company' } }],
+      },
+      orderBy: [{ priorityScore: 'desc' }, { pubDate: 'desc' }],
+      take: 120,
+      select: { id: true, title: true, titleKo: true, titleEn: true, link: true, source: true, pubDate: true, category: true, matchedKeyword: true },
+    }),
+    prisma.interNewsVerdict.findMany({
+      where: { relevant: true, domain: 'ai', news: { publishedAt: { gte: since, lte: until } } },
+      orderBy: { news: { publishedAt: 'desc' } },
+      take: 120,
+      select: { id: true, titleKo: true, news: { select: { title: true, url: true, source: true, publishedAt: true } } },
+    }),
+  ]);
+  // 묶은 뒤 "몇 개 매체가 다뤘나" 순. 동률이면 원래 순서(국내는 중요도, 해외는 최신) 유지.
+  const rank = <T extends { id: string; title: string; source: string; pubDate: Date }>(rows: T[]) =>
+    clusterArticles(rows as any[], { maxDateDiffDays: 2 })
+      .map((c, i) => ({ c, i, n: new Set([c.rep, ...c.others].map((x: any) => normalizeSource(x.source))).size }))
+      .sort((a, b) => b.n - a.n || a.i - b.i)
+      .slice(0, 6)
+      .map(({ c, n }) => ({ rep: c.rep as T, n }));
+  const famRows = family.map(a => ({ ...a, pubDate: a.pubDate as Date }));
+  const interRows = inter.map(v => ({ id: v.id, title: v.titleKo || v.news.title, link: v.news.url, source: v.news.source, pubDate: v.news.publishedAt }));
+  return [
+    rank(famRows).map(({ rep, n }) => ({ ...rep, mediaCount: n, tag: rep.category === 'sparklabs_self' ? '스파크랩' : rep.matchedKeyword })),
+    rank(interRows).map(({ rep, n }) => ({ ...rep, mediaCount: n, tag: 'AI' })),
+  ];
+}
+
+function MissedNewsCard({ title, items, empty, accent }: { title: string; items: MissedItem[]; empty: string; accent: 'purple' | 'emerald' }) {
+  const tr = getT();
+  const locale = getLocale() === 'en' ? 'en' : 'ko';
+  const tone = accent === 'purple'
+    ? { ring: 'border-spark-purple/40', chip: 'bg-spark-light-purple text-spark-purple', hover: 'hover:text-spark-purple' }
+    : { ring: 'border-emerald-300', chip: 'bg-emerald-50 text-emerald-700', hover: 'hover:text-emerald-700' };
+  const md = (d: Date) => `${new Date(d).getMonth() + 1}.${new Date(d).getDate()}`;
+  const [hero, ...rest] = items;
+  return (
+    <div className="flex flex-col bg-white p-5 rounded-2xl border border-spark-border shadow-card">
+      <div className="text-[15px] font-extrabold mb-3">{title}</div>
+      {!hero ? (
+        <p className="py-10 text-center text-sm text-spark-muted">{empty}</p>
+      ) : (
+        <>
+          {/* 맨 위 — 가장 많은 매체가 다룬 소식 */}
+          <a href={safeArticleHref(hero.link, hero.title, hero.source)} target="_blank" rel="noopener noreferrer"
+            className={`group block rounded-xl border-[1.5px] ${tone.ring} border-l-4 px-4 py-3.5 mb-3`}>
+            <div className="flex flex-wrap items-center gap-1.5 mb-1.5 text-[12px]">
+              <span className={`rounded-md px-1.5 py-0.5 font-bold ${tone.chip}`}>{tr(hero.tag)}</span>
+              {hero.mediaCount > 1
+                ? <span className="font-bold text-red-500">🔥 {tr('{n}개 매체가 함께 보도', { n: hero.mediaCount })}</span>
+                : <span className="font-bold text-red-500">🔥 {tr('가장 주목받은 소식')}</span>}
+              <span className="ml-auto text-spark-muted tabular-nums">{tr(hero.source)} · {md(hero.pubDate)}</span>
+            </div>
+            <div className={`text-[18px] font-extrabold leading-snug text-spark-ink ${tone.hover}`}>{articleTitle(hero as any, locale)}</div>
+          </a>
+          {/* 나머지 */}
+          <ul className="divide-y divide-spark-border">
+            {rest.map(a => (
+              <li key={a.id}>
+                <a href={safeArticleHref(a.link, a.title, a.source)} target="_blank" rel="noopener noreferrer" className="group block py-2.5">
+                  <div className={`text-[15px] font-bold leading-snug text-spark-ink line-clamp-2 ${tone.hover}`}>{articleTitle(a as any, locale)}</div>
+                  <div className="mt-1 flex flex-wrap items-center gap-1.5 text-[12px] text-spark-muted">
+                    <span className={`rounded px-1.5 py-px font-semibold ${tone.chip}`}>{tr(a.tag)}</span>
+                    <span>{tr(a.source)} · {md(a.pubDate)}</span>
+                    {a.mediaCount > 1 && <span className="font-semibold text-red-500">+{a.mediaCount - 1}{tr('개 매체')}</span>}
+                  </div>
+                </a>
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
+    </div>
   );
 }
 

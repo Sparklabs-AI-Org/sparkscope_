@@ -152,6 +152,72 @@ export const INTER_TOUR: TourStep[] = [
   HEADER_STEP,
 ];
 
+// ── 공개 화면(포트폴리오사 등 외부 계정) ──────────────────────────────────
+// 사내 화면과 패널 구성이 달라서(2026-10-22 개편) 따로 둔다. 관리 버튼·숫자 카드 설명은 없다.
+const PUBLIC_SCOPE_STEP: TourStep = {
+  key: 'scope-switch',
+  title: '화면은 두 개예요',
+  body: '**🏠 Intra**는 스파크랩 패밀리(스파크랩·포트폴리오사)와 국내 스타트업계 소식입니다.\n**🔭 Inter**는 해외 AI·바이오 시장이 어디로 움직이는지 보여줍니다.',
+};
+
+export const PUBLIC_INTRA_TOUR: TourStep[] = [
+  PUBLIC_SCOPE_STEP,
+  {
+    key: 'date-range',
+    title: '언제부터 언제까지 볼지',
+    body: '아래 **SparkLabs Family News** 목록의 기간을 정합니다. 7일·1개월·3개월·1년을 바로 고르거나 날짜를 직접 넣을 수 있어요.',
+  },
+  {
+    key: 'missed-news',
+    title: '어제 놓친 소식',
+    body: '어제 나온 기사만 골라 두 칸에 보여줍니다.\n**🏢 스파크랩 패밀리 뉴스** — 스파크랩과 포트폴리오사 소식\n**🤖 INTER · AI 트렌드 소식** — 해외 AI 업계 소식\n\n제목을 누르면 원문이 열립니다.',
+  },
+  {
+    key: 'family-tabs',
+    title: 'SparkLabs Family News',
+    body: '기간 안의 기사를 네 갈래로 나눠 봅니다 — **스파크랩 · 포트폴리오 · 스타트업계 소식 · 타 AC·VC**.\n스파크랩 탭에서는 코리아·대만·글로벌 등 지사별로 다시 고를 수 있어요.',
+  },
+  {
+    key: 'article-table',
+    title: '검색하고 정렬하기',
+    body: '제목·매체·회사명으로 검색하고 최신순·오래된순으로 정렬할 수 있습니다. 같은 소식을 여러 매체가 썼으면 한 줄로 묶이고 "+N개 매체 더보기"로 펼칩니다.',
+  },
+];
+
+export const PUBLIC_INTER_TOUR: TourStep[] = [
+  PUBLIC_SCOPE_STEP,
+  {
+    key: 'inter-domain',
+    title: '바이오냐, AI냐',
+    body: '위 버튼으로 **AI**와 **바이오**를 오갑니다. 아래 내용이 모두 그 분야 기준으로 바뀝니다.',
+  },
+  {
+    key: 'inter-now',
+    title: '오늘의 시그널',
+    body: '여러 매체가 함께 다룬 소식 가운데 가장 중요한 한 건과, 커뮤니티에서 화제인 이름들을 보여줍니다.',
+  },
+  {
+    key: 'inter-filter',
+    title: '기간과 국가를 고르고 "확인"',
+    body: '기간·국가를 고른 뒤 **확인**을 눌러야 조회됩니다. 여러 개를 바꿔 본 다음 한 번에 적용할 수 있어요.',
+  },
+  {
+    key: 'inter-matrix',
+    title: '주제 × 사건 유형 격자',
+    body: '행은 **무엇에 관한 기사**, 열은 **무슨 일이 일어났는가**입니다. 색이 진할수록 기사가 많고, 빨간 테두리는 갑자기 늘어난 칸이에요. 칸을 누르면 대표 기사가 열립니다.',
+  },
+  {
+    key: 'inter-insight',
+    title: '이 화면이 말하는 것',
+    body: '돈과 뉴스가 몰리는 분야, 놓치기 쉬운 분야, 그리고 AI가 정리한 트렌드 한 줄입니다.',
+  },
+  {
+    key: 'inter-sectors',
+    title: '주제별 상세',
+    body: '주제 카드가 **급한 순서**(급증 → 기회 → 주요 → 조용)로 정렬돼 있습니다. 카드 안에서 기사·논문·오피니언 원문을 볼 수 있어요.',
+  },
+];
+
 // ── 투어 엔진 ────────────────────────────────────────────────────────────
 
 const PAD = 8;        // 스포트라이트가 대상보다 얼마나 넉넉하게 뚫릴지
@@ -374,7 +440,7 @@ function TourOverlay({ steps, onClose }: { steps: TourStep[]; onClose: () => voi
 
 // ── 헤더 버튼 ────────────────────────────────────────────────────────────
 
-function TutorialButtonInner() {
+function TutorialButtonInner({ publicView }: { publicView: boolean }) {
   const t = useT();
   const pathname = usePathname();
   const sp = useSearchParams();
@@ -392,13 +458,16 @@ function TutorialButtonInner() {
   const scope = sp.get('scope') === 'inter' ? 'inter' : 'intra';
 
   async function start() {
-    const all = scope === 'inter' ? INTER_TOUR : INTRA_TOUR;
+    const all = publicView
+      ? (scope === 'inter' ? PUBLIC_INTER_TOUR : PUBLIC_INTRA_TOUR)
+      : (scope === 'inter' ? INTER_TOUR : INTRA_TOUR);
 
     // Inter 패널은 데이터를 클라이언트에서 받아온다("불러오는 중..."). 그 사이에 열면
     // 본문 패널이 아직 없어서 설명이 통째로 빠지므로, 잠깐(최대 4초) 기다렸다 시작한다.
-    if (scope === 'inter' && !findTarget('inter-headline')) {
+    const readyKey = publicView ? 'inter-insight' : 'inter-headline';
+    if (scope === 'inter' && !findTarget(readyKey)) {
       setWaiting(true);
-      for (let t = 0; t < 20 && !findTarget('inter-headline'); t++) {
+      for (let t = 0; t < 20 && !findTarget(readyKey); t++) {
         await new Promise(r => setTimeout(r, 200));
       }
       setWaiting(false);
@@ -424,11 +493,11 @@ function TutorialButtonInner() {
   );
 }
 
-export function DashboardTutorial() {
+export function DashboardTutorial({ publicView = false }: { publicView?: boolean }) {
   // useSearchParams는 Suspense 경계가 필요하다(Next.js app router).
   return (
     <Suspense fallback={null}>
-      <TutorialButtonInner />
+      <TutorialButtonInner publicView={publicView} />
     </Suspense>
   );
 }

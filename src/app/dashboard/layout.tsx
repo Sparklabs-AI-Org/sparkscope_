@@ -27,6 +27,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
   // (그 화면 자체가 requireAdmin + canApproveAccess 로 막고 있다.)
 
   const isGuest = user.id === GUEST_ID;
+  const isPublic = user.role === 'PORTFOLIO';
   const initial = isGuest ? 'P' : user.email[0].toUpperCase();
   const badge = ROLE_BADGE[user.role];
   const badgeLabel = getLocale() === 'en' ? badge.labelEn : badge.label;
@@ -57,11 +58,12 @@ export default async function DashboardLayout({ children }: { children: React.Re
             <span className="w-6 h-6 rounded-lg bg-spark-purple text-white grid place-items-center text-[13px] font-extrabold leading-none">S</span>
             <span className="text-spark-ink font-extrabold tracking-tight text-[15px]">SparkScope</span>
           </Link>
-          <span className="hidden sm:inline h-3.5 w-px bg-spark-border" />
-          <span className="hidden sm:inline text-xs font-medium text-spark-muted">{t('본부 인사이트 대시보드')}</span>
+          {/* 공개 화면(포트폴리오사 등)엔 '본부' 문구와 챗봇을 두지 않는다 — 챗봇은 내부 분석을 다루는 도구다. */}
+          {!isPublic && <span className="hidden sm:inline h-3.5 w-px bg-spark-border" />}
+          {!isPublic && <span className="hidden sm:inline text-xs font-medium text-spark-muted">{t('본부 인사이트 대시보드')}</span>}
           {/* 챗봇은 내부 분석(피칭·위기·본부 코멘트)을 다루는 도구라 게스트에겐 열지 않는다. */}
-          {!isGuest && <Link href="/chat" className="hidden sm:inline text-xs font-semibold text-spark-muted hover:text-spark-purple transition">💬 {t('챗봇')}</Link>}
-          <DashboardTutorial />
+          {!isPublic && <Link href="/chat" className="hidden sm:inline text-xs font-semibold text-spark-muted hover:text-spark-purple transition">💬 {t('챗봇')}</Link>}
+          <DashboardTutorial publicView={isPublic} />
           {pending > 0 && (
             <Link
               href="/dashboard/accounts"

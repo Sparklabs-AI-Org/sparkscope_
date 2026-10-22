@@ -310,10 +310,7 @@ function esc(s: string): string {
 export function renderInterStat(b: InterDigestBlock): string {
   const names = b.companyNames;
   return `
-      <div class="stat inter">
-        <div class="stat-value">${names.length}</div>
-        <div class="stat-label">해외 트렌드</div>
-      </div>`;
+      <td class="stat inter" align="center" valign="top"><div class="stat-value">${names.length}</div><div class="stat-label">해외 트렌드</div></td>`;
 }
 
 /**

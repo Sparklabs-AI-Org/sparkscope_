@@ -237,15 +237,11 @@ ${SIGNAL_EMAIL_CSS}
   <div class="header">
     <div class="brand">SparkScope · 미디어 다이제스트</div>
     <div class="date">${escape(data.dateLabel)}</div>
-    <div class="stats">
-      ${prefs.sparklabs && pStat.sparklabsSelf > 0 ? `<div class="stat"><div class="stat-value">${pStat.sparklabsSelf}</div><div class="stat-label">스파크랩 직접 언급</div></div>` : ''}
-      ${prefs.portfolio ? `<div class="stat"><div class="stat-value">${pStat.portfolio}</div><div class="stat-label">포트폴리오사 노출</div>${pStat.portfolioTrend ? `<div class="stat-trend">${escape(pStat.portfolioTrend)}</div>` : ''}</div>` : ''}
-      ${prefs.competitor ? `<div class="stat"><div class="stat-value">${pStat.competitor}</div><div class="stat-label">AC·VC 동향</div></div>` : ''}
-      ${data.inter ? renderInterStat(data.inter) : ''}
-    </div>
+    ${renderHeaderStats(pStat, prefs, data.inter)}
   </div>
 
   ${opts.subscriberToken ? renderBriefingLink(data.date, base, opts.subscriberToken) : ''}
+  ${SHOW_SUBSCRIPTION_UI ? renderSubscriptionTip(base, opts.subscriberToken) : ''}
 
   ${data.weeklyFlow ? `
   <div class="weekly-flow">
@@ -296,6 +292,7 @@ ${SIGNAL_EMAIL_CSS}
   </div>` : ''}
 
 
+  ${SHOW_SUBSCRIPTION_UI ? renderSubscriptionSection(prefs, base, opts.subscriberToken) : ''}
 
   <div class="footer">
     <div class="footer-cta-text">INTRA(스파크랩 내부 생태계)부터 INTER(글로벌 시장)까지, 아래 대시보드에서 확인하실 수 있습니다.</div>
@@ -306,20 +303,6 @@ ${SIGNAL_EMAIL_CSS}
 </html>`;
 }
 
-/**
- * 마지막 섹션 — 지금 무엇을 받고 있는지 보여주고 설정 화면으로 보낸다.
- *
- * 설정 화면(/subscribe)의 토글을 메일에 그대로 옮기지 않는다. 메일 HTML에는
- * 자바스크립트가 없어서 토글이 눌리지 않고(Gmail은 script를 통째로 지운다),
- * 7줄짜리 스위치 목록을 그리면 본문 아래에 설정 화면만 한 덩어리가 더 붙는다.
- *
- * 그래서 "상태를 읽는 것"만 메일에 두고 "바꾸는 것"은 링크로 넘긴다. 줄마다
- * 켜짐/꺼짐을 글자로 보여주므로 지금 무엇이 빠져 있는지 메일 안에서 바로 안다.
- * 2열 표로 그려 일곱 줄이 네 줄 높이에 들어간다(추가 용량 약 1KB).
- *
- * 표를 쓰는 이유는 Outlook이 flex·grid를 지원하지 않아서다. 칸 너비는 퍼센트로
- * 두어 좁은 화면에서도 두 열이 유지된다.
- */
 /**
  * 오늘 브리핑 영상 링크 — 구독자 토큰을 붙여서 사람별 시청을 잴 수 있게 한다.
  * 날짜는 발송 시각의 한국 날짜(09:30 발송이므로 그날 브리핑 키와 맞는다).
@@ -342,39 +325,51 @@ function renderBriefingLink(date: Date, base: string, token: string): string {
   </div>`;
 }
 
+// 헤더 요약 칸. flex+gap은 Gmail이 gap을 무시해서 칸이 붙어 보이므로 표 + 빈 칸(spacer)으로 간격을 만든다.
+function renderHeaderStats(pStat: DigestData['stats'], prefs: SectionPrefs, inter: DigestData['inter']): string {
+  const cell = (value: string | number, label: string, extra = '', cls = 'stat') =>
+    `<td class="${cls}" align="center" valign="top"><div class="stat-value">${value}</div><div class="stat-label">${label}</div>${extra}</td>`;
+  const cells = [
+    prefs.sparklabs && pStat.sparklabsSelf > 0 ? cell(pStat.sparklabsSelf, '스파크랩 직접 언급') : '',
+    prefs.portfolio ? cell(pStat.portfolio, '포트폴리오사 노출', pStat.portfolioTrend ? `<div class="stat-trend">${escape(pStat.portfolioTrend)}</div>` : '') : '',
+    prefs.competitor ? cell(pStat.competitor, 'AC·VC 동향') : '',
+    inter ? renderInterStat(inter) : '',
+  ].filter(Boolean);
+  if (cells.length === 0) return '';
+  const spacer = '<td width="10" style="width:10px;font-size:0;line-height:0">&nbsp;</td>';
+  return `<table class="stats" role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top:16px;table-layout:fixed"><tr>${cells.join(spacer)}</tr></table>`;
+}
+
+/**
+ * 구독 설정 안내(영상 아래 한 줄 + 맨 아래 '내 구독' 카드)를 보일지.
+ * 2026-10-22 소윤: 섹션별 구독 설정이 지금은 필요 없어 숨긴다. 코드는 남겨 두었으니 다시 띄울 때 true로.
+ * 대시보드의 '구독 설정' 버튼(dashboard/page.tsx)도 같은 이름의 스위치로 함께 숨겼다.
+ */
+export const SHOW_SUBSCRIPTION_UI = false;
+
+// 메일에는 버튼 하나만 둔다 — 메일 HTML에는 스크립트가 없어 토글을 못 누르고, 줄마다 링크로 바로
+// 바꾸게 하면 메일 보안 장비가 링크를 미리 열 때 설정이 바뀔 수 있다. 바꾸는 건 설정 화면이 맡는다.
+// 토큰이 없는 전사 그룹 메일은 사람별 상태를 모르므로 개수 문구를 빼고 로그인 화면으로 보낸다.
 function renderSubscriptionSection(prefs: SectionPrefs, base: string, token?: string): string {
-  // 토큰이 없으면 로그인해서 바꾸는 화면으로 보낸다.
-  //
-  // 토큰은 구독자별 발송 경로에서만 생긴다(digest-send.ts). 그런데 그 경로는
-  // DIGEST_USE_SUBSCRIBERS 스위치 뒤에 있고 그 스위치는 켜져 있지 않아서, 지금
-  // 실제로 나가는 메일은 전사 그룹 1통이다(runner.ts). 2026-09-21 발송분에
-  // 이 섹션이 통째로 빠진 이유다 — 토큰이 없으면 섹션을 아예 안 그렸다.
-  //
-  // 그래서 토큰 유무로 섹션을 켜고 끄지 않고, 링크만 바꾼다. 전사 그룹 메일에서는
-  // 사내 로그인 화면(/dashboard/subscriptions)으로 보내면 된다 — 그쪽은 세션
-  // 이메일로 자기 행만 찾으므로 그룹 메일을 여럿이 받아도 서로의 설정을 못 건드린다.
-  // 스위치를 켜는 것과 무관하게 동작해야 한다: 그 스위치는 "누구에게 보내는가"를
-  // 바꾸는 것이지 "무엇을 보여주는가"를 정하는 값이 아니다.
   const url = token ? `${base}/subscribe?token=${escape(token)}` : `${base}/dashboard/subscriptions`;
-  const cell = (s: (typeof SECTIONS)[number]) => {
-    const on = prefs[s.key];
-    return `<td class="sub-cell" width="50%">
-      <span class="sub-state ${on ? 'sub-on' : 'sub-off'}">${on ? '받는 중' : '끔'}</span>
-      <span class="${on ? 'sub-label' : 'sub-label sub-muted'}">${s.label}</span>
-    </td>`;
-  };
-  const rows: string[] = [];
-  for (let i = 0; i < SECTIONS.length; i += 2) {
-    rows.push(`<tr>${cell(SECTIONS[i]!)}${SECTIONS[i + 1] ? cell(SECTIONS[i + 1]!) : '<td width="50%"></td>'}</tr>`);
-  }
+  const on = SECTIONS.filter(s => prefs[s.key]).length;
+  const count = token
+    ? `<div class="sub-count">지금 <b>${SECTIONS.length}개 중 ${on}개</b> 섹션을 받고 있어요</div>`
+    : '';
   return `
-  <div class="section sub-section">
-    <div class="section-title">⚙️ 구독 설정</div>
-    <div class="sub-desc">받고 싶은 항목만 골라 받을 수 있습니다. 바꾸면 다음 발송분부터 적용됩니다.</div>
-    <table class="sub-table" cellpadding="0" cellspacing="0" width="100%">${rows.join('')}</table>
-    <a href="${url}" class="sub-button">항목 고르기</a>
-    <div class="sub-foot"><a href="${url}" class="sub-foot-link">다이제스트 전체 수신 거부</a></div>
+  <div class="sub-section">
+    <div class="sub-eyebrow">내 구독</div>
+    <div class="sub-title">나에게 필요한 소식만 받아보세요</div>
+    <div class="sub-desc">받고 싶은 섹션만 켜 두면 다음 메일부터 그것만 도착해요.</div>
+    ${count}
+    <a href="${url}" class="sub-button">구독 설정 변경하기</a>
   </div>`;
+}
+
+// 영상 블록 바로 아래 한 줄 — 맨 아래 카드까지 내려가지 않아도 설정할 수 있다는 걸 알린다.
+function renderSubscriptionTip(base: string, token?: string): string {
+  const url = token ? `${base}/subscribe?token=${escape(token)}` : `${base}/dashboard/subscriptions`;
+  return `<div class="sub-tip">📬 <b>받고 싶은 섹션만 골라 받을 수 있어요.</b> <a href="${url}" class="sub-tip-link">구독 설정 →</a></div>`;
 }
 
 // 카테고리 섹션 상단 편집자 요약 한 줄 (검수 콘솔에서 입력)
@@ -475,8 +470,7 @@ body{margin:0;padding:0;background:#F5F3EF;font-family:-apple-system,BlinkMacSys
 .editor-line{margin-top:14px;padding:14px 18px;background:linear-gradient(135deg,#EEEDFC 0%,#F5F3EF 100%);border-radius:10px;font-size:14px;line-height:1.55}
 .editor-line strong{color:#5046E5}
 .editor-byline{display:block;margin-top:8px;font-size:11px;color:#6B7280;font-style:italic}
-.stats{display:flex;gap:10px;margin-top:16px}
-.stat{flex:1;background:#F5F3EF;padding:12px 10px;border-radius:8px;text-align:center}
+.stat{background:#F5F3EF;padding:12px 10px;border-radius:8px;text-align:center}
 .stat-value{font-size:22px;font-weight:700;color:#5046E5;line-height:1.1}
 .stat-label{font-size:10px;color:#6B7280;margin-top:4px}
 .stat-trend{font-size:10px;color:#16A34A;margin-top:2px;font-weight:600}
@@ -512,15 +506,13 @@ body{margin:0;padding:0;background:#F5F3EF;font-family:-apple-system,BlinkMacSys
 .footer-cta-button{display:block;width:100%;box-sizing:border-box;padding:15px 20px;background:#5046E5;color:#FFF !important;text-decoration:none;border-radius:8px;font-size:14px;font-weight:700;text-align:center}
 .footer-link{font-size:12px;color:#5046E5;text-decoration:none;font-weight:600}
 .footer-meta{margin-top:12px;font-size:11px;color:#9CA3AF;line-height:1.6}
-.sub-desc{font-size:12px;color:#6B7280;margin:-4px 0 12px}
-.sub-table{border-collapse:separate;border-spacing:0 8px}
-.sub-cell{vertical-align:middle;padding-right:8px}
-.sub-state{display:inline-block;min-width:44px;padding:2px 6px;border-radius:4px;font-size:10px;font-weight:700;text-align:center;margin-right:6px}
-.sub-on{background:#EEF0FE;color:#5046E5}
-.sub-off{background:#F1F1F0;color:#9CA3AF}
-.sub-label{font-size:12px;color:#374151;font-weight:600}
-.sub-muted{color:#9CA3AF;font-weight:500}
-.sub-button{display:block;margin-top:10px;padding:12px 20px;background:#FFF;border:1px solid #5046E5;color:#5046E5 !important;text-decoration:none;border-radius:8px;font-size:13px;font-weight:700;text-align:center}
-.sub-foot{margin-top:10px;text-align:center}
-.sub-foot-link{font-size:11px;color:#9CA3AF;text-decoration:underline}
+.sub-tip{padding:12px 28px;background:#F6F5FF;border-bottom:1px solid #EEEDFC;font-size:12.5px;color:#374151}
+.sub-tip-link{color:#5046E5 !important;font-weight:700;text-decoration:none;white-space:nowrap}
+.sub-section{padding:28px 28px 30px;background:#FFF;border-top:1px solid #EEEDFC}
+.sub-eyebrow{font-size:11px;font-weight:700;letter-spacing:1.2px;color:#5046E5}
+.sub-title{margin:4px 0 4px;font-size:19px;font-weight:700;color:#1A1A2E}
+.sub-desc{margin:0 0 14px;font-size:13px;color:#6B7280}
+.sub-count{margin:0 0 14px;font-size:12px;color:#6B7280}
+.sub-count b{color:#5046E5}
+.sub-button{display:block;box-sizing:border-box;padding:15px 20px;background:#FFF;border:2px solid #5046E5;color:#5046E5 !important;text-decoration:none;border-radius:8px;font-size:14px;font-weight:700;text-align:center}
 `;

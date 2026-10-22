@@ -6,6 +6,7 @@
  * 같은 화면을 쓴다 — 다른 건 본인 확인 방법(token 유무)뿐이라 폼은 하나로 둔다.
  */
 import { useState } from 'react';
+import Link from 'next/link';
 import { SECTIONS, type SectionKey } from '@/lib/sparkscope/subscription';
 
 export interface SubscriptionFormProps {
@@ -123,6 +124,13 @@ export default function SubscriptionForm({
           {msg.text}
         </p>
       )}
+
+      <Link
+        href="/dashboard"
+        className="mt-6 block w-full rounded-xl bg-spark-purple px-5 py-3.5 text-center text-[15px] font-bold text-white transition-opacity hover:opacity-90"
+      >
+        대시보드로 돌아가기
+      </Link>
     </div>
   );
 }
