@@ -26,3 +26,11 @@ _backup_before_clone/
 
 # GCP 서비스 계정 키 (비밀정보, 커밋 금지)
 google-service-account.json
+
+# 로컬 스크래치·디자인 작업물 (커밋 금지)
+.design/
+scratch-*
+scripts/_backfill-gv-articles.ts
+scripts/_check-subscription.ts
+scripts/_q-temp.ts
+scripts/_test-gv-keywords.ts
