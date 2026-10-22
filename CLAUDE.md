@@ -102,6 +102,7 @@ GitHub `schedule`은 예약보다 2~3시간 늦게 시작한다(9/11~9/28 실측
 | 월~금 08:15~08:55(5분) · 09:00~11:45(15분) | Vercel `/api/cron/daily-send-only?hold=1` | 영상이 있으면 메일 발송 → 평소 **08:30 도착**. 12:00 이후엔 보내지 않음 |
 | 월~금 09:00·10:00 | Vercel → `daily-briefing.yml` | 영상 재시도(이미 있으면 건너뜀) — 영상이 실패해도 메일이 영영 안 나가는 일이 없게 |
 | 월~금 08:30~08:55(5분) · 09:00~11:45(15분) | Vercel `/api/cron/briefing-notify` | 잔디 전송 — **영상과 메일이 둘 다 나간 뒤에만**. 월 위클리 방, 화~금 데일리 방 |
+| 월~금 09:05 · 12:00 | Vercel `/api/cron/briefing-delay-alert` | 셋 중 하나라도 안 나갔으면 관리자(`ADMIN_EMAILS`)에게 메일 — 09:05 지연, 12:00 미발송. 단계별 하루 1번 |
 
 - 필요한 설정: Vercel `GITHUB_DISPATCH_TOKEN`(이 저장소 Actions 쓰기 권한 fine-grained 토큰 — 이수 관리),
   `JANDI_WEBHOOK_URL`(데일리 방), `JANDI_WEBHOOK_URL_WEEKLY`(위클리 방 — 비면 데일리 방으로) / GitHub 시크릿 `SUPABASE_SERVICE_ROLE_KEY`, `NEXT_PUBLIC_SUPABASE_URL`.

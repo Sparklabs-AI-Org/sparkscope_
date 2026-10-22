@@ -31,7 +31,8 @@ export async function notifyBriefing(opts: { final: boolean; baseUrl: string }):
   // 메일과 영상은 반드시 같이 나간다 — 메일 발송이 아직이면(영상 대기·발송 실패) 잔디도 기다린다(2026-10-22 소윤 결정).
   // 날짜 키는 발송 라우트(daily-send-only)와 같은 방식으로 만든다.
   const kstNow = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Seoul' }));
-  const mailDay = new Date(kstNow.getFullYear(), kstNow.getMonth(), kstNow.getDate(), 0, 0, 0, 0);
+  // Digest.date는 한국 날짜의 UTC 자정으로 저장된다 — 서버 시간대와 무관하게 같은 값을 만든다.
+  const mailDay = new Date(Date.UTC(kstNow.getFullYear(), kstNow.getMonth(), kstNow.getDate()));
   const mail = await prisma.digest.findUnique({ where: { date: mailDay }, select: { sentAt: true } });
   if (!mail?.sentAt) return { status: 'waiting-for-mail' };
   const headlines = video.headlines;

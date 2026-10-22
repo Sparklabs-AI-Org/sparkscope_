@@ -171,6 +171,31 @@ export async function sendOwnerAlert(to: string | string[], subject: string, tex
   }
 }
 
+/**
+ * 관리자 알림 — 실제 발송 도메인으로 여러 명에게 보낸다.
+ * sendOwnerAlert는 발신 도메인 미인증 상황용이라 Resend 테스트 주소(onboarding@resend.dev)를 쓰는데,
+ * 그 주소는 Resend 계정 주인에게만 도착한다. 관리자 여러 명에게 보낼 때는 이 함수를 쓴다.
+ */
+export async function sendAdminAlert(to: string[], subject: string, text: string): Promise<boolean> {
+  const apiKey = process.env.RESEND_API_KEY;
+  const toList = to.map(s => s.trim()).filter(Boolean);
+  if (!apiKey || toList.length === 0) return false;
+  const from = process.env.DIGEST_FROM_EMAIL ?? 'sparkscope@sparklabs.co.kr';
+  try {
+    const { error } = await new Resend(apiKey).emails.send({
+      from: `SparkScope <${from}>`,
+      to: toList,
+      subject,
+      html: `<pre style="font-family:sans-serif;white-space:pre-wrap;font-size:14px">${text.replace(/&/g, '&amp;').replace(/</g, '&lt;')}</pre>`,
+    });
+    if (error) console.error('[mailer] 관리자 알림 실패:', error);
+    return !error;
+  } catch (e) {
+    console.error('[mailer] 관리자 알림 실패:', e);
+    return false;
+  }
+}
+
 export function buildSubject(dateLabel: string, top1Title?: string): string {
   const short = top1Title ? top1Title.slice(0, 30) : '오늘의 미디어 다이제스트';
   return `[SparkScope] ${dateLabel.replace('년 ', '/').replace('월 ', '/').replace('일', '')} — ${short}`;
