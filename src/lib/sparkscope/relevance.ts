@@ -330,12 +330,19 @@ export function filterReason(a: RelevanceInput): FilterReason | null {
 
   // 포트폴리오사 이름이 코인 이름과 같으면 코인 시세 기사 본문 목록에 걸린다(2026-10 플루언트·아스타 — "[코인 갱신 일지]").
   // 제목에 회사명이 있으면 진짜 그 회사 기사이므로 둔다(암호화폐 업종 포트폴리오사 보호).
-  if (a.category?.startsWith('portfolio') && CRYPTO_MARKET_NOISE.test(title) && !keys.some(k => matchesAsToken(title, k))) return 'irrelevant';
+  // 코인 전문 매체의 순위·시세 기사는 제목에 코인 단어가 없을 때도 있다("[트렌딩 나우] 글로벌 PPOLY 1위") — 매체로도 본다.
+  // 매체만으로 자르면 암호화폐 업종 포트폴리오사(애니모카 등) 정상 기사까지 빠지므로, 본문이 시세·순위 목록일 때만 본다.
+  if (a.category?.startsWith('portfolio') && !keys.some(k => matchesAsToken(title, k))
+    && (CRYPTO_MARKET_NOISE.test(title) || (CRYPTO_MEDIA.test(a.source ?? '') && CRYPTO_LISTING_BODY.test(body)))) return 'irrelevant';
 
   return null;
 }
 
 // 코인·가상자산 시세 기사 제목 (부분일치)
+// 코인·가상자산 전문 매체
+const CRYPTO_MEDIA = /토큰포스트|tokenpost|코인리더스|coinreaders|블록미디어|blockmedia|코인데스크|coindesk|디센터|decenter|코인니스|coinness|블록스트리트|비인크립토|beincrypto/i;
+// 코인 시세·순위 목록 본문 신호
+const CRYPTO_LISTING_BODY = /코인마켓캡|coinmarketcap|트렌딩 종목|많이 찾아본 종목|전일 대비|24시간 (동안 )?(상승|하락)|상승 종목|하락 종목|거래대금 상위/i;
 const CRYPTO_MARKET_NOISE = /코인|가상자산|암호화폐|비트코인|이더리움|알트코인|신고점|신저점|업비트|빗썸|바이낸스|김치 ?프리미엄|시세/;
 
 // AC·VC 섹션에서 빼는 증시·주가 시황 용어 (제목 기준, 부분일치)

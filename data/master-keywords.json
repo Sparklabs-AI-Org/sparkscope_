@@ -2140,7 +2140,7 @@
     "portfolioStatus": "Live",
     "tier": "A",
     "primaryKeyword": "앰버로드",
-    "helperKeywords": "임언호, AI",
+    "helperKeywords": "임언호",
     "notes": "포스코 사내벤처 출신 제조 AI 솔루션 기업. 공정 최적화 AI '마이너 리포트(Miner Report)' 개발"
   },
   {
@@ -2151,7 +2151,7 @@
     "portfolioStatus": "Written-off",
     "tier": "C",
     "primaryKeyword": "아몬디",
-    "helperKeywords": "강신영, 헬스케어",
+    "helperKeywords": "강신영",
     "excludeWords": null,
     "contextWords": "아몬디케어, 강신영, 심리상담, 멘탈, 헬스케어, EHR",
     "notes": "심리상담사들을 위한 전자건강기록 서비스인 아몬디케어를 운영하는 멘탈 헬스케어 스타트업"
@@ -2215,9 +2215,10 @@
     "portfolioStatus": "Live",
     "tier": "C",
     "primaryKeyword": "아스타",
-    "helperKeywords": "이재원, 마케팅, AI",
+    "helperKeywords": "이재원",
     "contextWords": "디지털 콘텐츠 마케팅, AI 크리에이터 엔진, AVICA, 브랜드 마케팅 솔루션",
-    "notes": "AI 디지털 콘텐츠 마케팅 기업. AI 크리에이터 엔진 'AVICA' 기반 브랜드 마케팅 솔루션"
+    "notes": "AI 디지털 콘텐츠 마케팅 기업. AI 크리에이터 엔진 'AVICA' 기반 브랜드 마케팅 솔루션",
+    "excludeWords": "국화, 꽃, 국화축제, 꽃축제, 수목원"
   },
   {
     "name": "증강지능",
@@ -2546,7 +2547,7 @@
     "portfolioStatus": "Exit",
     "tier": "C",
     "primaryKeyword": "캐스팅",
-    "helperKeywords": "허성욱, 마케팅",
+    "helperKeywords": "허성욱",
     "contextWords": "플랫폼, 인플루언서, 구독자, 구독, DM, 소통, 오현민",
     "notes": "다양한 분야의 인플루언서들과 개인적으로 소통할 수 있는 플랫폼"
   },
@@ -2569,7 +2570,7 @@
     "portfolioStatus": "Written-off",
     "tier": "B",
     "primaryKeyword": "클로아",
-    "helperKeywords": "임성은, 데이터, AI",
+    "helperKeywords": "임성은",
     "contextWords": "데이터 파이프라인, 대용량 데이터, 인프라, 임성은",
     "notes": "데이터 파이프라인 솔루션 기업. 실시간 대용량 데이터 처리 인프라 개발"
   },
@@ -2978,7 +2979,7 @@
     "portfolioStatus": "Written-off",
     "tier": "C",
     "primaryKeyword": "엔터핀",
-    "helperKeywords": "김민욱, IoT",
+    "helperKeywords": "김민욱",
     "excludeWords": null,
     "contextWords": "클라우드, IoT 플랫폼, 스키드, 하드웨어, 김민욱, 소프트웨어",
     "notes": "하드웨어 기기의 데이터를 클라우드 서버에 쉽게 연결하고 수집·활용할 수 있는 IoT 플랫폼 '스키드(skiiiD)'"
@@ -3042,7 +3043,7 @@
     "portfolioStatus": "Written-off",
     "tier": "C",
     "primaryKeyword": "팔콘리",
-    "helperKeywords": "Nikunji Mehta, AI",
+    "helperKeywords": "Nikunji Mehta",
     "excludeWords": "맹금류",
     "contextWords": "제조산업, 센서 데이터, AI, 장비 고장, 예측, 노코드, 시계열, 데이터 분석, 머신러닝, 설비 고장, Nikunji Mehta, 실리콘밸리",
     "notes": "제조·산업 장비의 센서 데이터를 AI로 실시간 분석하여 오탐지 없는 장비 고장 예측과 이상 징후를 탐지하는 '노코드 시계열 데이터 분석 AI 플랫폼'"
@@ -3231,7 +3232,7 @@
     "portfolioStatus": "Written-off",
     "tier": "C",
     "primaryKeyword": "프리스타일",
-    "helperKeywords": "김용선, AI, IoT",
+    "helperKeywords": "김용선",
     "excludeWords": null,
     "contextWords": "AI, IoT 기술, 상수도, 가스, 원격자동검침, 스마트 시티, 김용선",
     "notes": "AI 및 IoT 기술 기반의 상수도·가스 무선 원격자동검침 시스템과 스마트 시티 관리 솔루션을 제공"
@@ -3244,7 +3245,7 @@
     "portfolioStatus": "Written-off",
     "tier": "C",
     "primaryKeyword": "프레스코키친",
-    "helperKeywords": "벤 해리스, 플랫폼",
+    "helperKeywords": "벤 해리스",
     "excludeWords": null,
     "contextWords": "스마트 가전, 연결, 실시간 제어, KitchenOS, 밴 해리스, 스마트 주방",
     "notes": "다양한 브랜드의 스마트 가전을 하나로 연결하고, AI가 조리 과정을 실시간으로 제어·안내하는 주방 전용 운영체제(KitchenOS)"
@@ -3309,7 +3310,7 @@
     "portfolioStatus": "Written-off",
     "tier": "A",
     "primaryKeyword": "젠지 이스포츠",
-    "helperKeywords": "아놀드 원 허, 게임, 이스포츠",
+    "helperKeywords": "아놀드 원 허",
     "excludeWords": null,
     "contextWords": null,
     "notes": "글로벌 프로게임단 운영을 중심 선수 육성, 이스포츠 교육(Gen.G Global Academy), 브랜드 협업 및 마케팅 서비스"
@@ -3512,7 +3513,7 @@
     "portfolioStatus": "Exit",
     "tier": "C",
     "primaryKeyword": "해브잇",
-    "helperKeywords": "서수아, 쇼핑, 커머스",
+    "helperKeywords": "서수아",
     "contextWords": "인스타그램, SNS, 인플루언서, 패션, 명품, 정보 연계, 판매, 커머스, 서수아",
     "notes": "인스타그램 등 SNS 인플루언서들이 착용하는 패션 및 명품 아이템 정보를 연계하여 선별 판매하는 큐레이션 기반 명품 커머스 플랫폼"
   },
@@ -3627,7 +3628,7 @@
     "portfolioStatus": "Exit",
     "tier": "C",
     "primaryKeyword": "아이디엘",
-    "helperKeywords": "김상현, 헬스케어, IoT",
+    "helperKeywords": "김상현",
     "contextWords": "아이, 활동량, 측정, 부모, 건강 데이터, 카롱, 김상현, 웨어러블",
     "notes": "아이의 활동량을 실시간으로 측정하고 부모에게 또래 평균과 비교한 건강 데이터를 제공하는 IoT 기반 서비스 '카롱(Caron)'"
   },
@@ -3743,7 +3744,7 @@
     "portfolioStatus": "Written-off",
     "tier": "C",
     "primaryKeyword": "캐드호",
-    "helperKeywords": "카베 아자르타시, AI, 뇌과학",
+    "helperKeywords": "카베 아자르타시",
     "contextWords": "두뇌, 신경과학, 언어교육, 에듀테크, 뇌훈련, AI, 카베 아자르타시",
     "notes": "신경과학과 AI 및 머신러닝 결합하여 두뇌 훈련 커리큘럼과 언어 교육을 제공하는 에듀테크 스타트업"
   },
@@ -3806,7 +3807,7 @@
     "portfolioStatus": "Written-off",
     "tier": "C",
     "primaryKeyword": "클로저",
-    "helperKeywords": "변영진, 마케팅",
+    "helperKeywords": "변영진",
     "excludeWords": "야구, 마무리투수",
     "contextWords": "고객채널, 마케팅, CRM, 클라우드, 변영진, 플랫폼",
     "notes": "고객채널 관리 플랫폼을 클라우드로 제공하는 마케팅 테크 전문 기업"
@@ -4088,7 +4089,7 @@
     "portfolioStatus": "Exit",
     "tier": "B",
     "primaryKeyword": "로커스랩",
-    "helperKeywords": "무함마드 아르살란 아르샤드, AI",
+    "helperKeywords": "무함마드 아르살란 아르샤드",
     "contextWords": "AI, 인스타그램, 왓츠앱, 엡사이트, DM,  Md Arsalan Arshad, 고객",
     "notes": "인공지능(AI) 고객 응대 자동화 플랫폼"
   },
@@ -4256,7 +4257,7 @@
     "portfolioStatus": "Written-off",
     "tier": "C",
     "primaryKeyword": "메리윈드",
-    "helperKeywords": "오재영, 게임",
+    "helperKeywords": "오재영",
     "excludeWords": "주얼리",
     "contextWords": "호텔, 카지노, 게임, 오재영",
     "notes": "호텔 카지노 게임"
@@ -4321,7 +4322,7 @@
     "portfolioStatus": "Written-off",
     "tier": "C",
     "primaryKeyword": "민트엔에프티",
-    "helperKeywords": "제임스 선, 블록체인",
+    "helperKeywords": "제임스 선",
     "contextWords": "mintNFT,  제임스선, James Sun, Web3, 블록체인",
     "notes": null
   },
@@ -4333,7 +4334,7 @@
     "portfolioStatus": "Live",
     "tier": "B",
     "primaryKeyword": "미쉬팟",
-    "helperKeywords": "형용준, SNS",
+    "helperKeywords": "형용준",
     "excludeWords": "성경",
     "contextWords": "스마트폰, 수평적 협업, 주소록, 그룹틱, 피플웨어, 형용준, 앱, 클라우드",
     "notes": "스마트폰 기반의 수평적 협업 주소록 서비스 '그룹틱', 스마트폰 기반의 수평적 협업 주소록 서비스 '피플웨어'"
@@ -4486,7 +4487,7 @@
     "portfolioStatus": "Written-off",
     "tier": "B",
     "primaryKeyword": "엔사이어티",
-    "helperKeywords": "김태현, 플랫폼, SNS",
+    "helperKeywords": "김태현",
     "contextWords": "글로벌, 청소년, SNS, 놀이터, 판타스틴닷컴, 김태현, 플랫폼",
     "notes": "글로벌 청소년을 타깃으로 한 SNS 놀이터 플랫폼 '판타스틴닷컴(Fatasteen.com)'"
   },
@@ -4852,7 +4853,7 @@
     "portfolioStatus": "Live",
     "tier": "C",
     "primaryKeyword": "프로파운드",
-    "helperKeywords": "이유경, 비즈니스, 플랫폼",
+    "helperKeywords": "이유경",
     "contextWords": "컨설팅, 전문가, 인사이트, 비즈니스, 네트워크, 지식, 이유경",
     "notes": "전세계 다양한 비즈니스 전문가들을 연결해 그들의 지식과 인사이트를 제공하는 '비즈니스 스팟 컨설팅 마켓 네트워크'"
   },
@@ -5472,7 +5473,7 @@
     "portfolioStatus": "Exit",
     "tier": "C",
     "primaryKeyword": "텔라",
-    "helperKeywords": "진유하, 교육",
+    "helperKeywords": "진유하",
     "contextWords": "영어, 교육, 튜터, 회화, 진유하, 에듀테크, 학습",
     "notes": "채팅 기반 영어교육 스타트업. 텍스트 학습 데이터 분석 기반 개인화 영어 커리큘럼 (최근 AI 호텔예약 자동화로도 확장)"
   },
@@ -6140,7 +6141,7 @@
     "portfolioStatus": "Live",
     "tier": "C",
     "primaryKeyword": "트랙인베스트",
-    "helperKeywords": "바비 바티아, 바티아 산디프 싱, 핀테크",
+    "helperKeywords": "바비 바티아, 바티아 산디프 싱",
     "contextWords": "가상 투자, TrakInvest, 주식거래, 포트폴리오, Bobby Bhatia, Bhatia Sandeep Singh",
     "notes": null
   },
