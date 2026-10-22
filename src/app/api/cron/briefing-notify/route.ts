@@ -1,4 +1,4 @@
-// 월~금 브리핑 잔디 알림 — 08:30(영상 있으면 전송, 월=위클리·화~금=데일리) · 09:00(?final=1 재시도) · ?test=1 연결 테스트. 2026-10-22 09:45→08:30.
+// 월~금 브리핑 잔디 알림 — 08:30부터 12시까지 재시도(영상과 메일이 둘 다 나갔을 때만 전송, 월=위클리·화~금=데일리) · ?test=1 연결 테스트.
 import { NextResponse } from 'next/server';
 import { notifyBriefing, sendJandiTest } from '@/lib/briefing-video/notify';
 

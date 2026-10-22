@@ -5,31 +5,11 @@
   "crons": [
     {
       "path": "/api/cron/daily-send-only?hold=1",
-      "schedule": "10 23 * * 0-4"
+      "schedule": "10,15,20,25,30,35,40,45,50,55 23 * * 0-4"
     },
     {
       "path": "/api/cron/daily-send-only?hold=1",
-      "schedule": "20 23 * * 0-4"
-    },
-    {
-      "path": "/api/cron/daily-send-only?hold=1",
-      "schedule": "25 23 * * 0-4"
-    },
-    {
-      "path": "/api/cron/daily-send-only?hold=1",
-      "schedule": "30 23 * * 0-4"
-    },
-    {
-      "path": "/api/cron/daily-send-only?hold=1",
-      "schedule": "35 23 * * 0-4"
-    },
-    {
-      "path": "/api/cron/daily-send-only?hold=1",
-      "schedule": "40 23 * * 0-4"
-    },
-    {
-      "path": "/api/cron/daily-send-only?hold=1",
-      "schedule": "50 23 * * 0-4"
+      "schedule": "0,15,30,45 0,1,2 * * 1-5"
     },
     {
       "path": "/api/cron/gv-collect",
@@ -60,12 +40,16 @@
       "schedule": "12 23 * * 1-4"
     },
     {
-      "path": "/api/cron/briefing-notify",
-      "schedule": "30 23 * * 0-4"
+      "path": "/api/cron/dispatch?workflow=daily-briefing.yml&slot=retry",
+      "schedule": "0 0,1 * * 1-5"
     },
     {
-      "path": "/api/cron/briefing-notify?final=1",
-      "schedule": "0 0 * * 1-5"
+      "path": "/api/cron/briefing-notify",
+      "schedule": "30,35,40,45,50,55 23 * * 0-4"
+    },
+    {
+      "path": "/api/cron/briefing-notify",
+      "schedule": "0,15,30,45 0,1,2 * * 1-5"
     }
   ]
 }
