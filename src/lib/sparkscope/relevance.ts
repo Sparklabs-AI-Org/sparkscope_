@@ -274,7 +274,11 @@ export function resolveMainKeys(a: RelevanceInput): { mainKeys: string[]; trueHe
  * 6) 광고/생활정보 노이즈 → ad_noise
  */
 export function filterReason(a: RelevanceInput): FilterReason | null {
-  const title = a.title ?? '';
+  // 구글 뉴스 제목 끝의 " - 매체명"은 떼고 본다. 매체명이 사명과 같으면 그 매체의 모든 기사가 걸린다
+  // (2026-10-23: 강원도민일보 "Kado" ↔ 포트폴리오사 카도(Kado) — 전국체전·평창 재판 등 54건이 카도 기사로 저장됨).
+  const rawTitle = a.title ?? '';
+  const source = (a.source ?? '').trim();
+  const title = source && rawTitle.endsWith(` - ${source}`) ? rawTitle.slice(0, -(source.length + 3)) : rawTitle;
   const body = a.body ?? '';
 
   const excl = splitCsv(a.excludeWords);
