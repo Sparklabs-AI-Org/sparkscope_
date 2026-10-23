@@ -171,6 +171,11 @@ function isListMentionAt(text: string, idx: number): boolean {
   const sentence = text.slice(sentStart, sentEnd);
   const commaCount = (sentence.match(/,/g) || []).length;
   if (commaCount < LIST_MENTION_MIN_COMMAS) return false;
+  // "A, B, C 등 …"처럼 나열 뒤에 '등'이 붙으면 문장 맨 앞이어도 나열의 한 항목이다(2026-10-23:
+  // "특히 SparkLabs Taiwan, PegaVC, CDIB Capital Group 등 주요 현지 VC와 …"가 주어로 판정돼 타 VC 기사가 스파크랩 기사로 분류됨).
+  const tail = text.slice(idx, sentEnd);
+  const etc = tail.search(/\s등(\s|$)/);
+  if (etc !== -1 && tail.slice(0, etc).includes(',')) return true;
   return idx - sentStart > LIST_MENTION_SUBJECT_WINDOW;
 }
 
