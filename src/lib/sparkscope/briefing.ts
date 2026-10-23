@@ -77,8 +77,8 @@ const CATEGORY_LABEL: Record<string, string> = {
 // 검수 화면·추천·영상·메일 크론이 모두 이 함수 하나로 "다음 방송"을 정한다.
 
 export type BriefingProgram = 'daily' | 'weekly';
-/** 방송별 기사 수 — 데일리는 기사당 15~20초로 10건(3분 30초 내외, 2026-10-22), 위클리(뉴스데스크)는 기존 8건 */
-export const BRIEFING_COUNT: Record<BriefingProgram, number> = { daily: 10, weekly: 8 };
+/** 방송별 기사 수 — 데일리·위클리 모두 10건, 기사당 약 18~20초(3분 10~20초). 2026-10-22 데일리, 10-23 위클리도 같게(소윤). */
+export const BRIEFING_COUNT: Record<BriefingProgram, number> = { daily: 10, weekly: 10 };
 // 메일 크론이 헤드라인·기사 창을 확정하는 시각(첫 실행). 도착은 영상이 나온 뒤 08:20~08:30(2026-10-22, 이전 09:30).
 export const SEND_KST = { h: 8, m: 10 };
 

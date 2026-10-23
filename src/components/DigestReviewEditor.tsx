@@ -7,7 +7,7 @@ import type { BriefingHeadline } from '@/lib/sparkscope/briefing';
 import type { BriefingCandidate, BriefingRecommendation } from '@/lib/sparkscope/briefing-reco';
 
 const BRIEFING_MAX_DAILY = 10; // briefing.ts BRIEFING_COUNT와 같은 값(서버 전용 모듈이라 복사)
-const BRIEFING_MAX_WEEKLY = 8;
+const BRIEFING_MAX_WEEKLY = 10;
 
 interface Cand {
   id: string;

@@ -225,8 +225,8 @@ export function itemSlide(dateLabel: string, h: BriefingHeadline, index: number,
  * 오늘 다룰 헤드라인 전체를 깔아 두고 지금 읽는 기사만 강조해, 전체 흐름과 남은 분량이 한눈에 보이게 한다.
  * active가 -1이면 전부 같은 톤(오프닝 직후 인사 화면). 지난 기사는 흐리게, 앞으로 나올 기사는 보통 톤.
  */
-export function boardSlide(dateLabel: string, headlines: BriefingHeadline[], active: number): Buffer {
-  const { canvas, ctx } = base(dateLabel);
+export function boardSlide(dateLabel: string, headlines: BriefingHeadline[], active: number, program?: string): Buffer {
+  const { canvas, ctx } = base(dateLabel, program);
   const n = headlines.length;
   const top = 118;
   const bottom = H - 34;

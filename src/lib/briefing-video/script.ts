@@ -166,6 +166,8 @@ export interface ScriptFrame {
   outro?: string;
   /** true면 기사마다 화면용 헤드라인(30자 안팎)과 글용 한 줄 요약도 함께 쓴다(데일리) */
   withHeadline?: boolean;
+  /** 기사당 글자 수 범위(withHeadline일 때) — 벗어나면 한 번 다시 쓴다. 없으면 데일리 기준 */
+  chars?: { min: number; max: number; target: string };
   /** 기사별 길이 지시를 바꿀 때(위클리 — 8개 전체 3분 30초~4분, 최대 5분, 2026-10-08 소윤) */
   length?: string;
 }
@@ -225,14 +227,23 @@ async function findUngrounded(h: BriefingHeadline, body: string, narration: stri
  * 데일리 길이·문체 지시 — 기사 12건을 5분 안에 담으려고 기사당 약 20초로 줄인다(2026-10-21 설문·대표님 피드백).
  * 더벨 데일리 브리핑 최근 10건 분석: 누가·무엇을·얼마를 먼저 말하고, 맥락은 한 구절, 상투적 전망 문장 없음.
  */
-/** 데일리 대본이 이보다 짧으면(본문 재료가 있을 때) 한 번 더 길게 쓴다 */
-const MIN_DAILY_CHARS = 120;
+/** 데일리 기사당 글자 수 — 이보다 짧으면(본문 재료가 있을 때) 길게, 길면 짧게 한 번 더 쓴다. 위클리는 frame.chars로 따로 준다. */
+const DAILY_CHARS = { min: 120, max: 170, target: '140~155' };
 
 export const DAILY_LENGTH = `위의 구성·길이·해석 지시는 모두 무시하고, 더벨 데일리 브리핑처럼 씁니다. 기사마다 약 140~155자(130자보다 짧거나 170자보다 길게 쓰지 않습니다), 2~3문장(읽는 데 약 18~20초). 영상 전체 3분 10~20초 기준(2026-10-22). 재료가 있으면 기사에 나온 일정·규모·상대방을 더 담아 길이를 채우되, 없는 사실을 지어내지는 않습니다.
  ① 첫 문장: 누가·무엇을·얼마(금액·지분·규모 같은 숫자)를 말하는 핵심 사실.
  ② 나머지 문장: 기사에 나온 목적·배경·일정·조건을 덧붙입니다. 기사가 밝힌 목적이나 업계 관측("~를 위한 방안으로 관측됩니다", "~하려는 구상입니다")은 써도 됩니다.
  우리 쪽 해석은 쓰지 않습니다 — "포트폴리오사 입장에선", "의미가 있다", "시사한다", "지켜볼 변수" 같은 문장은 넣지 마세요.
  예시: 롯데손해보험과 신한EZ손해보험의 합병은 신한금융의 손해보험 부문 규모를 키우기 위한 방안으로 관측됩니다. 양사는 중복 비용을 줄이고 판매 채널과 디지털 역량을 공유해 수익성과 자본 건전성을 높이려는 구상입니다.`;
+
+/**
+ * 위클리 길이 — 데일리와 같은 지시에서 글자 수만 조금 줄인다. 인사·마무리가 데일리보다 길고 한 주치 기사라
+ * 재료가 많아, 같은 지시로 10건이면 3분 43초가 나왔다(2026-10-23 10/19 샘플). 목표는 데일리와 같은 3분 10~20초.
+ */
+export const WEEKLY_LENGTH = DAILY_LENGTH
+  .replace('약 140~155자(130자보다 짧거나 170자보다 길게 쓰지 않습니다)', '약 115~130자(100자보다 짧거나 140자보다 길게 쓰지 않습니다)')
+  .replace('읽는 데 약 18~20초', '읽는 데 약 15~17초');
+if (WEEKLY_LENGTH === DAILY_LENGTH) throw new Error('WEEKLY_LENGTH: DAILY_LENGTH 문구가 바뀌어 글자 수를 못 바꿨다 — 두 상수를 같이 고칠 것');
 
 export async function writeBriefingScript(snapshot: BriefingSnapshot, frame?: ScriptFrame): Promise<ScriptSegment[]> {
   const heads = snapshot.headlines;
@@ -277,7 +288,9 @@ export async function writeBriefingScript(snapshot: BriefingSnapshot, frame?: Sc
   };
   const texts = await Promise.all(heads.map(async (h, i) => {
     let feedback = '';
-    let shortButGood: { text: string; extra?: ReturnType<typeof extras.get> } | null = null;
+    const range = frame?.chars ?? DAILY_CHARS;
+    // 길이만 어긋난 첫 대본 — 다시 쓴 것이 실패하면 이걸 쓴다.
+    let firstGood: { text: string; extra?: ReturnType<typeof extras.get> } | null = null;
     for (let attempt = 0; attempt < 2; attempt++) {
       try {
         const t = await writeOne(h, i, feedback);
@@ -285,11 +298,15 @@ export async function writeBriefingScript(snapshot: BriefingSnapshot, frame?: Sc
           if (!frame?.withHeadline) return t;
           // 데일리는 헤드라인·리드·사실까지 원문과 대조한다 — 없는 이름·숫자가 있으면 한 번 더 쓴다.
           const bad = await findUngrounded(h, bodies[i], t, extras.get(i));
-          // 너무 짧으면(본문 재료가 있을 때만) 한 번 더 길게 쓴다 — 글자 수 지시를 자주 어겨 영상이 목표보다 짧아졌다(2026-10-22).
-          if (bad.length === 0 && attempt === 0 && t.length < MIN_DAILY_CHARS && bodies[i]) {
-            console.warn(`[script] ${i}번 대본이 ${t.length}자로 짧음 — 본문 재료를 더 담아 다시 씀`);
-            shortButGood = { text: t, extra: extras.get(i) };
-            feedback = `\n[수정 요청] 직전 대본이 ${t.length}자로 너무 짧았습니다. 본문 발췌에 있는 일정·규모·상대방·목적을 더 담아 140~155자로 다시 쓰세요. 없는 사실은 쓰지 마세요.`;
+          // 글자 수가 범위를 벗어나면 한 번 더 쓴다 — 지시를 자주 어겨 영상 길이가 목표에서 벗어났다(2026-10-22·23).
+          // 짧을 때는 본문 재료가 있을 때만 늘린다(재료 없이 늘리면 지어낸다).
+          if (bad.length === 0 && attempt === 0 && ((t.length < range.min && bodies[i]) || t.length > range.max)) {
+            const short = t.length < range.min;
+            console.warn(`[script] ${i}번 대본이 ${t.length}자로 ${short ? '짧음' : '김'} — ${range.target}자로 다시 씀`);
+            firstGood = { text: t, extra: extras.get(i) };
+            feedback = short
+              ? `\n[수정 요청] 직전 대본이 ${t.length}자로 너무 짧았습니다. 본문 발췌에 있는 일정·규모·상대방·목적을 더 담아 ${range.target}자로 다시 쓰세요. 없는 사실은 쓰지 마세요.`
+              : `\n[수정 요청] 직전 대본이 ${t.length}자로 너무 깁니다. 핵심 사실만 남겨 ${range.target}자로 줄여 다시 쓰세요.`;
             continue;
           }
           if (bad.length === 0) return t;
@@ -302,9 +319,9 @@ export async function writeBriefingScript(snapshot: BriefingSnapshot, frame?: Sc
         console.warn(`[script] ${i}번 대본 실패:`, e);
       }
     }
-    if (shortButGood) { // 길게 다시 쓴 것이 실패하면 처음의 짧지만 정상인 대본을 쓴다
-      if (shortButGood.extra) extras.set(i, shortButGood.extra);
-      return shortButGood.text;
+    if (firstGood) { // 길이를 맞춰 다시 쓴 것이 실패하면 처음의 정상 대본을 쓴다
+      if (firstGood.extra) extras.set(i, firstGood.extra);
+      return firstGood.text;
     }
     extras.delete(i); // 끝내 못 맞춘 칸은 헤드라인·요약을 쓰지 않고 원문 제목·요약으로 대신한다
     return '';

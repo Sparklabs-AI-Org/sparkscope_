@@ -71,10 +71,10 @@ function openingDate(dateKey: string): string {
 }
 
 /** 더벨 형식 개요 — "○○ 주요 뉴스의 핵심 내용은? A, B, … 그리고 N." 제목을 그대로 나열하므로 새 사실이 들어가지 않는다. */
-export function buildOverview(dateKey: string, headlines: BriefingHeadline[]): string {
+export function buildOverview(dateKey: string, headlines: BriefingHeadline[], label = '스파크스코프 주요 뉴스'): string {
   const titles = headlines.map(h => h.headline ?? h.title);
   const list = titles.length > 1 ? `${titles.slice(0, -1).join(', ')}, 그리고 ${titles[titles.length - 1]}` : titles[0] ?? '';
-  return `${longDate(dateKey)} 스파크스코프 주요 뉴스의 핵심 내용은? ${list} 소식입니다.`;
+  return `${longDate(dateKey)} ${label}의 핵심 내용은? ${list} 소식입니다.`;
 }
 
 /** 영상 총 길이 추정 — render.ts와 같은 규칙(장면마다 음성 + GAP). 오프닝 포함. */
