@@ -48,8 +48,8 @@ export async function notifyBriefing(opts: { final: boolean; baseUrl: string }):
   await postJandi(url, briefingMessage({
     dateKey,
     weekly,
+    // 영상 화면과 같은 브리핑 헤드라인만 — 요약은 붙이지 않는다(2026-10-23 소윤: 제목만).
     titles: headlines.map(h => h.headline ?? h.title),
-    briefs: headlines.map(h => h.brief),
     videoPage: `${opts.baseUrl.replace(/\/$/, '')}/briefing/${dateKey}`,
     baseUrl: opts.baseUrl,
   }));
@@ -67,14 +67,14 @@ export async function notifyBriefing(opts: { final: boolean; baseUrl: string }):
  *
  *   📰SparkScope 데일리 브리핑            ← 월요일은 "위클리 브리핑"
  *   ┃ 10월 2일 SparkScope 데일리브리핑
- *   ┃ 1. (브리핑 헤드라인) + 한 줄 요약
+ *   ┃ 1. (브리핑 헤드라인 — 영상 화면과 같은 제목)
  *   ┃ …
  *   ┃ 📹 영상 보기 · 🗂 지난 영상 보기 (링크)  ← 영상이 없는 날은 이 줄이 빠진다
  *   ┃ 🔗SparkScope 대시보드 바로가기 (링크)
  */
 export interface JandiMessage { body: string; connectColor: string; connectInfo: { title: string; description: string }[] }
 
-export function briefingMessage(m: { dateKey: string; weekly?: boolean; titles: string[]; briefs?: (string | undefined)[]; videoPage: string | null; baseUrl: string }): JandiMessage {
+export function briefingMessage(m: { dateKey: string; weekly?: boolean; titles: string[]; videoPage: string | null; baseUrl: string }): JandiMessage {
   const [, mm, dd] = m.dateKey.split('-').map(Number);
   const base = m.baseUrl.replace(/\/$/, '');
   const kind = m.weekly ? '위클리' : '데일리';
@@ -84,7 +84,7 @@ export function briefingMessage(m: { dateKey: string; weekly?: boolean; titles: 
     connectInfo: [{
       title: `${mm}월 ${dd}일 SparkScope ${kind}브리핑`,
       description: [
-        ...m.titles.map((t, i) => `${i + 1}. ${t}${m.briefs?.[i] ? `\n   ${m.briefs[i]}` : ''}`),
+        ...m.titles.map((t, i) => `${i + 1}. ${t}`),
         '',
         ...(m.videoPage ? [`[📹 영상 보기](${m.videoPage})`, `[🗂 지난 영상 보기](${base}/briefing)`] : []),
         `[🔗SparkScope 대시보드 바로가기](${base}/dashboard)`,
