@@ -369,9 +369,18 @@ export async function pickByTiers(w: BroadcastWindow): Promise<{ picked: Briefin
   // 스파크랩 — 다이제스트 섹션(한국·대만·글로벌벤처스 모두). 지난 브리핑에 나간 기사는 다시 넣지 않는다
   // (2026-10-07 소윤 결정 — 화~금 매일 나가므로 중복을 무조건 막는다. 10-01의 "메일과 맞춰 다시 넣기"를 대체).
   // 같은 사건의 한·영 기사가 두 칸을 차지하지 않게 한국어 기사를 앞에 둔다(1칸만 쓴다).
+  // 스파크랩 칸은 제목에 스파크랩(자사 이름·프로그램·대표)이 있는 기사만 — 본문 참여기관 목록에 한 번 나온 타 AC·VC 기사가
+  // "스파크랩 뉴스"로 맨 앞에 서던 문제(2026-10-23 1번 "노틸러스인베스트먼트, … NGG 프로그램" — 본문에 "SparkLabs Taiwan 등 현지 VC").
+  const selfTargets = await prisma.monitoringTarget.findMany({
+    where: { category: 'sparklabs_self' }, select: { name: true, englishName: true, primaryKeyword: true, helperKeywords: true },
+  });
+  const squash = (t: string) => t.toLowerCase().replace(/\s+/g, '');
+  const selfKeys = [...new Set(selfTargets.flatMap(t => [t.name, t.englishName, t.primaryKeyword, ...(t.helperKeywords ?? '').split(',')])
+    .map(k => squash(k ?? '')).filter(k => k.length >= 2))];
+  const selfInTitle = (title: string) => selfKeys.some(k => squash(title).includes(k));
   const S = [...data.sparklabsArticles]
     .sort((x, y) => Number(isKorean(y.title)) - Number(isKorean(x.title)))
-    .map(a => fromArticle(a, idByLink)).filter(fresh);
+    .map(a => fromArticle(a, idByLink)).filter(a => fresh(a) && selfInTitle(a.title));
 
   // 포트폴리오 — 다이제스트 섹션(회사당 1건). 주가 기사면 같은 회사 다른 기사로. 지난 7일 브리핑에 나간 회사 제외.
   const briefedCompanies = new Set(weekly ? [] : candidates.filter(a => briefed.has(a.link, a.title)).map(a => a.matchedKeyword));
