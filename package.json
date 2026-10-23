@@ -19,7 +19,7 @@
     "audit:analysis": "tsx scripts/run-analysis-audit.ts"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.32.1",
+    "@anthropic-ai/sdk": "^0.137.0",
     "@auth/prisma-adapter": "^2.7.4",
     "@google-cloud/vertexai": "^1.12.0",
     "@prisma/client": "^5.22.0",

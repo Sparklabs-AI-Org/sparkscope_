@@ -51,6 +51,23 @@ function capTitles(titles: string[], n = 40): string[] {
   return titles.slice(0, n);
 }
 
+/**
+ * 프롬프트 캐싱 (2026-10 SparkLabs 조직 공지로 적용).
+ * 요청마다 같은 지시문은 전부 system에 두고 cache_control을 건다. 회사명·기간·건수·제목처럼
+ * 매번 바뀌는 값은 user 메시지로만 보낸다 — 이 값이 system 앞쪽에 섞이면 캐시가 매번 깨진다.
+ * 참고: Haiku 5.5는 512토큰 미만 접두부는 캐싱하지 않으므로, 지시문이 짧은 호출은
+ * cache_read_input_tokens가 0으로 남을 수 있다(오류는 아님).
+ */
+function cachedSystem(text: string): Anthropic.TextBlockParam[] {
+  return [{ type: 'text', text, cache_control: { type: 'ephemeral' } }];
+}
+
+function logCacheUsage(label: string, usage: Anthropic.Usage): void {
+  console.info(
+    `[competitor-insights] ${label} 토큰 — 입력 ${usage.input_tokens}, 캐시 읽기 ${usage.cache_read_input_tokens ?? 0}, 캐시 쓰기 ${usage.cache_creation_input_tokens ?? 0}`,
+  );
+}
+
 const COMPANY_TREND_SYSTEM = `당신은 벤처투자 업계 미디어 애널리스트입니다.
 경쟁 액셀러레이터·VC의 최근 기사 제목만 보고 투자 동향을 요약합니다.
 제목에 없는 사실은 절대 추측해서 쓰지 마세요. 근거가 부족하면 "기사상 확인 어려움"이라고 쓰세요.
@@ -60,7 +77,17 @@ const COMPANY_TREND_SYSTEM = `당신은 벤처투자 업계 미디어 애널리�
 - 불필요한 조사·서술어를 최대한 생략하고 핵심 정보만 나열하세요.
 - 예시: "3개월간 크로스보더 AI 커머스 스타트업 '사줘'에 집중 투자" (O)
        "이 기간 크로스보더 AI 커머스 스타트업 '사줘'에 집중 투자했다" (X, 너무 길고 서술체)
-- 각 항목은 40자 이내를 목표로 최대한 짧게 씁니다.`;
+- 각 항목은 40자 이내를 목표로 최대한 짧게 씁니다.
+
+작업:
+사용자 메시지로 경쟁사 1곳의 이름, 기간, 기사 건수, 기사 제목 목록이 주어집니다.
+아래 3가지를 각각 개조식 명사구로 요약하세요. 라벨·번호·완결형 문장 없이, 주어진 기간 표현(예: "3개월간")으로 시작하는 짧은 구로 쓰세요(화면에 불릿(•)으로 표시됩니다).
+- 그 경쟁사가 가장 크게(또는 두드러지게) 투자한 곳
+- 그 투자들이 쏠린 분야·성격 (예: 바이오 중심, 초기 AI 위주)
+- 스파크랩과 비교했을 때 노출량·투자영역 차이 한 줄
+
+출력 스키마: {"points": ["구1", "구2", "구3"]}
+JSON 객체만 반환하세요.`;
 
 /**
  * 경쟁사 1곳의 트렌드 3줄 요약.
@@ -85,24 +112,18 @@ export async function summarizeCompetitorTrend(
     const resp = await anthropic.messages.create({
       model: 'claude-haiku-5-5',
       max_tokens: 400,
-      system: COMPANY_TREND_SYSTEM,
+      system: cachedSystem(COMPANY_TREND_SYSTEM),
       messages: [{
         role: 'user',
         content: `경쟁사: ${company}
+기간 표현: ${periodPhrase}
 ${periodPhrase} ${company} 관련 기사 ${competitorCount}건, 같은 기간 스파크랩 관련 기사 ${sparklabsCount}건.
 
 기사 제목:
-${capped.map((t, i) => `${i + 1}. ${t}`).join('\n')}
-
-아래 3가지를 각각 개조식 명사구로 요약해주세요. 라벨·번호·완결형 문장 없이, "${periodPhrase} ~" 형태로 시작하는 짧은 구로 쓰세요(화면에 불릿(•)으로 표시됩니다).
-- ${company}가 가장 크게(또는 두드러지게) 투자한 곳
-- 그 투자들이 쏠린 분야·성격 (예: 바이오 중심, 초기 AI 위주)
-- 스파크랩과 비교했을 때 노출량·투자영역 차이 한 줄
-
-출력 스키마: {"points": ["구1", "구2", "구3"]}
-JSON 객체만 반환:`,
+${capped.map((t, i) => `${i + 1}. ${t}`).join('\n')}`,
       }],
     });
+    logCacheUsage(company, resp.usage);
     const text = resp.content[0]?.type === 'text' ? resp.content[0].text : '';
     const parsed = JSON.parse(extractJson(text));
     const points = Array.isArray(parsed?.points)
@@ -126,7 +147,15 @@ const OVERALL_SYSTEM = `당신은 벤처투자 업계 미디어 애널리스트�
 - 불필요한 조사·서술어를 최대한 생략하고 핵심 정보만 나열하세요.
 - 예시: "네이버 D2SF, 220건으로 AI·검색·커머스 분야 압도적 1위" (O)
        "네이버 D2SF가 220건으로 압도적 1위를 차지하며 AI·검색·커머스 영역에서 주도권을 확보하고 있다" (X, 너무 길고 서술체)
-- 각 항목은 50자 이내를 목표로 최대한 짧게 씁니다.`;
+- 각 항목은 50자 이내를 목표로 최대한 짧게 씁니다.
+
+작업:
+사용자 메시지로 기간, 경쟁 AC·VC 언론 노출 순위, 스파크랩 기사 건수, 주요 기사 제목이 주어집니다.
+경쟁사들이 전체적으로 어떻게 움직이고 있는지 개조식 명사구 3~4개로 요약하세요. 완결형 문장 없이 짧게 쓰세요.
+누가 주도하고 있는지, 어떤 분야·단계에 자금이 몰리는지, 스파크랩은 그 안에서 어느 위치인지가 드러나게 써주세요.
+
+출력 스키마: {"lines": ["구1", "구2", "구3"]}
+JSON 객체만 반환하세요.`;
 
 /** 경쟁사 전체 총평 3~4줄 */
 export async function summarizeOverallTrend(
@@ -146,7 +175,7 @@ export async function summarizeOverallTrend(
     const resp = await anthropic.messages.create({
       model: 'claude-haiku-5-5',
       max_tokens: 600,
-      system: OVERALL_SYSTEM,
+      system: cachedSystem(OVERALL_SYSTEM),
       messages: [{
         role: 'user',
         content: `${periodPhrase} 경쟁 AC·VC 언론 노출 순위:
@@ -155,15 +184,10 @@ ${competitors.map((c, i) => `${i + 1}. ${c.name} ${c.count}건 (부정 ${c.negCo
 같은 기간 스파크랩 관련 기사: ${sparklabsCount}건
 
 주요 기사 제목:
-${capTitles(sampleTitles, 60).map((t, i) => `${i + 1}. ${t}`).join('\n')}
-
-경쟁사들이 전체적으로 어떻게 움직이고 있는지 개조식 명사구 3~4개로 요약해주세요. 완결형 문장 없이 짧게 쓰세요.
-누가 주도하고 있는지, 어떤 분야·단계에 자금이 몰리는지, 스파크랩은 그 안에서 어느 위치인지가 드러나게 써주세요.
-
-출력 스키마: {"lines": ["구1", "구2", "구3"]}
-JSON 객체만 반환:`,
+${capTitles(sampleTitles, 60).map((t, i) => `${i + 1}. ${t}`).join('\n')}`,
       }],
     });
+    logCacheUsage('전체 총평', resp.usage);
     const text = resp.content[0]?.type === 'text' ? resp.content[0].text : '';
     const parsed = JSON.parse(extractJson(text));
     const lines = Array.isArray(parsed?.lines)
@@ -186,7 +210,13 @@ const CATEGORY_PULSE_SYSTEM = `당신은 벤처투자 업계 미디어 애널리
 - 완결된 문장("~했다") 대신 명사구로 끝나는 개조식 한 줄로 쓰세요.
 - 예시: "카카오벤처스·D2SF 등 AI 초기투자 활발, 시리즈A 조달 잇따라" (O)
        "카카오벤처스와 D2SF를 중심으로 AI 초기투자가 활발히 이루어지고 있다" (X, 서술체·너무 김)
-- 45자 이내를 목표로 최대한 짧게. 라벨·번호 없이 한 줄만.`;
+- 45자 이내를 목표로 최대한 짧게. 라벨·번호 없이 한 줄만.
+
+작업:
+사용자 메시지로 분야, 기간, 기사 제목 목록이 주어집니다.
+지금 이 분야에서 가장 눈에 띄는 흐름을 한 줄로 요약하세요.
+출력 스키마: {"line": "..."}
+JSON 객체만 반환하세요.`;
 
 /** 최근 며칠간 특정 카테고리(AC·VC/스타트업계 등) 기사 제목을 보고 "지금 흐름" 한 줄 요약. */
 export async function summarizeCategoryPulse(
@@ -206,18 +236,15 @@ export async function summarizeCategoryPulse(
     const resp = await anthropic.messages.create({
       model: 'claude-haiku-5-5',
       max_tokens: 200,
-      system: CATEGORY_PULSE_SYSTEM,
+      system: cachedSystem(CATEGORY_PULSE_SYSTEM),
       messages: [{
         role: 'user',
         content: `분야: ${label}
 ${periodPhrase} 기사 ${capped.length}건 중 제목:
-${capped.map((t, i) => `${i + 1}. ${t}`).join('\n')}
-
-지금 이 분야에서 가장 눈에 띄는 흐름을 한 줄로 요약해주세요.
-출력 스키마: {"line": "..."}
-JSON 객체만 반환:`,
+${capped.map((t, i) => `${i + 1}. ${t}`).join('\n')}`,
       }],
     });
+    logCacheUsage(label, resp.usage);
     const text = resp.content[0]?.type === 'text' ? resp.content[0].text : '';
     const parsed = JSON.parse(extractJson(text));
     const line = typeof parsed?.line === 'string' ? parsed.line.trim() : '';
