@@ -6,6 +6,7 @@ import { articleTitle } from '@/lib/sparkscope/article-title';
 import { prisma } from '@/lib/prisma';
 import { ArticleListView } from '@/components/ArticleListView';
 import { SignalBanner } from '@/components/SignalBanner';
+import { FamilyNews } from '@/components/FamilyNews';
 import { DashboardTutorial } from '@/components/DashboardTutorial';
 import { SHOW_SUBSCRIPTION_UI } from '@/lib/sparkscope/digest';
 import { PortfolioFilter } from '@/components/PortfolioFilter';
@@ -1094,10 +1095,29 @@ export default async function DashboardPage({ searchParams }: { searchParams: { 
         <InterPanel from={range.from} to={range.to} min={MIN_DATE} max={fmt(getKstNow())} canScrap={canScrap && !portfolioView} portfolioView={portfolioView} />
       ) : portfolioView ? (
       // ── 공개 화면 Intra ── 오늘의 시그널 + 지금 핫한 키워드(AI) 한 장(2026-10-26 소윤).
-      // 예전의 '어제 놓친 소식'·'SparkLabs Family News'는 뺐다. 이 패널은 Inter에서 옮겨 와 Inter에는 다시 두지 않는다.
-      <div data-tour="today-signal" className="mb-8">
-        <SignalBanner domain="ai" hidePortfolio />
-      </div>
+      // 예전의 '어제 놓친 소식'만 이 패널로 바꿨다 — 아래 SparkLabs Family News(기사 DB)는 그대로. 이 패널은 Inter에서 옮겨 와 Inter에는 다시 두지 않는다.
+      <>
+        <div data-tour="today-signal" className="mb-8">
+          <SignalBanner domain="ai" hidePortfolio />
+        </div>
+
+        <div data-tour="date-range" className="mb-6">
+          <DateRangePicker
+            key={`${range.from}_${range.to}`}
+            from={range.from} to={range.to} min={MIN_DATE} max={fmt(getKstNow())}
+            tab="portfolio"
+          />
+        </div>
+
+        <SectionTitle title={`🗄️ SparkLabs Family News`} />
+        <div data-tour="article-table" className="bg-white p-5 rounded-2xl border border-spark-border shadow-card mb-8">
+          <FamilyNews
+            articles={articlesWithBookmark.map(({ importance, tone, pitchScore, portfolioStatus, ...a }: any) => ({ ...a, importance: null, tone: null, pitchScore: null })) as any}
+            canBookmark={canBookmark}
+            emptyText={tr('{range} 내 기사가 없습니다.', { range: range.label })}
+          />
+        </div>
+      </>
       ) : (
       <>
       {/* 섹션 탭 — 국가(1단) × 관점(2단) 2단 계층.

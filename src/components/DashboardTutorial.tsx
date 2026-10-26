@@ -157,7 +157,7 @@ export const INTER_TOUR: TourStep[] = [
 const PUBLIC_SCOPE_STEP: TourStep = {
   key: 'scope-switch',
   title: '화면은 두 개예요',
-  body: '**🏠 Intra**는 오늘 여러 매체가 함께 다룬 AI 소식과 지금 화제인 키워드를 한눈에 보여줍니다.\n**🔭 Inter**는 해외 AI·바이오 시장이 어디로 움직이는지 주제별로 깊게 봅니다.',
+  body: '**🏠 Intra**는 오늘 여러 매체가 함께 다룬 AI 소식·지금 화제인 키워드와, 스파크랩 패밀리 기사 모음을 보여줍니다.\n**🔭 Inter**는 해외 AI·바이오 시장이 어디로 움직이는지 주제별로 깊게 봅니다.',
 };
 
 export const PUBLIC_INTRA_TOUR: TourStep[] = [
@@ -166,6 +166,21 @@ export const PUBLIC_INTRA_TOUR: TourStep[] = [
     key: 'today-signal',
     title: '오늘의 시그널',
     body: '여러 매체가 함께 다룬 소식 가운데 **가장 중요한 한 건**을 크게, 그다음 소식들을 아래 카드로 보여줍니다.\n오른쪽 위 **오늘 · 이번 주 · 이번 달**로 기간을 바꿀 수 있고, 카드의 **원문 보기**로 기사를 엽니다.\n오른쪽 **🔥 지금 핫한 키워드**는 여러 매체와 커뮤니티에서 실제로 많이 다뤄진 이름이에요. 누르면 관련 소식이 펼쳐집니다.',
+  },
+  {
+    key: 'date-range',
+    title: '언제부터 언제까지 볼지',
+    body: '아래 **SparkLabs Family News** 목록의 기간을 정합니다. 7일·1개월·3개월·1년을 바로 고르거나 날짜를 직접 넣을 수 있어요.',
+  },
+  {
+    key: 'family-tabs',
+    title: 'SparkLabs Family News',
+    body: '기간 안의 기사를 네 갈래로 나눠 봅니다 — **스파크랩 · 포트폴리오 · 스타트업계 소식 · 타 AC·VC**.\n스파크랩 탭에서는 코리아·대만·글로벌 등 지사별로 다시 고를 수 있어요.',
+  },
+  {
+    key: 'article-table',
+    title: '검색하고 정렬하기',
+    body: '제목·매체·회사명으로 검색하고 최신순·오래된순으로 정렬할 수 있습니다. 같은 소식을 여러 매체가 썼으면 한 줄로 묶이고 "+N개 매체 더보기"로 펼칩니다.',
   },
 ];
 
