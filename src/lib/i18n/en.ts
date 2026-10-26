@@ -1478,10 +1478,10 @@ export const EN: Record<string, string> = {
   // 정책·지원사업 탭 (policy-collect.ts 수집분)
   '📑 정책·지원사업': '📑 Policy & grants',
   '정책·지원사업': 'Policy & grants',
-  '{range} · {n}건 · 깡프로 스타트업 뉴스가 매일 아침 고른 기사': '{range} · {n} articles · picked each morning by Kkangpro Startup News',
+  '{range} · {n}건 · 깡프로 스타트업 뉴스가 고른 기사 + 데모데이 정책·자금 글': '{range} · {n} articles · picked by Kkangpro Startup News + Demoday policy & funding posts',
   '{range} 내 수집된 정책·지원사업 기사가 없습니다.': 'No policy & grant articles collected in {range}.',
   '오늘의 정책·지원사업': "Today's policy & grants",
   '가장 최근 정책·지원사업': 'Latest policy & grants',
-  '{n}건 · 깡프로 스타트업 뉴스': '{n} articles · Kkangpro Startup News',
+  '{n}건 · 깡프로 스타트업 뉴스 · 데모데이': '{n} articles · Kkangpro Startup News · Demoday',
   '+{n}건 더보기': '+{n} more',
 };

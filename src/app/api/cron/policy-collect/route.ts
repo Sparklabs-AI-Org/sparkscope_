@@ -15,7 +15,12 @@
  *   화면에 요약이 필요해지면 그때 붙인다(대시보드 사전계산과 같은 방식).
  */
 import { NextRequest, NextResponse } from 'next/server';
-import { collectPolicyArticles, POLICY_CURATOR } from '@/lib/sparkscope/policy-collect';
+import {
+  collectPolicyArticles,
+  collectDemodayArticles,
+  POLICY_CURATOR,
+  DEMODAY_SOURCE,
+} from '@/lib/sparkscope/policy-collect';
 import { prisma } from '@/lib/prisma';
 
 export const runtime = 'nodejs';
@@ -30,10 +35,25 @@ export async function GET(request: NextRequest) {
   const days = Number(request.nextUrl.searchParams.get('days') ?? 3);
 
   try {
-    const raw = await collectPolicyArticles(days);
+    const curated = await collectPolicyArticles(days);
+
+    // 데모데이는 사이트맵 전체를 보고 "아직 없는 것"만 읽는다(lastmod를 못 믿어서다 —
+    // policy-collect.ts 머리말 참고). 이미 저장한 주소를 넘겨 그만큼 요청을 아낀다.
+    const known = new Set(
+      (
+        await prisma.article.findMany({
+          where: { source: DEMODAY_SOURCE, category: 'policy_support' },
+          select: { link: true },
+        })
+      ).map(a => a.link),
+    );
+    const demoday = await collectDemodayArticles(known);
+
+    const raw = [...curated, ...demoday];
+    console.log(`[cron:policy-collect] ${POLICY_CURATOR} ${curated.length}건 · ${DEMODAY_SOURCE} ${demoday.length}건`);
     if (raw.length === 0) {
       // 블로그 글 형식이 바뀌면 조용히 0건이 된다 — 가장 위험한 실패라 로그를 남긴다.
-      console.warn('[cron:policy-collect] 수집 0건 — 연속되면 블로그 글 형식 변경 여부 확인 필요');
+      console.warn('[cron:policy-collect] 수집 0건 — 연속되면 블로그 글 형식·데모데이 사이트맵 확인 필요');
       return NextResponse.json({ ok: true, collected: 0, saved: 0 });
     }
 
@@ -65,9 +85,7 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    console.log(
-      `[cron:policy-collect] ${POLICY_CURATOR} ${raw.length}건 → 신규 ${saved}건 · 기존 ${skipped}건`,
-    );
+    console.log(`[cron:policy-collect] 합계 ${raw.length}건 → 신규 ${saved}건 · 기존 ${skipped}건`);
     return NextResponse.json({ ok: true, collected: raw.length, saved, skipped });
   } catch (e: any) {
     console.error('[cron:policy-collect] 실패:', e);

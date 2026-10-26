@@ -21,6 +21,21 @@
  *   중복 저장하고 (2) 매체명을 알 수 없다. 리다이렉트를 따라가 n.news.naver.com 주소로
  *   펴서 저장하고, 매체명은 그 페이지의 언론사 로고 alt에서 읽는다.
  *
+ * ── 데모데이(demoday.co.kr/policy) ──────────────────────────────────────────
+ *
+ * 깡프로와 달리 남의 기사를 모아주는 곳이 아니라 **자기가 쓴 글**이다(정부지원사업
+ * TOP100·K-Startup 주간 공고 등). 그래서 글 하나를 기사 하나로 저장한다.
+ *
+ * 목록을 어떻게 아는가 — sitemap/1.xml:
+ *   RSS가 없고 /policy 목록 페이지는 자바스크립트로 그려져 HTML에 주소가 없다.
+ *   대신 사이트맵에 /policy/ 주소가 232개(2026-10-26) 들어 있다. robots.txt는
+ *   /policy를 허용하고 /api/는 막고 있어, 내부 API는 쓰지 않고 사이트맵만 쓴다.
+ *
+ * lastmod는 못 믿는다:
+ *   232개가 전부 같은 값이다(사이트맵을 만든 시각). 신선도 판단에 쓸 수 없어,
+ *   **이미 저장한 주소를 빼는 방식**으로 새 글만 읽는다. 발행일은 글 페이지의
+ *   JSON-LD datePublished에서 가져온다.
+ *
  * 한계:
  *   - 블로그 글 형식(번호 + 제목 + 다음 줄에 링크)에 기대고 있다. 글쓴이가 형식을 바꾸면
  *     파싱이 0건이 된다 — 조용히 죽지 않도록 호출부에서 0건을 경고로 남긴다.
@@ -182,6 +197,66 @@ export async function collectPolicyArticles(days = 3): Promise<RawArticle[]> {
         basePriority: 0,
       });
     }
+  }
+  return out;
+}
+
+// ── 데모데이 ────────────────────────────────────────────────────────────────
+
+export const DEMODAY_SOURCE = '데모데이';
+const DEMODAY_SITEMAP = 'https://demoday.co.kr/sitemap/1.xml';
+
+/** 사이트맵에서 /policy/ 글 주소를 모두 얻는다(최신 id가 뒤). */
+export async function fetchDemodayUrls(): Promise<string[]> {
+  const res = await fetchText(DEMODAY_SITEMAP);
+  if (!res?.ok) return [];
+  const xml = await res.text();
+  const urls = [...xml.matchAll(/<loc>(https:\/\/demoday\.co\.kr\/policy\/\d+)<\/loc>/g)].map(m => m[1]!);
+  // id 오름차순으로 정렬해 호출부가 뒤에서부터(최신부터) 집어가게 한다.
+  return [...new Set(urls)].sort((a, b) => Number(a.split('/').pop()) - Number(b.split('/').pop()));
+}
+
+/** 글 한 편에서 제목과 발행일을 읽는다. */
+export async function fetchDemodayPost(url: string): Promise<{ title: string; pubDate: Date } | null> {
+  const res = await fetchText(url);
+  if (!res?.ok) return null;
+  const html = await res.text();
+  const $ = cheerio.load(html);
+  const title =
+    $('meta[property="og:title"]').attr('content')?.trim() ||
+    $('title').text().replace(/\s*\|\s*데모데이\s*$/, '').trim();
+  if (!title) return null;
+  // 발행일은 JSON-LD에 있다. og:article:published_time은 이 사이트에 없다(실측).
+  const iso = html.match(/"datePublished"\s*:\s*"([^"]+)"/)?.[1];
+  const pubDate = iso ? new Date(iso) : null;
+  if (!pubDate || isNaN(pubDate.getTime())) return null;
+  return { title, pubDate };
+}
+
+/**
+ * 아직 저장하지 않은 글만 최신순으로 최대 max편 읽는다.
+ * knownLinks를 호출부가 넘긴다 — 수집기가 DB를 직접 보지 않게 해서 다른 수집기와 모양을 맞춘다.
+ */
+export async function collectDemodayArticles(knownLinks: Set<string>, max = 30): Promise<RawArticle[]> {
+  const urls = await fetchDemodayUrls();
+  if (urls.length === 0) {
+    console.warn('[policy-collect] 데모데이 사이트맵 0건 — 주소나 형식이 바뀌었을 수 있다');
+    return [];
+  }
+  const fresh = urls.filter(u => !knownLinks.has(u)).reverse().slice(0, max);
+  const out: RawArticle[] = [];
+  for (const url of fresh) {
+    const post = await fetchDemodayPost(url);
+    if (!post) continue;
+    out.push({
+      title: post.title,
+      link: url,
+      source: DEMODAY_SOURCE,
+      pubDate: post.pubDate,
+      matchedKeyword: DEMODAY_SOURCE,
+      category: POLICY_CATEGORY,
+      basePriority: 0,
+    });
   }
   return out;
 }

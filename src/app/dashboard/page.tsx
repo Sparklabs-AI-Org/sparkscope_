@@ -1509,7 +1509,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: { 
           <div className="mb-4">
             <div className="font-bold">📑 {tr('정책·지원사업')}</div>
             <div className="text-xs text-gray-500 mt-0.5">
-              {tr('{range} · {n}건 · 깡프로 스타트업 뉴스가 매일 아침 고른 기사', { range: range.label, n: data.policyArticles.length })}
+              {tr('{range} · {n}건 · 깡프로 스타트업 뉴스가 고른 기사 + 데모데이 정책·자금 글', { range: range.label, n: data.policyArticles.length })}
             </div>
             <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-spark-border/60 pt-3">
               <span className="text-xs font-semibold text-gray-500 whitespace-nowrap">📅 {tr('기간')}</span>

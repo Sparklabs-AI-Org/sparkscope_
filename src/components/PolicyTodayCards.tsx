@@ -42,7 +42,7 @@ export function PolicyTodayCards({
         </span>
         <span className="text-xs font-semibold text-sky-700">{label}</span>
         <span className="text-xs text-sky-700/70">
-          {t('{n}건 · 깡프로 스타트업 뉴스', { n: items.length })}
+          {t('{n}건 · 깡프로 스타트업 뉴스 · 데모데이', { n: items.length })}
         </span>
         {rest > 0 && (
           <button
