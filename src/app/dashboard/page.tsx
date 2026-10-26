@@ -1524,6 +1524,9 @@ export default async function DashboardPage({ searchParams }: { searchParams: { 
             canRequestReport={canRequestReport}
             showSearch={true}
             csvName={tr('정책·지원사업')}
+            // 정책·지원사업 기사는 AI 분석(중요도·피칭·논조)을 태우지 않아 칸이 늘 '—'다 — 열을 뺀다(2026-10-26 소윤).
+            showPitchColumn={false}
+            showInternal={false}
             emptyText={tr('{range} 내 수집된 정책·지원사업 기사가 없습니다.', { range: range.label })}
           />
         </div>
