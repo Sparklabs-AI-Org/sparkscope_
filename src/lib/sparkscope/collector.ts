@@ -3,6 +3,7 @@
  * 감시대상(MonitoringTarget) 키워드로 호출하고, 관련성/노이즈 필터·중복 제거·게시일 컷을 적용.
  * 네이버는 primaryKeyword+name+englishName으로만 검색. helperKeywords는 관련성 필터 전용.
  */
+import { competitorRelevant } from './competitor-gate';
 import { parseStringPromise } from 'xml2js';
 import { prisma } from '@/lib/prisma';
 import type { RawArticle, Category } from './types';
@@ -284,6 +285,15 @@ export async function collectAllArticles(opts: CollectOptions = {}): Promise<Raw
   console.log(`[collector] raw (relevant) collected: ${allArticles.length}`);
   const filtered = filterAndDedupe(allArticles, opts.daysBack ?? MAX_DAYS_AGO);
   console.log(`[collector] after dedupe: ${filtered.length}`);
+
+  // AC·VC 기사는 AI로 한 번 더 본다 — 투자·스타트업 업무에 쓸 기사만(증권 시황·대기업 실적·동음이의 기사 제외).
+  const comp = filtered.filter(x => x.category === 'competitor');
+  if (comp.length > 0) {
+    const keep = await competitorRelevant(comp.map(x => ({ title: x.title, matchedKeyword: x.matchedKeyword, body: x.body })));
+    const drop = new Set(comp.filter((_, i) => !keep[i]));
+    for (let i = filtered.length - 1; i >= 0; i--) if (drop.has(filtered[i])) filtered.splice(i, 1);
+    console.log(`[collector] AC·VC 판정 제외 ${drop.size}/${comp.length}건`);
+  }
 
   // 구글 뉴스로 들어온 기사는 링크가 news.google.com/rss/articles/… 프록시라 그대로 열면
   // 기사가 아니라 빈 구글 페이지가 뜬다. 그래서 화면·메일은 그런 링크를 제목 검색으로
