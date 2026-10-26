@@ -38,6 +38,7 @@ const CATEGORY_BADGE: Record<string, { label: string; cls: string }> = {
   portfolio_company: { label: '포트폴리오', cls: 'bg-spark-light-purple text-spark-purple' },
   competitor: { label: 'AC·VC', cls: 'bg-red-100 text-red-800' },
   industry_trend: { label: '스타트업계', cls: 'bg-amber-100 text-amber-800' },
+  policy_support: { label: '정책·지원사업', cls: 'bg-sky-100 text-sky-800' },
   live: { label: '실시간🔍', cls: 'bg-blue-100 text-blue-800 font-semibold' },
 };
 
@@ -178,7 +179,10 @@ export function ArticlesTable({ articles, canScrap = false, canBookmark = false,
                     )}
                   </td>
                   <td className="px-3 py-3 text-xs text-gray-600">{t(a.source)}{others.length > 0 && ` ${t('외 {n}', { n: others.length })}`}</td>
-                  {showInternal && <td className={`px-3 py-3 text-center text-xs ${IMP_STYLE[a.importance ?? 'LOW']}`}>{a.importance === 'HIGH' || a.importance === 'CRITICAL' ? t('높음') : a.importance === 'MEDIUM' ? t('중') : t('낮음')}</td>}
+                  {/* 중요도가 비어 있으면 '낮음'이 아니라 '—'다. AI 분석을 태우지 않는 수집
+                    경로(정책·지원사업 큐레이션)가 생기면서, 분석해서 낮게 본 기사와
+                    아직 분석하지 않은 기사가 같은 글자로 보이던 것을 가른다. */}
+                {showInternal && <td className={`px-3 py-3 text-center text-xs ${a.importance ? IMP_STYLE[a.importance] ?? 'text-gray-400' : 'text-gray-300'}`}>{!a.importance ? '—' : a.importance === 'HIGH' || a.importance === 'CRITICAL' ? t('높음') : a.importance === 'MEDIUM' ? t('중') : t('낮음')}</td>}
                   {showPitchColumn && <td className="px-3 py-3 text-center text-xs font-bold text-amber-700">{a.pitchScore && a.pitchScore >= 60 ? a.pitchScore : '—'}</td>}
                   {(canReport || canRequestReport) && (
                     <td className="px-2 py-3 text-center border-l border-spark-border">

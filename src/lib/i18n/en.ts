@@ -1475,4 +1475,9 @@ export const EN: Record<string, string> = {
   '처음이라면? 화면 둘러보기': 'New here? Take the tour',
   '여러 매체가 함께 다룬 소식 가운데 **가장 중요한 한 건**을 크게, 그다음 소식들을 아래 카드로 보여줍니다.\n오른쪽 위 **오늘 · 이번 주 · 이번 달**로 기간을 바꿀 수 있고, 카드의 **원문 보기**로 기사를 엽니다.\n오른쪽 **🔥 지금 핫한 키워드**는 여러 매체와 커뮤니티에서 실제로 많이 다뤄진 이름이에요. 누르면 관련 소식이 펼쳐집니다.': 'The **single most important story** covered by several outlets is shown large, with the next stories as cards below.\nUse **Today · This week · This month** at the top right to change the period, and **View original** on a card to open the article.\n**🔥 Hot keywords right now** on the right are the names most discussed across outlets and communities. Tap one to see related stories.',
   '**🏠 Intra**는 오늘 여러 매체가 함께 다룬 AI 소식·지금 화제인 키워드와, 스파크랩 패밀리 기사 모음을 보여줍니다.\n**🔭 Inter**는 해외 AI·바이오 시장이 어디로 움직이는지 주제별로 깊게 봅니다.': '**🏠 Intra** shows today\'s AI stories covered by several outlets, trending keywords, and the SparkLabs family news archive.\n**🔭 Inter** looks deeper at where global AI and bio markets are heading, by topic.',
+  // 정책·지원사업 탭 (policy-collect.ts 수집분)
+  '📑 정책·지원사업': '📑 Policy & grants',
+  '정책·지원사업': 'Policy & grants',
+  '{range} · {n}건 · 깡프로 스타트업 뉴스가 매일 아침 고른 기사': '{range} · {n} articles · picked each morning by Kkangpro Startup News',
+  '{range} 내 수집된 정책·지원사업 기사가 없습니다.': 'No policy & grant articles collected in {range}.',
 };

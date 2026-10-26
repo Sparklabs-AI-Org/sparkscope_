@@ -9,7 +9,8 @@ export type Category =
   | 'portfolio_company_tw'   // 대만 포트폴리오사 — 수집 소스가 달라 별도 카테고리로 둔다
   | 'portfolio_company_gv'   // 글로벌벤처스 포트폴리오사 — 영문 뉴스라 수집 소스가 또 다르다
   | 'competitor'
-  | 'industry_trend';
+  | 'industry_trend'
+  | 'policy_support';  // 정책·지원사업 큐레이션 — 회사가 아니라 주제로 모은다(policy-collect.ts)
 
 export type Importance = 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW';
 export type Tone = 'POSITIVE' | 'NEUTRAL' | 'NEGATIVE' | 'MIXED';

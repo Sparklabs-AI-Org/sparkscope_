@@ -33,6 +33,7 @@ const CATEGORY_LABELS: Record<string, string> = {
   portfolio_company: '포트폴리오',
   competitor: 'AC·VC',
   industry_trend: '스타트업계',
+  policy_support: '정책·지원사업',
 };
 
 // 분류 필터 버튼 — 색은 기사 테이블의 분류 배지 색과 동일하게 맞춘다.

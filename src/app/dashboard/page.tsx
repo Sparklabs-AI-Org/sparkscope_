@@ -50,6 +50,7 @@ const TABS = [
   { id: 'portfolio', label: '📊 포트폴리오사' },
   { id: 'competitor', label: '🏁 업계 모니터링' },
   { id: 'articles', label: '📋 최근 수집 기사' },
+  { id: 'policy', label: '📑 정책·지원사업' },
   { id: 'synergy', label: '🤝 시너지' },
 ] as const;
 export type TabId = (typeof TABS)[number]['id'];
@@ -90,7 +91,8 @@ const REGION_LABEL: Record<RegionId, string> = {
   gv: '🌐 스파크랩 글로벌벤처스',
 };
 const REGION_VIEWS: Record<RegionId, readonly TabId[]> = {
-  kr: ['portfolio', 'sparklabs', 'competitor'],
+  // 정책·지원사업은 국내 정부지원사업 큐레이션이라 한국 관점에만 둔다(대만·GV엔 해당 없음).
+  kr: ['portfolio', 'sparklabs', 'competitor', 'policy'],
   tw: ['portfolio', 'sparklabs'],
   // 대만과 같은 이유로 업계 모니터링 탭을 만들지 않는다 — competitor 감시대상이
   // 전부 한국 AC·VC라 영구 0건 탭이 된다.
@@ -111,6 +113,7 @@ const VIEW_LABEL: Record<RegionId, Partial<Record<TabId, string>>> = {
     portfolio: '📊 포트폴리오사',
     sparklabs: '🏢 스파크랩 직접 언급',
     competitor: '🏁 한국 업계 모니터링',
+    policy: '📑 정책·지원사업',
   },
   tw: {
     portfolio: '📊 포트폴리오사',
@@ -329,6 +332,7 @@ async function loadDashboardData(
   const needSparklabs = tab === 'sparklabs';                         // 매체 분포·톤·펀드
   const needCompetitor = tab === 'competitor';                       // 경쟁사 패널
   const needPulses = tab === 'articles';                             // AC·VC / 스타트업계 한 줄
+  const needPolicy = tab === 'policy';                               // 정책·지원사업 큐레이션
   const EMPTY: never[] = [];
   // AI가 생성한 문장(위기 원인·경쟁사 트렌드)은 사전계산된 한국어를 저장해두므로,
   // EN 화면이면 그 문장의 영어판을 채워서 읽는다(DashboardInsight JSON 안에 캐시된다).
@@ -768,6 +772,18 @@ async function loadDashboardData(
     companyName: portfolioNameOf.get(a.matchedKeyword) ?? a.matchedKeyword,
     portfolioStatus: portfolioStatusOf.get(a.matchedKeyword) ?? null,
   }));
+  // 정책·지원사업 — 깡프로 큐레이션(policy-collect.ts)이 넣은 기사. 회사가 아니라 주제로
+  // 묶인 것이라 포트폴리오 이름 매핑이 없다. 위의 큰 Promise.all 튜플은 구조 분해 순서에
+  // 의존해서 한 칸만 끼워 넣어도 전부 밀리므로, 이 탭 것만 따로 읽는다.
+  const policyArticles = needPolicy
+    ? (await prisma.article.findMany({
+        where: { ...where, category: 'policy_support' },
+        orderBy: [{ pubDate: 'desc' }],
+        take: 300,
+        select: LIST_SELECT,
+      })).map(a => ({ ...a, companyName: undefined, portfolioStatus: null }))
+    : EMPTY;
+
   const portfolioTop = portfolioTop15.map(g => {
     const count = g._count._all;
     const prevCount = prevCountOf.get(g.matchedKeyword) ?? 0;
@@ -826,6 +842,7 @@ async function loadDashboardData(
     range: { from, to },
     kpi: { total, sparklabsCount: sparklabsCountFiltered, portfolioCount, pitchCount },
     articles: enrichedArticles,
+    policyArticles,
     portfolioNames,
     selectedCompany: company,
     selectedCompanyName,
@@ -1459,6 +1476,31 @@ export default async function DashboardPage({ searchParams }: { searchParams: { 
       )}
 
       {/* 기사 테이블 — 기간/포트폴리오사 필터 + 정렬 + CSV */}
+      {tab === 'policy' && (
+        <div className="bg-white p-5 rounded-2xl border border-spark-border shadow-card">
+          <div className="mb-4">
+            <div className="font-bold">📑 {tr('정책·지원사업')}</div>
+            <div className="text-xs text-gray-500 mt-0.5">
+              {tr('{range} · {n}건 · 깡프로 스타트업 뉴스가 매일 아침 고른 기사', { range: range.label, n: data.policyArticles.length })}
+            </div>
+            <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-spark-border/60 pt-3">
+              <span className="text-xs font-semibold text-gray-500 whitespace-nowrap">📅 {tr('기간')}</span>
+              <DateRangePicker key={`${range.from}_${range.to}`} from={range.from} to={range.to} min={MIN_DATE} max={fmt(getKstNow())} company={data.selectedCompany} tab={tab} />
+            </div>
+          </div>
+          <ArticleListView
+            articles={data.policyArticles as any}
+            canScrap={canScrap}
+            canBookmark={canBookmark}
+            canReport={canManageContent}
+            canRequestReport={canRequestReport}
+            showSearch={true}
+            csvName={tr('정책·지원사업')}
+            emptyText={tr('{range} 내 수집된 정책·지원사업 기사가 없습니다.', { range: range.label })}
+          />
+        </div>
+      )}
+
       {tab === 'articles' &&
       <div data-tour="article-table" className="bg-white p-5 rounded-2xl border border-spark-border shadow-card">
         <div className="mb-4">
