@@ -325,7 +325,9 @@ async function loadDashboardData(
 ) {
   // ── 이 탭이 실제로 쓰는 것만 읽는다 ─────────────────────────────────────
   // 여기 조건은 아래 JSX의 `{tab === ...}` 조건과 짝이다. 한쪽만 고치면 화면이 빈다.
-  const needKpi = tab !== 'competitor' && tab !== SYNERGY_TAB;       // 상단 KPI 4칸
+  // 정책·지원사업은 회사 단위 지표(스파크랩 언급·포폴사 노출·피칭)와 무관한 주제 큐레이션이라
+  // KPI 4칸과 급증 배너를 띄우지 않는다 — 다른 탭의 숫자가 그대로 얹혀 오해를 준다(2026-10-26 소윤 요청).
+  const needKpi = tab !== 'competitor' && tab !== SYNERGY_TAB && tab !== 'policy';  // 상단 KPI 4칸
   const needSpikes = needKpi;                                        // 급증 배너
   const needArticles = tab === 'articles' || (tab === 'portfolio' && portfolioView);
   const needPortfolio = tab === 'portfolio';                         // 위기·TOP15·피칭·긍부정
@@ -1263,7 +1265,8 @@ export default async function DashboardPage({ searchParams }: { searchParams: { 
 
 
       {/* 이슈 급증 배너 + KPI — 경쟁사·시너지 탭 제외 (시너지는 기사 집계와 무관) */}
-      {tab !== 'competitor' && tab !== SYNERGY_TAB && (
+      {/* 조건은 위 needKpi와 반드시 같아야 한다 — 한쪽만 고치면 빈 칸이 뜨거나 0이 찍힌다. */}
+      {tab !== 'competitor' && tab !== SYNERGY_TAB && tab !== 'policy' && (
         <>
           {data.spikes.length > 0 && !portfolioView && (
             <div data-tour="spike-banner" className="mb-6 space-y-2">
