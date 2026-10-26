@@ -155,9 +155,13 @@ export function InterPanel({
   }, [domain, country, from, to]);
 
   // 매트릭스 칸/주제를 눌렀을 때 해당 카드로 이동 + 2초간 테두리 하이라이트.
+  // 하위 탭 — 한 화면에 다 쌓아 세로 8화면이던 것을 나눈다(2026-10-26 설문: 정보량이 많고 스크롤이 길다).
+  const [view, setView] = useState<'signal' | 'summary' | 'topics'>('signal');
+
   function focusSector(id: string) {
     setHighlighted(id);
-    document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    setView('topics');
+    setTimeout(() => document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 50);
     setTimeout(() => setHighlighted(prev => (prev === id ? null : prev)), 2000);
   }
 
@@ -223,15 +227,31 @@ export function InterPanel({
       {/* 오늘의 시그널 — 뉴스와 커뮤니티를 한 배너로 합쳤다(2026-09-08).
           따로 있을 땐 둘 다 같은 무게로 나열돼 "그래서 오늘 뭘 봐야 하나"에 답을 못 했다.
           지금은 가장 중요한 한 건을 크게 두고, 커뮤니티 랭킹을 옆에 세운다. */}
-      {/* 공개 화면에서는 이 배너를 Intra로 옮겼다(2026-10-26) — 같은 패널이 두 번 나오지 않게 여기선 뺀다. */}
       {!portfolioView && (
+        <div className="mb-5 flex gap-1 rounded-xl border border-spark-border bg-white p-1 w-fit">
+          {([
+            ['signal', '📡 오늘의 시그널', '화제 기사 · 키워드'],
+            ['summary', '📊 한눈에 보기', '격자 · 핵심 요약'],
+            ['topics', '🗂 주제별 상세', '주제 카드 · 원문'],
+          ] as const).map(([k, label, sub]) => (
+            <button key={k} onClick={() => setView(k)}
+              className={`rounded-lg px-4 py-2 text-left transition ${view === k ? 'bg-emerald-600 text-white shadow' : 'text-spark-ink-soft hover:bg-spark-subtle'}`}>
+              <span className="block text-[14px] font-extrabold">{label}</span>
+              <span className={`block text-[11px] ${view === k ? 'text-white/75' : 'text-spark-muted'}`}>{sub}</span>
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* 공개 화면에서는 이 배너를 Intra로 옮겼다(2026-10-26) — 같은 패널이 두 번 나오지 않게 여기선 뺀다. */}
+      {!portfolioView && view === 'signal' && (
         <div data-tour="inter-now" className="mb-6">
           <SignalBanner domain={domain} hidePortfolio={portfolioView} />
         </div>
       )}
 
       {/* 조회 조건 — 기간·국가를 고른 뒤 '확인'을 눌러야 조회된다(클릭마다 화면이 새로 뜨지 않게) */}
-      <div data-tour="inter-filter" className="bg-white border border-spark-border rounded-2xl p-5 mb-6">
+      <div data-tour="inter-filter" className={`bg-white border border-spark-border rounded-2xl p-5 mb-6 ${!portfolioView && view === 'signal' ? 'hidden' : ''}`}>
         {/* 조회 기간 */}
         <div className="flex flex-wrap items-center gap-3">
           <span className="w-full sm:w-24 shrink-0 text-[14px] font-semibold text-spark-ink-soft">{t('조회 기간')}</span>
@@ -291,7 +311,7 @@ export function InterPanel({
         </div>
       </div>
 
-      {loading || !data ? (
+      {!portfolioView && view === 'signal' ? null : loading || !data ? (
         <div className="py-16 text-center text-[15px] text-spark-muted">{t('불러오는 중...')}</div>
       ) : (
         <>
@@ -299,6 +319,7 @@ export function InterPanel({
           {/* 포트폴리오사 화면엔 건수 지표·매트릭스·인사이트(포트폴리오 매치 기반)를 두지 않는다 */}
           {/* 포트폴리오사 화면엔 헤드라인 지표(포트폴리오 접점 포함)를
               두지 않는다. 매트릭스·인사이트 패널은 남기되, 포트폴리오 매치에서 나온 부분만 뺀다. */}
+          {(portfolioView || view === 'summary') && <>
           {!portfolioView && (
             <div data-tour="inter-headline">
               <HeadlineStats headline={data.matrix.headline} />
@@ -325,6 +346,9 @@ export function InterPanel({
 
           {/* AI 요약 — 위 매트릭스의 숫자를 그대로 되풀이하지 않고, 그래서 뭘 해야 하는지로 마무리 */}
           {!portfolioView && <ColoredSummaryCard summary={data.summary} overview={data.overview} />}
+          </>}
+
+          {(portfolioView || view === 'topics') && <>
 
           {/* 분야별 카드 — 급한 순(급증→기회→주요→조용)으로 위아래 배치.
               2열로 나눠봤더니 카드마다 탭·매치 목록이 들어가 좌우로 눈이 튀어 읽기 어려웠다(2026-08-06).
@@ -360,6 +384,7 @@ export function InterPanel({
               />
             ))}
           </div>
+          </>}
         </>
       )}
     </div>
