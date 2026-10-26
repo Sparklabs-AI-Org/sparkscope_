@@ -346,6 +346,34 @@ async function rankWithAI(
 }
 
 /**
+ * 고른 기사 중 같은 사건을 다룬 것 — 앞 칸(우선순위 높은 쪽)을 남기고 뒤 칸 번호를 돌려준다. 실패하면 빈 집합(선정은 그대로).
+ */
+async function sameEventDuplicates(items: BriefingCandidate[]): Promise<Set<number>> {
+  if (items.length < 2) return new Set();
+  try {
+    const resp = await openai.chat.completions.create({
+      model: RANK_MODEL,
+      temperature: 0,
+      response_format: { type: 'json_object' },
+      messages: [
+        { role: 'system', content: '뉴스 목록에서 같은 사건(같은 발표·사고·거래·발견)을 다룬 항목끼리 묶으세요. 매체·언어·표현이 달라도 같은 사건이면 같은 묶음입니다. 같은 회사의 다른 소식, 같은 주제의 다른 사건은 묶지 마세요. JSON으로만: {"groups":[[0,3],[2,5]]} — 같은 사건이 없으면 {"groups":[]}' },
+        { role: 'user', content: items.map((c, i) => `${i}. ${c.title} — ${c.summary}`).join('\n') },
+      ],
+    });
+    const groups = (JSON.parse(resp.choices[0]?.message?.content ?? '{}').groups ?? []) as number[][];
+    const drop = new Set<number>();
+    for (const g of groups) {
+      const ids = [...new Set(g.filter(n => Number.isInteger(n) && n >= 0 && n < items.length))].sort((a, b) => a - b);
+      ids.slice(1).forEach(n => drop.add(n));
+    }
+    return drop;
+  } catch (e) {
+    console.warn('[briefing-reco] 같은 사건 확인 실패(건너뜀):', e);
+    return new Set();
+  }
+}
+
+/**
  * 칸 수에 맞춰 5칸을 채운다 — 재료는 방송 기간(broadcastFor)의 다이제스트 섹션과 AI 트렌드·해외 트렌드.
  * 위클리는 한 주 정리라 "최근 브리핑에 나간 기사 제외"를 하지 않는다.
  */
@@ -494,6 +522,28 @@ export async function pickByTiers(w: BroadcastWindow): Promise<{ picked: Briefin
     for (const c of [...(chosen?.[g] ?? []), ...pools[g]]) {
       if (picked.length >= total) break;
       take(g, c);
+    }
+  }
+  // 같은 사건이 두 칸에 들어가지 않게 — 국내 기사와 번역된 해외 기사는 제목 낱말이 달라 위의 중복 제거로 못 잡는다
+  // (2026-10-26 위클리 3번 "PHP 보안 취약점 … KISA 권고"·7번 ITmedia "PHP 중대 취약점 … 긴급 패치").
+  // 뒤쪽(우선순위 낮은) 칸을 빼고, 빠진 칸과 같은 그룹 → 국내 포폴 → AI → 스타트업계 순으로 다시 채운다. 두 번까지.
+  const tierGroup = Object.fromEntries(Object.entries(GROUP_TIER).map(([g, t]) => [t, g])) as Record<number, Group>;
+  for (let round = 0; round < 2; round++) {
+    const drop = await sameEventDuplicates(picked);
+    if (drop.size === 0) break;
+    const removedGroups: Group[] = [];
+    for (let i = picked.length - 1; i >= 0; i--) {
+      if (!drop.has(i)) continue;
+      console.log(`[briefing-reco] 같은 사건 중복 제외: ${picked[i].title.slice(0, 40)}`);
+      removedGroups.push(tierGroup[tiers[i]]);
+      picked.splice(i, 1);
+      tiers.splice(i, 1);
+    }
+    for (const g of [...new Set([...removedGroups, 'P', 'G', 'T'] as Group[])]) {
+      for (const c of [...(chosen?.[g] ?? []), ...pools[g]]) {
+        if (picked.length >= total) break;
+        take(g, c);
+      }
     }
   }
   // 칸 순서대로(스파크랩 → 국내 포폴 → 해외 포폴 → AI → 스타트업계) 보이게 정렬
