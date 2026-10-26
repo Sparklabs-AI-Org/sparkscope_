@@ -32,8 +32,22 @@ function bodyRegion(html: string): string {
   return html;
 }
 
+/**
+ * 중국어·일본어 제목 대조 — 띄어쓰기가 없고 아래 낱말 대조는 한자·가나를 세지 않아, 맞는 본문도 버렸다
+ * (2026-10-26 ITmedia). 제목을 두 글자씩 끊어(bigram) 본문에 들어 있는 비율로 본다. 해당 없으면 null.
+ */
+export function cjkTitleMatch(text: string, title: string): boolean | null {
+  const cjk = title.replace(/[^\u3040-\u30ff\u3400-\u9fff]/g, ' ').split(/\s+/).filter(r => r.length >= 2);
+  const grams = new Set(cjk.flatMap(r => Array.from({ length: r.length - 1 }, (_, i) => r.slice(i, i + 2))));
+  if (grams.size < 6) return null;
+  const hit = [...grams].filter(g => text.includes(g)).length;
+  return hit / grams.size >= 0.3;
+}
+
 /** 제목의 핵심 낱말(회사·고유명사)이 본문에 2개 이상 나오는가 — 엉뚱한 기사를 대본 재료로 쓰지 않게. */
 function matchesTitle(text: string, title: string, strict = false): boolean {
+  const cjk = cjkTitleMatch(text, title);
+  if (cjk !== null) return cjk;
   const words = [...new Set(title.replace(/[^0-9a-zA-Z가-힣\s]/g, ' ').split(/\s+/)
     .filter(w => (/[가-힣]/.test(w) ? w.length >= 2 : w.length >= 3)))];
   if (words.length === 0) return true;
@@ -42,12 +56,29 @@ function matchesTitle(text: string, title: string, strict = false): boolean {
   return hit >= (strict ? Math.max(2, Math.ceil(words.length / 2)) : Math.min(2, words.length));
 }
 
+/**
+ * 페이지 인코딩대로 읽는다 — r.text()는 무조건 UTF-8이라 Shift_JIS(ITmedia 등 일본 매체)·EUC-KR(일부 국내 언론사)
+ * 페이지가 깨져 본문을 못 읽었다(2026-10-26 위클리 ITmedia PHP 기사). 헤더 → <meta charset> 순으로 본다.
+ */
+async function decodePage(r: Response): Promise<string> {
+  const buf = await r.arrayBuffer();
+  const fromHeader = /charset=["']?([\w-]+)/i.exec(r.headers.get('content-type') ?? '')?.[1];
+  const head = new TextDecoder('latin1').decode(buf.slice(0, 4096));
+  const fromMeta = /<meta[^>]+charset=["']?([\w-]+)/i.exec(head)?.[1];
+  const charset = (fromHeader || fromMeta || 'utf-8').toLowerCase();
+  try {
+    return new TextDecoder(charset).decode(buf);
+  } catch {
+    return new TextDecoder('utf-8').decode(buf);
+  }
+}
+
 /** 한 페이지에서 본문 문단을 읽는다. 150자 미만이면(로그인·구독 벽, 자바스크립트로만 그리는 페이지) 실패로 본다. */
 async function readPage(url: string, max: number, title = '', strict = false): Promise<string> {
   if (!/^https?:\/\//.test(url)) return '';
   try {
     const r = await fetch(url, { headers: { 'user-agent': 'Mozilla/5.0' }, redirect: 'follow', signal: AbortSignal.timeout(7000) });
-    const full = (await r.text()).slice(0, 600_000);
+    const full = (await decodePage(r)).slice(0, 600_000);
     return extract(bodyRegion(full), max, title, strict) || extract(full, max, title, strict);
   } catch {
     return '';

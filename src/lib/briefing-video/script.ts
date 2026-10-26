@@ -9,7 +9,22 @@
  */
 import OpenAI from 'openai';
 import type { BriefingHeadline, BriefingSnapshot } from '../sparkscope/briefing';
-import { articleExcerpt } from './article-text';
+import { articleExcerpt, cjkTitleMatch } from './article-text';
+import { prisma } from '@/lib/prisma';
+
+/**
+ * 해외 트렌드 카드의 원문 제목 — 카드 제목은 한국어 번역본이라 일본어·영어 원문 본문과 낱말이 겹치지 않아
+ * 맞는 본문도 "다른 기사"로 버렸다(2026-10-26 ITmedia PHP 기사). 본문 찾기·대조는 원문 제목으로 한다.
+ */
+async function interOriginalTitle(url: string): Promise<string | null> {
+  const rows = await prisma.$queryRaw<{ title: string }[]>`select title from "InterNews" where url = ${url} limit 1`.catch(() => []);
+  return rows[0]?.title ?? null;
+}
+
+/** 대본을 못 썼을 때 읽을 문장 — 해외 트렌드 카드의 요약 칸은 분류 라벨("AI버티컬 × 연구성과")이라 읽지 않는다. */
+function fallbackText(h: BriefingHeadline): string {
+  return h.kind === 'inter' ? `${h.title}.` : `${h.title}. ${h.summary}`;
+}
 
 const MODEL = 'gpt-4.1';
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
@@ -149,6 +164,8 @@ async function rewriteCliches(byIndex: Map<number, string>, heads: BriefingHeadl
  * (2026-10-13 비마이프렌즈 — 원문이 맞는데 제목만 읽는 대본이 됐다). 그래서 제목 전체 낱말을 본다.
  */
 export function aboutHeadline(text: string, h: BriefingHeadline, window = 150): boolean {
+  const cjk = cjkTitleMatch(text.slice(0, Math.max(window, 600)), h.title);
+  if (cjk !== null) return cjk;
   const words = h.title.replace(/\[[^\]]*\]/g, ' ').replace(/[^0-9a-zA-Z가-힣\s]/g, ' ').split(/\s+/)
     .filter(w => (/[가-힣]/.test(w) ? w.length >= 2 : w.length >= 3));
   if (words.length === 0) return true;
@@ -255,9 +272,10 @@ export async function writeBriefingScript(snapshot: BriefingSnapshot, frame?: Sc
   // 숫자·맥락 재료 — 원문 본문 앞부분(article-text.ts). 못 읽으면 제목·요약만.
   // 본문이 제목과 다른 기사이면(원문 주소가 엉뚱한 페이지로 풀린 경우) 버리고 제목·요약만 쓴다.
   const bodies = await Promise.all(heads.map(async h => {
-    const b = await articleExcerpt(h.url, h.title);
+    const matchTitle = (h.kind === 'inter' && (await interOriginalTitle(h.url))) || h.title;
+    const b = await articleExcerpt(h.url, matchTitle);
     // 본문은 앞에 기자명·날짜·사진 설명이 붙는 일이 많아 150자 안에서만 보면 맞는 본문도 버린다 — 앞 600자에서 본다.
-    if (b && !aboutHeadline(b, h, 600)) {
+    if (b && !aboutHeadline(b, { ...h, title: matchTitle }, 600)) {
       console.warn(`[script] 원문이 제목과 다름 — 본문 버림: ${h.title.slice(0, 30)}`);
       return '';
     }
@@ -342,9 +360,9 @@ export async function writeBriefingScript(snapshot: BriefingSnapshot, frame?: Sc
   const usedStarts = new Set<string>();
   heads.forEach((h, i) => {
     // AI가 빠뜨린 항목은 요약으로라도 채운다 — 화면엔 있는데 말이 없는 슬라이드가 생기지 않게.
-    let body = byIndex.get(i) || `${h.title}. ${h.summary}`;
+    let body = byIndex.get(i) || fallbackText(h);
     // 같은 문장으로 시작하는 대본이 두 칸에 들어가면 뒤 칸은 제목·요약으로 대신한다(2026-10-13 대조에서 발견).
-    if (usedStarts.has(body.slice(0, 80))) body = `${h.title}. ${h.summary}`;
+    if (usedStarts.has(body.slice(0, 80))) body = fallbackText(h);
     usedStarts.add(body.slice(0, 80));
     const sec = sectionOf(h);
     const lead = sec === prev ? '' : prev === 'S' && sec === 'P' ? '이어서 포트폴리오 소식입니다.' : SECTION_LEAD[sec][prev ? 1 : 0];
