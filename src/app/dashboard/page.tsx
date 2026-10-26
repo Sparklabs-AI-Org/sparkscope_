@@ -789,12 +789,19 @@ async function loadDashboardData(
   // 가장 최근 발행일 한 묶음 — 위 카드 영역용. 이미 읽어온 policyArticles에서 고르므로
   // 추가 쿼리가 없다. policyArticles는 pubDate 내림차순이라 첫 건의 날짜가 가장 최근이다.
   const policyToday = (() => {
-    if (policyArticles.length === 0) return { items: EMPTY as typeof policyArticles, label: '', isToday: false };
+    if (policyArticles.length === 0) return { items: EMPTY as typeof policyArticles, total: 0, label: '', isToday: false };
     const kstDay = (d: Date) => new Date(d.getTime() + 9 * 3600 * 1000).toISOString().slice(0, 10);
     const newest = kstDay(policyArticles[0]!.pubDate);
-    const items = policyArticles.filter(a => kstDay(a.pubDate) === newest);
+    const sameDay = policyArticles.filter(a => kstDay(a.pubDate) === newest);
     const [, mm, dd] = newest.split('-');
-    return { items, label: `${mm}.${dd}`, isToday: newest === fmt(getKstNow()) };
+    // 카드는 한 줄(6개)까지만. 나머지는 바로 아래 표에서 본다 — 카드를 다 깔면
+    // 밀도를 낮추려고 만든 영역이 다시 목록이 된다(2026-10-26 소윤 요청).
+    return {
+      items: sameDay.slice(0, 6),
+      total: sameDay.length,
+      label: `${mm}.${dd}`,
+      isToday: newest === fmt(getKstNow()),
+    };
   })();
 
   const portfolioTop = portfolioTop15.map(g => {
@@ -1504,8 +1511,16 @@ export default async function DashboardPage({ searchParams }: { searchParams: { 
             </span>
             <span className="text-xs font-semibold text-sky-700">{data.policyToday.label}</span>
             <span className="text-xs text-sky-700/70">
-              {tr('{n}건 · 깡프로 스타트업 뉴스', { n: data.policyToday.items.length })}
+              {tr('{n}건 · 깡프로 스타트업 뉴스', { n: data.policyToday.total })}
             </span>
+            {data.policyToday.total > data.policyToday.items.length && (
+              <a
+                href="#policy-table"
+                className="ml-auto rounded-lg border border-sky-300 bg-white px-2.5 py-1 text-[11.5px] font-bold text-sky-800 transition-colors hover:border-sky-500 hover:bg-sky-50"
+              >
+                {tr('+{n}건 더보기', { n: data.policyToday.total - data.policyToday.items.length })} ↓
+              </a>
+            )}
           </div>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
             {data.policyToday.items.map(a => (
@@ -1527,7 +1542,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: { 
       )}
 
       {tab === 'policy' && (
-        <div className="bg-white p-5 rounded-2xl border border-spark-border shadow-card">
+        <div id="policy-table" className="scroll-mt-4 bg-white p-5 rounded-2xl border border-spark-border shadow-card">
           <div className="mb-4">
             <div className="font-bold">📑 {tr('정책·지원사업')}</div>
             <div className="text-xs text-gray-500 mt-0.5">

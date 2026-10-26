@@ -1483,4 +1483,5 @@ export const EN: Record<string, string> = {
   '오늘의 정책·지원사업': "Today's policy & grants",
   '가장 최근 정책·지원사업': 'Latest policy & grants',
   '{n}건 · 깡프로 스타트업 뉴스': '{n} articles · Kkangpro Startup News',
+  '+{n}건 더보기': '+{n} more',
 };
