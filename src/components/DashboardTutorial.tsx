@@ -453,15 +453,15 @@ function TutorialButtonInner({ publicView, prominent }: { publicView: boolean; p
   const scope = sp.get('scope') === 'inter' ? 'inter' : 'intra';
 
   async function start() {
-    // 공개 화면은 Intra·Inter가 한 페이지라 두 투어를 이어서 보여준다(전환 버튼 설명은 뺀다).
+    // 공개 화면은 한 페이지(시그널 → 기사 DB)라 Intra 투어만, 전환 버튼 설명은 뺀다(2026-10-26 해외 트렌드 섹션 삭제).
     const all = publicView
-      ? [...PUBLIC_INTRA_TOUR, ...PUBLIC_INTER_TOUR].filter(s => s.key !== 'scope-switch')
+      ? PUBLIC_INTRA_TOUR.filter(s => s.key !== 'scope-switch')
       : (scope === 'inter' ? INTER_TOUR : INTRA_TOUR);
 
     // Inter 패널은 데이터를 클라이언트에서 받아온다("불러오는 중..."). 그 사이에 열면
     // 본문 패널이 아직 없어서 설명이 통째로 빠지므로, 잠깐(최대 4초) 기다렸다 시작한다.
     const readyKey = publicView ? 'inter-insight' : 'inter-headline';
-    if ((scope === 'inter' || publicView) && !findTarget(readyKey)) {
+    if (scope === 'inter' && !publicView && !findTarget(readyKey)) {
       setWaiting(true);
       for (let t = 0; t < 20 && !findTarget(readyKey); t++) {
         await new Promise(r => setTimeout(r, 200));

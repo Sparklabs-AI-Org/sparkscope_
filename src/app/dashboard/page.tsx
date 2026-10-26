@@ -1119,9 +1119,6 @@ export default async function DashboardPage({ searchParams }: { searchParams: { 
           />
         </div>
 
-        {/* 해외 트렌드(Inter) — 같은 페이지 아래에 이어 붙인다. 기간·국가는 이 패널 안에서 따로 고른다. */}
-        <SectionTitle title={`🔭 ${tr('해외 트렌드')}`} />
-        <InterPanel from={range.from} to={range.to} min={MIN_DATE} max={fmt(getKstNow())} canScrap={false} portfolioView />
       </>
       ) : (
       <>
