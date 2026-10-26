@@ -157,7 +157,12 @@ export function aboutHeadline(text: string, h: BriefingHeadline, window = 150): 
   // 엔비디아 내용을 쓴 대본이 스파크클로 기사 칸에 통과했다). 고유 낱말이 둘 이상 맞아야 한다.
   const head = text.slice(0, window).toLowerCase();
   const hits = words.filter(w => head.includes(stem(w).toLowerCase())).length;
-  return hits >= Math.min(2, words.length);
+  if (hits >= Math.min(2, words.length)) return true;
+  // 제목 맨 앞 고유 낱말(주어 — 보통 회사명, 3자 이상)이 있으면 하나로도 통과. 사실만 쓰는 대본은 "해법 나오나·주목" 같은
+  // 제목 수사를 쓰지 않아 회사명 하나만 겹친다(2026-10-26 위클리 루센트블록이 제목만 읽힘). 일반 낱말 하나로 다른 기사가
+  // 통과하던 10-20 사고("성과·고객")는 그 낱말이 제목 맨 앞 주어가 아니라 여전히 막힌다.
+  const subject = stem(words[0]);
+  return subject.length >= 3 && head.includes(subject.toLowerCase());
 }
 
 /** 인사·마무리 문구 — 데일리가 기본, 뉴스데스크(newsdesk.ts)는 자기 문구를 넘긴다. */
