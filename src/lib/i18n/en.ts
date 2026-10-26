@@ -1480,4 +1480,7 @@ export const EN: Record<string, string> = {
   '정책·지원사업': 'Policy & grants',
   '{range} · {n}건 · 깡프로 스타트업 뉴스가 매일 아침 고른 기사': '{range} · {n} articles · picked each morning by Kkangpro Startup News',
   '{range} 내 수집된 정책·지원사업 기사가 없습니다.': 'No policy & grant articles collected in {range}.',
+  '오늘의 정책·지원사업': "Today's policy & grants",
+  '가장 최근 정책·지원사업': 'Latest policy & grants',
+  '{n}건 · 깡프로 스타트업 뉴스': '{n} articles · Kkangpro Startup News',
 };
