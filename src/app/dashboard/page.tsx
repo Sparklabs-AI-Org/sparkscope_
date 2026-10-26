@@ -1022,7 +1022,8 @@ export default async function DashboardPage({ searchParams }: { searchParams: { 
       {/* 스코프 전환 — Intra(내부 생태계) / Inter(해외 트렌드).
           작은 텍스트 토글이던 것을 세그먼티드 컨트롤로 바꿨다(2026-09-08). 아이콘과 이름을
           위아래로 쌓고 활성 칸에만 색·그림자를 줘서, 지금 어느 화면인지가 한눈에 보이게 한다. */}
-      <div className="mb-5">
+      {/* 공개 화면은 Intra/Inter 전환 없이 한 페이지(2026-10-26 소윤) — 전환 버튼을 그리지 않는다. */}
+      {!portfolioView && <div className="mb-5">
         <div
           data-tour="scope-switch"
           className="inline-flex items-stretch gap-1 rounded-2xl border border-spark-border bg-spark-cream p-1 shadow-[inset_0_1px_2px_rgba(26,20,40,0.04)]"
@@ -1057,8 +1058,8 @@ export default async function DashboardPage({ searchParams }: { searchParams: { 
             );
           })}
         </div>
-        {!portfolioView && <p className="mt-2 text-[11.5px] text-spark-muted">{tr(activeScope.desc)}</p>}
-      </div>
+        <p className="mt-2 text-[11.5px] text-spark-muted">{tr(activeScope.desc)}</p>
+      </div>}
 
       {/* 헤더(오늘 날짜 · 제목 · 스크랩함) — Intra/Inter 두 스코프에서 동일하게 보인다.
           Inter에도 같은 헤더를 두어 "지금 며칠 기준 화면인지"가 항상 같은 자리에 있게 한다. */}
@@ -1089,7 +1090,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: { 
         </div>
       </div>
 
-      {scope === 'inter' ? (
+      {scope === 'inter' && !portfolioView ? (
         // 기간 선택은 InterPanel 안(국가 필터 바로 위)에서 렌더된다 — 기간·국가를 같이 고르고
         // '확인'을 눌러야 조회되는 흐름이라 두 컨트롤이 한 카드에 있어야 한다.
         <InterPanel from={range.from} to={range.to} min={MIN_DATE} max={fmt(getKstNow())} canScrap={canScrap && !portfolioView} portfolioView={portfolioView} />
@@ -1117,6 +1118,10 @@ export default async function DashboardPage({ searchParams }: { searchParams: { 
             emptyText={tr('{range} 내 기사가 없습니다.', { range: range.label })}
           />
         </div>
+
+        {/* 해외 트렌드(Inter) — 같은 페이지 아래에 이어 붙인다. 기간·국가는 이 패널 안에서 따로 고른다. */}
+        <SectionTitle title={`🔭 ${tr('해외 트렌드')}`} />
+        <InterPanel from={range.from} to={range.to} min={MIN_DATE} max={fmt(getKstNow())} canScrap={false} portfolioView />
       </>
       ) : (
       <>
