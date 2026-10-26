@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { getLocale, getT } from '@/lib/i18n/server';
 import { ensureArticleEnDeep, ensureArticleKoDeep } from '@/lib/sparkscope/translate-content';
 import { articleTitle } from '@/lib/sparkscope/article-title';
+import { PolicyTodayCards } from '@/components/PolicyTodayCards';
 import { prisma } from '@/lib/prisma';
 import { ArticleListView } from '@/components/ArticleListView';
 import { SignalBanner } from '@/components/SignalBanner';
@@ -789,19 +790,13 @@ async function loadDashboardData(
   // 가장 최근 발행일 한 묶음 — 위 카드 영역용. 이미 읽어온 policyArticles에서 고르므로
   // 추가 쿼리가 없다. policyArticles는 pubDate 내림차순이라 첫 건의 날짜가 가장 최근이다.
   const policyToday = (() => {
-    if (policyArticles.length === 0) return { items: EMPTY as typeof policyArticles, total: 0, label: '', isToday: false };
+    if (policyArticles.length === 0) return { items: EMPTY as typeof policyArticles, label: '', isToday: false };
     const kstDay = (d: Date) => new Date(d.getTime() + 9 * 3600 * 1000).toISOString().slice(0, 10);
     const newest = kstDay(policyArticles[0]!.pubDate);
     const sameDay = policyArticles.filter(a => kstDay(a.pubDate) === newest);
     const [, mm, dd] = newest.split('-');
-    // 카드는 한 줄(6개)까지만. 나머지는 바로 아래 표에서 본다 — 카드를 다 깔면
-    // 밀도를 낮추려고 만든 영역이 다시 목록이 된다(2026-10-26 소윤 요청).
-    return {
-      items: sameDay.slice(0, 6),
-      total: sameDay.length,
-      label: `${mm}.${dd}`,
-      isToday: newest === fmt(getKstNow()),
-    };
+    // 그날치를 전부 넘긴다 — 처음 6개만 보여주고 더보기로 펼치는 건 카드 컴포넌트가 한다.
+    return { items: sameDay, label: `${mm}.${dd}`, isToday: newest === fmt(getKstNow()) };
   })();
 
   const portfolioTop = portfolioTop15.map(g => {
@@ -1498,47 +1493,15 @@ export default async function DashboardPage({ searchParams }: { searchParams: { 
       )}
 
       {/* 기사 테이블 — 기간/포트폴리오사 필터 + 정렬 + CSV */}
-      {/* 오늘의 큐레이션 — 아래 표(원본 DB 뷰) 위에 얹는 읽기용 요약.
-          표는 정렬·검색·CSV를 위한 밀도 높은 화면이라 "오늘 뭐 났나"를 훑기엔 안 맞다.
-          그래서 가장 최근 날짜 한 묶음만 큼직한 카드로 먼저 보여준다(2026-10-26 소윤 요청).
+      {/* 오늘의 큐레이션 — 표 위에 얹는 읽기용 요약. 펼치기가 있어 클라이언트 컴포넌트로 뺐다.
           오늘치가 아직 없으면(크론은 평일 10:10) 가장 최근 발행일을 대신 보여준다 —
           빈 칸을 띄우면 "수집이 멈췄나" 하고 헷갈린다. 날짜를 머리말에 적어 구분한다. */}
-      {tab === 'policy' && data.policyToday.items.length > 0 && (
-        <div className="mb-5 rounded-2xl border border-sky-200 bg-sky-50/40 p-5">
-          <div className="mb-4 flex flex-wrap items-baseline gap-x-2 gap-y-1">
-            <span className="text-[15px] font-extrabold text-sky-900">
-              {data.policyToday.isToday ? tr('오늘의 정책·지원사업') : tr('가장 최근 정책·지원사업')}
-            </span>
-            <span className="text-xs font-semibold text-sky-700">{data.policyToday.label}</span>
-            <span className="text-xs text-sky-700/70">
-              {tr('{n}건 · 깡프로 스타트업 뉴스', { n: data.policyToday.total })}
-            </span>
-            {data.policyToday.total > data.policyToday.items.length && (
-              <a
-                href="#policy-table"
-                className="ml-auto rounded-lg border border-sky-300 bg-white px-2.5 py-1 text-[11.5px] font-bold text-sky-800 transition-colors hover:border-sky-500 hover:bg-sky-50"
-              >
-                {tr('+{n}건 더보기', { n: data.policyToday.total - data.policyToday.items.length })} ↓
-              </a>
-            )}
-          </div>
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
-            {data.policyToday.items.map(a => (
-              <a
-                key={a.id}
-                href={a.link}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="group flex min-h-[112px] flex-col justify-between rounded-xl border border-sky-200/80 bg-white p-3.5 shadow-sm transition-colors hover:border-sky-400"
-              >
-                <span className="text-[13.5px] font-semibold leading-snug text-gray-900 group-hover:text-sky-700">
-                  {articleTitle(a, locale)}
-                </span>
-                <span className="mt-2 text-[11.5px] font-medium text-gray-500">{tr(a.source)}</span>
-              </a>
-            ))}
-          </div>
-        </div>
+      {tab === 'policy' && (
+        <PolicyTodayCards
+          items={data.policyToday.items}
+          label={data.policyToday.label}
+          isToday={data.policyToday.isToday}
+        />
       )}
 
       {tab === 'policy' && (
