@@ -195,16 +195,21 @@ export function titleKey(title: string): string {
   return title.replace(/\s+-\s+[^-]+$/, '').replace(/[^0-9a-zA-Z가-힣]/g, '').toLowerCase();
 }
 
-interface Briefed { has(url: string, title?: string): boolean }
+interface Briefed {
+  has(url: string, title?: string): boolean;
+  /** 최근 7일 브리핑에 나간 기사 제목 — 같은 사건 비교용 */
+  titles: string[];
+}
 
 async function recentlyBriefed(): Promise<Briefed> {
   const urls = await recentlyBriefedUrls();
   return {
     has: (url, title) => urls.urls.has(url) || (!!title && urls.titles.has(titleKey(title))),
+    titles: urls.list,
   };
 }
 
-async function recentlyBriefedUrls(): Promise<{ urls: Set<string>; titles: Set<string> }> {
+async function recentlyBriefedUrls(): Promise<{ urls: Set<string>; titles: Set<string>; list: string[] }> {
   const today = kstDateKey();
   const keys = Array.from({ length: 7 }, (_, i) => kstDateKey(new Date(Date.now() - (i + 1) * 864e5)));
   const rows = await prisma.dashboardInsight.findMany({
@@ -213,13 +218,14 @@ async function recentlyBriefedUrls(): Promise<{ urls: Set<string>; titles: Set<s
   });
   const urls = new Set<string>();
   const titles = new Set<string>();
+  const list: string[] = [];
   for (const r of rows) {
     try {
-      for (const h of (JSON.parse(r.value).headlines ?? [])) { urls.add(h.url); titles.add(titleKey(h.title ?? '')); }
+      for (const h of (JSON.parse(r.value).headlines ?? [])) { urls.add(h.url); titles.add(titleKey(h.title ?? '')); if (h.title) list.push(h.title); }
     } catch { /* 깨진 행은 무시 */ }
   }
   titles.delete('');
-  return { urls, titles };
+  return { urls, titles, list: [...new Set(list)] };
 }
 
 /**
@@ -374,8 +380,33 @@ async function sameEventDuplicates(items: BriefingCandidate[]): Promise<Set<numb
 }
 
 /**
+ * 최근 7일 브리핑에서 이미 다룬 사건 — 주소·제목이 달라도(다른 매체·후속 기사) 같은 사건이면 다시 넣지 않는다
+ * (2026-10-26: 루센트블록 인가 탈락이 10/09~10/26 사이 여섯 번 다른 기사로 나감). 새 진전(새 발표·결정)이 있으면 다른 사건으로 본다.
+ * 실패하면 빈 집합(선정은 그대로).
+ */
+async function alreadyBriefedEvents(items: BriefingCandidate[], history: string[]): Promise<Set<number>> {
+  if (items.length === 0 || history.length === 0) return new Set();
+  try {
+    const resp = await openai.chat.completions.create({
+      model: RANK_MODEL,
+      temperature: 0,
+      response_format: { type: 'json_object' },
+      messages: [
+        { role: 'system', content: '[후보] 뉴스 중 [이미 방송한 뉴스]와 같은 사건을 다룬 것을 고르세요. 매체·언어·표현이 달라도 같은 발표·사고·거래·논란이면 같은 사건입니다. 같은 회사라도 새 발표·새 결정·새 거래처럼 새로운 진전이면 다른 사건입니다. JSON으로만: {"same":[후보 번호,...]} — 없으면 {"same":[]}' },
+        { role: 'user', content: `[이미 방송한 뉴스]\n${history.map(t => `- ${t}`).join('\n')}\n\n[후보]\n${items.map((c, i) => `${i}. ${c.title} — ${c.summary}`).join('\n')}` },
+      ],
+    });
+    const same = (JSON.parse(resp.choices[0]?.message?.content ?? '{}').same ?? []) as number[];
+    return new Set(same.filter(n => Number.isInteger(n) && n >= 0 && n < items.length));
+  } catch (e) {
+    console.warn('[briefing-reco] 지난 브리핑 사건 확인 실패(건너뜀):', e);
+    return new Set();
+  }
+}
+
+/**
  * 칸 수에 맞춰 5칸을 채운다 — 재료는 방송 기간(broadcastFor)의 다이제스트 섹션과 AI 트렌드·해외 트렌드.
- * 위클리는 한 주 정리라 "최근 브리핑에 나간 기사 제외"를 하지 않는다.
+ * 위클리도 "최근 7일 브리핑에 나간 기사·회사·사건 제외"를 한다(2026-10-26부터).
  */
 export async function pickByTiers(w: BroadcastWindow): Promise<{ picked: BriefingCandidate[]; tiers: number[] }> {
   const [briefed, data, candidates] = await Promise.all([
@@ -392,7 +423,9 @@ export async function pickByTiers(w: BroadcastWindow): Promise<{ picked: Briefin
   const notExit = (c: { company?: string; title: string }) => !c.company || !exitNames.has(c.company) || isAchievement(c.title);
   const rankOf = (a: { importance?: string }) => IMPORTANCE_RANK[a.importance ?? ''] ?? 0;
   const weekly = w.program === 'weekly';
-  const fresh = (c: BriefingCandidate) => weekly || !briefed.has(c.url, c.title);
+  // 위클리도 최근 7일(지난주 데일리·지난 위클리) 브리핑에 나간 기사·회사는 다시 넣지 않는다(2026-10-26 소윤 결정 B —
+  // 위클리가 지난주 데일리를 절반가량 그대로 다시 쓰고 매주 비슷하다는 의견). 예전엔 한 주 정리라 이 규칙을 껐다.
+  const fresh = (c: BriefingCandidate) => !briefed.has(c.url, c.title);
 
   // 스파크랩 — 다이제스트 섹션(한국·대만·글로벌벤처스 모두). 지난 브리핑에 나간 기사는 다시 넣지 않는다
   // (2026-10-07 소윤 결정 — 화~금 매일 나가므로 중복을 무조건 막는다. 10-01의 "메일과 맞춰 다시 넣기"를 대체).
@@ -411,7 +444,7 @@ export async function pickByTiers(w: BroadcastWindow): Promise<{ picked: Briefin
     .map(a => fromArticle(a, idByLink)).filter(a => fresh(a) && selfInTitle(a.title));
 
   // 포트폴리오 — 다이제스트 섹션(회사당 1건). 주가 기사면 같은 회사 다른 기사로. 지난 7일 브리핑에 나간 회사 제외.
-  const briefedCompanies = new Set(weekly ? [] : candidates.filter(a => briefed.has(a.link, a.title)).map(a => a.matchedKeyword));
+  const briefedCompanies = new Set(candidates.filter(a => briefed.has(a.link, a.title)).map(a => a.matchedKeyword));
   const byCompany = (company: string) => candidates
     .filter(c => c.matchedKeyword === company && !STOCK_TICKER.test(c.title) && isKorean(c.title))
     .sort((x, y) => rankOf(y) - rankOf(x) || y.priorityScore - x.priorityScore)[0];
@@ -529,7 +562,7 @@ export async function pickByTiers(w: BroadcastWindow): Promise<{ picked: Briefin
   // 뒤쪽(우선순위 낮은) 칸을 빼고, 빠진 칸과 같은 그룹 → 국내 포폴 → AI → 스타트업계 순으로 다시 채운다. 두 번까지.
   const tierGroup = Object.fromEntries(Object.entries(GROUP_TIER).map(([g, t]) => [t, g])) as Record<number, Group>;
   for (let round = 0; round < 2; round++) {
-    const drop = await sameEventDuplicates(picked);
+    const drop = new Set([...(await sameEventDuplicates(picked)), ...(await alreadyBriefedEvents(picked, briefed.titles))]);
     if (drop.size === 0) break;
     const removedGroups: Group[] = [];
     for (let i = picked.length - 1; i >= 0; i--) {
