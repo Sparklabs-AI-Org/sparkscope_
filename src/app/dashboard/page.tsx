@@ -5,7 +5,8 @@ import { ensureArticleEnDeep, ensureArticleKoDeep } from '@/lib/sparkscope/trans
 import { articleTitle } from '@/lib/sparkscope/article-title';
 import { prisma } from '@/lib/prisma';
 import { ArticleListView } from '@/components/ArticleListView';
-import { FamilyNews } from '@/components/FamilyNews';
+import { SignalBanner } from '@/components/SignalBanner';
+import { DashboardTutorial } from '@/components/DashboardTutorial';
 import { SHOW_SUBSCRIPTION_UI } from '@/lib/sparkscope/digest';
 import { PortfolioFilter } from '@/components/PortfolioFilter';
 import { ToneBreakdown } from '@/components/ToneBreakdown';
@@ -931,8 +932,8 @@ export default async function DashboardPage({ searchParams }: { searchParams: { 
   // 공개 화면은 기사 목록만 읽으면 된다(포트폴리오 분석 쿼리를 돌리지 않는다).
   if (portfolioView) tab = DB_TAB;
   const data = await loadDashboardData(range.from, range.to, company, range.isDefaultRange, categoryOfRegion(region), region, tab, portfolioView);
-  // 공개 화면 '어제 놓친 소식' — 어제(KST 0시~24시) 기사만. 기간 선택과 무관하다.
-  const [missedFamily, missedInter] = portfolioView && scope !== 'inter' ? await loadMissedNews() : [[], []];
+  // 공개 화면의 '어제 놓친 소식'은 없앴다(2026-10-26) — 번역 대상 목록 자리만 비워 둔다.
+  const missedFamily: Awaited<ReturnType<typeof loadMissedNews>>[0] = [];
   // 관리 화면 링크는 canManageContent(위)로 — 들어갈 수 없는 사람에게 보이면
   // "보이는데 안 되는" 상태가 되고, 그게 아예 안 보이는 것보다 나쁘다.
   const canBookmark = !!userId && isStaffAccount;
@@ -1074,6 +1075,8 @@ export default async function DashboardPage({ searchParams }: { searchParams: { 
           </p>}
         </div>
         <div data-tour="header-actions" className="flex items-center gap-2">
+          {/* 공개 화면은 튜토리얼을 제목 옆 오른쪽에 크게(보라색) — 처음 온 포트폴리오사가 바로 찾게(2026-10-26 소윤). */}
+          {portfolioView && <DashboardTutorial publicView prominent />}
           {canScrap && !portfolioView && <Link href="/dashboard/scraps" className="rounded-lg border border-spark-border bg-white px-3 py-1.5 text-sm font-semibold text-spark-ink-soft hover:border-spark-purple/40 hover:text-spark-purple transition-colors whitespace-nowrap">⭐ {tr('스크랩함')}</Link>}
           {canBookmark && <Link href="/dashboard/bookmarks" className="rounded-lg border border-spark-border bg-white px-3 py-1.5 text-sm font-semibold text-spark-ink-soft hover:border-spark-purple/40 hover:text-spark-purple transition-colors whitespace-nowrap">🔖 {tr('내 북마크')}</Link>}
           {/* 구독 설정은 지금 숨김(digest.ts SHOW_SUBSCRIPTION_UI) — 다시 띄울 때 그 스위치만 켜면 된다. */}
@@ -1090,41 +1093,11 @@ export default async function DashboardPage({ searchParams }: { searchParams: { 
         // '확인'을 눌러야 조회되는 흐름이라 두 컨트롤이 한 카드에 있어야 한다.
         <InterPanel from={range.from} to={range.to} min={MIN_DATE} max={fmt(getKstNow())} canScrap={canScrap && !portfolioView} portfolioView={portfolioView} />
       ) : portfolioView ? (
-      // ── 공개 화면 Intra ── 탭 없이 한 장: 어제 놓친 소식(패밀리 뉴스 · AI 트렌드) → SparkLabs Family News
-      <>
-        <div data-tour="date-range" className="mb-6">
-          <DateRangePicker
-            key={`${range.from}_${range.to}`}
-            from={range.from} to={range.to} min={MIN_DATE} max={fmt(getKstNow())}
-            tab="portfolio"
-          />
-        </div>
-
-        <SectionTitle title={`🗞️ ${tr('어제 놓친 소식')}`} />
-        <div data-tour="missed-news" className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8 items-start">
-          <MissedNewsCard
-            title={`🏢 ${tr('스파크랩 패밀리 뉴스')}`}
-            items={missedFamily}
-            accent="purple"
-            empty={tr('어제는 스파크랩·포트폴리오사 소식이 없었습니다.')}
-          />
-          <MissedNewsCard
-            title={`🤖 ${tr('INTER · AI 트렌드 소식')}`}
-            items={missedInter}
-            accent="emerald"
-            empty={tr('어제 수집된 해외 AI 트렌드 기사가 없습니다.')}
-          />
-        </div>
-
-        <SectionTitle title={`🗄️ SparkLabs Family News`} />
-        <div data-tour="article-table" className="bg-white p-5 rounded-2xl border border-spark-border shadow-card mb-8">
-          <FamilyNews
-            articles={articlesWithBookmark.map(({ importance, tone, pitchScore, portfolioStatus, ...a }: any) => ({ ...a, importance: null, tone: null, pitchScore: null })) as any}
-            canBookmark={canBookmark}
-            emptyText={tr('{range} 내 기사가 없습니다.', { range: range.label })}
-          />
-        </div>
-      </>
+      // ── 공개 화면 Intra ── 오늘의 시그널 + 지금 핫한 키워드(AI) 한 장(2026-10-26 소윤).
+      // 예전의 '어제 놓친 소식'·'SparkLabs Family News'는 뺐다. 이 패널은 Inter에서 옮겨 와 Inter에는 다시 두지 않는다.
+      <div data-tour="today-signal" className="mb-8">
+        <SignalBanner domain="ai" hidePortfolio />
+      </div>
       ) : (
       <>
       {/* 섹션 탭 — 국가(1단) × 관점(2단) 2단 계층.

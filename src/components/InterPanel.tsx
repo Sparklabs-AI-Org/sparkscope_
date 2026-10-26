@@ -223,9 +223,12 @@ export function InterPanel({
       {/* 오늘의 시그널 — 뉴스와 커뮤니티를 한 배너로 합쳤다(2026-09-08).
           따로 있을 땐 둘 다 같은 무게로 나열돼 "그래서 오늘 뭘 봐야 하나"에 답을 못 했다.
           지금은 가장 중요한 한 건을 크게 두고, 커뮤니티 랭킹을 옆에 세운다. */}
-      <div data-tour="inter-now" className="mb-6">
-        <SignalBanner domain={domain} hidePortfolio={portfolioView} />
-      </div>
+      {/* 공개 화면에서는 이 배너를 Intra로 옮겼다(2026-10-26) — 같은 패널이 두 번 나오지 않게 여기선 뺀다. */}
+      {!portfolioView && (
+        <div data-tour="inter-now" className="mb-6">
+          <SignalBanner domain={domain} hidePortfolio={portfolioView} />
+        </div>
+      )}
 
       {/* 조회 조건 — 기간·국가를 고른 뒤 '확인'을 눌러야 조회된다(클릭마다 화면이 새로 뜨지 않게) */}
       <div data-tour="inter-filter" className="bg-white border border-spark-border rounded-2xl p-5 mb-6">

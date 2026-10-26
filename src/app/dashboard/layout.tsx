@@ -63,7 +63,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
           {!isPublic && <span className="hidden sm:inline text-xs font-medium text-spark-muted">{t('본부 인사이트 대시보드')}</span>}
           {/* 챗봇은 내부 분석(피칭·위기·본부 코멘트)을 다루는 도구라 게스트에겐 열지 않는다. */}
           {!isPublic && <Link href="/chat" className="hidden sm:inline text-xs font-semibold text-spark-muted hover:text-spark-purple transition">💬 {t('챗봇')}</Link>}
-          <DashboardTutorial publicView={isPublic} />
+          {!isPublic && <DashboardTutorial />}
           {pending > 0 && (
             <Link
               href="/dashboard/accounts"

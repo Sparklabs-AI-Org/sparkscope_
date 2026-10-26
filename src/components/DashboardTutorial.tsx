@@ -157,30 +157,15 @@ export const INTER_TOUR: TourStep[] = [
 const PUBLIC_SCOPE_STEP: TourStep = {
   key: 'scope-switch',
   title: '화면은 두 개예요',
-  body: '**🏠 Intra**는 스파크랩 패밀리(스파크랩·포트폴리오사)와 국내 스타트업계 소식입니다.\n**🔭 Inter**는 해외 AI·바이오 시장이 어디로 움직이는지 보여줍니다.',
+  body: '**🏠 Intra**는 오늘 여러 매체가 함께 다룬 AI 소식과 지금 화제인 키워드를 한눈에 보여줍니다.\n**🔭 Inter**는 해외 AI·바이오 시장이 어디로 움직이는지 주제별로 깊게 봅니다.',
 };
 
 export const PUBLIC_INTRA_TOUR: TourStep[] = [
   PUBLIC_SCOPE_STEP,
   {
-    key: 'date-range',
-    title: '언제부터 언제까지 볼지',
-    body: '아래 **SparkLabs Family News** 목록의 기간을 정합니다. 7일·1개월·3개월·1년을 바로 고르거나 날짜를 직접 넣을 수 있어요.',
-  },
-  {
-    key: 'missed-news',
-    title: '어제 놓친 소식',
-    body: '어제 나온 기사만 골라 두 칸에 보여줍니다.\n**🏢 스파크랩 패밀리 뉴스** — 스파크랩과 포트폴리오사 소식\n**🤖 INTER · AI 트렌드 소식** — 해외 AI 업계 소식\n\n제목을 누르면 원문이 열립니다.',
-  },
-  {
-    key: 'family-tabs',
-    title: 'SparkLabs Family News',
-    body: '기간 안의 기사를 네 갈래로 나눠 봅니다 — **스파크랩 · 포트폴리오 · 스타트업계 소식 · 타 AC·VC**.\n스파크랩 탭에서는 코리아·대만·글로벌 등 지사별로 다시 고를 수 있어요.',
-  },
-  {
-    key: 'article-table',
-    title: '검색하고 정렬하기',
-    body: '제목·매체·회사명으로 검색하고 최신순·오래된순으로 정렬할 수 있습니다. 같은 소식을 여러 매체가 썼으면 한 줄로 묶이고 "+N개 매체 더보기"로 펼칩니다.',
+    key: 'today-signal',
+    title: '오늘의 시그널',
+    body: '여러 매체가 함께 다룬 소식 가운데 **가장 중요한 한 건**을 크게, 그다음 소식들을 아래 카드로 보여줍니다.\n오른쪽 위 **오늘 · 이번 주 · 이번 달**로 기간을 바꿀 수 있고, 카드의 **원문 보기**로 기사를 엽니다.\n오른쪽 **🔥 지금 핫한 키워드**는 여러 매체와 커뮤니티에서 실제로 많이 다뤄진 이름이에요. 누르면 관련 소식이 펼쳐집니다.',
   },
 ];
 
@@ -190,11 +175,6 @@ export const PUBLIC_INTER_TOUR: TourStep[] = [
     key: 'inter-domain',
     title: '바이오냐, AI냐',
     body: '위 버튼으로 **AI**와 **바이오**를 오갑니다. 아래 내용이 모두 그 분야 기준으로 바뀝니다.',
-  },
-  {
-    key: 'inter-now',
-    title: '오늘의 시그널',
-    body: '여러 매체가 함께 다룬 소식 가운데 가장 중요한 한 건과, 커뮤니티에서 화제인 이름들을 보여줍니다.',
   },
   {
     key: 'inter-filter',
@@ -440,7 +420,7 @@ function TourOverlay({ steps, onClose }: { steps: TourStep[]; onClose: () => voi
 
 // ── 헤더 버튼 ────────────────────────────────────────────────────────────
 
-function TutorialButtonInner({ publicView }: { publicView: boolean }) {
+function TutorialButtonInner({ publicView, prominent }: { publicView: boolean; prominent: boolean }) {
   const t = useT();
   const pathname = usePathname();
   const sp = useSearchParams();
@@ -484,20 +464,22 @@ function TutorialButtonInner({ publicView }: { publicView: boolean }) {
       <button
         onClick={start}
         disabled={waiting}
-        className="rounded-md border border-spark-border bg-white px-2.5 py-1 text-[11px] font-bold text-spark-ink-soft transition-colors hover:border-spark-purple/50 hover:text-spark-purple disabled:opacity-60"
+        className={prominent
+          ? 'rounded-xl bg-spark-purple px-4 py-2 text-[14px] font-extrabold text-white shadow-[0_4px_14px_-4px_rgba(80,70,229,0.6)] transition hover:brightness-110 disabled:opacity-60 whitespace-nowrap'
+          : 'rounded-md border border-spark-border bg-white px-2.5 py-1 text-[11px] font-bold text-spark-ink-soft transition-colors hover:border-spark-purple/50 hover:text-spark-purple disabled:opacity-60'}
       >
-        {waiting ? `🎓 ${t('준비 중…')}` : `🎓 ${t('튜토리얼 열기')}`}
+        {waiting ? `🎓 ${t('준비 중…')}` : prominent ? `🎓 ${t('처음이라면? 화면 둘러보기')}` : `🎓 ${t('튜토리얼 열기')}`}
       </button>
       {steps && <TourOverlay key={runId} steps={steps} onClose={() => setSteps(null)} />}
     </>
   );
 }
 
-export function DashboardTutorial({ publicView = false }: { publicView?: boolean }) {
+export function DashboardTutorial({ publicView = false, prominent = false }: { publicView?: boolean; prominent?: boolean }) {
   // useSearchParams는 Suspense 경계가 필요하다(Next.js app router).
   return (
     <Suspense fallback={null}>
-      <TutorialButtonInner publicView={publicView} />
+      <TutorialButtonInner publicView={publicView} prominent={prominent} />
     </Suspense>
   );
 }
