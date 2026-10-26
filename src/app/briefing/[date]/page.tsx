@@ -50,12 +50,21 @@ export default async function BriefingPage({
 
   return (
     <main className="mx-auto max-w-2xl px-4 py-6">
-      <BriefingTracker dateKey={video.dateKey} token={searchParams.s} />
+      <BriefingTracker dateKey={video.dateKey} token={searchParams.s} title={video.program === 'weekly' ? `위클리 브리핑 · ${spokenDate(video.dateKey)}` : `데일리 브리핑 · ${spokenDate(video.dateKey)}`} />
       <div className="text-sm font-semibold text-spark-purple">SparkScope {video.program === 'weekly' ? '위클리' : '데일리'} 브리핑</div>
       <h1 className="mt-1 text-2xl font-bold text-spark-ink">
         {video.program === 'weekly' ? spokenDate(video.dateKey) : `[데일리 브리핑] ${longDate(video.dateKey)} 스파크스코프 주요 뉴스`}
       </h1>
       <video src={video.url} controls playsInline preload="metadata" className="mt-4 w-full rounded-xl bg-black aspect-video" />
+      {video.audioUrl && (
+        <div className="mt-3 rounded-xl border border-spark-border bg-white p-3">
+          <div className="flex items-baseline justify-between gap-2">
+            <span className="text-sm font-bold text-spark-ink">🎧 소리로 듣기</span>
+            <span className="text-xs text-spark-muted">화면을 끄거나 다른 앱으로 넘어가도 계속 들려요</span>
+          </div>
+          <audio src={video.audioUrl} controls preload="none" className="mt-2 w-full" />
+        </div>
+      )}
       {video.overview && <p className="mt-4 text-sm leading-relaxed text-spark-ink-soft">{video.overview}</p>}
       <ol className="mt-6 space-y-3">
         {video.headlines.map((h, i) => (

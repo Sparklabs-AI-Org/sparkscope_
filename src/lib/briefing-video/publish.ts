@@ -10,6 +10,7 @@
 import { readFile } from 'fs/promises';
 import { prisma } from '@/lib/prisma';
 import type { BuiltBriefing } from './build';
+import { extractAudio } from './render';
 
 const BUCKET = 'briefings';
 export const KIND_VIDEO = 'briefing_video';
@@ -19,6 +20,8 @@ export interface BriefingVideoRecord {
   /** daily · weekly(월 Claw-e 뉴스데스크). 없으면 daily */
   program?: 'daily' | 'weekly';
   url: string;
+  /** 소리만(m4a) — 화면이 꺼져도 재생된다. 없으면(예전 기록·추출 실패) 페이지에 '소리로 듣기'를 띄우지 않는다. */
+  audioUrl?: string;
   seconds: number;
   headlines: { title: string; url: string; label: string; source: string; headline?: string; brief?: string; points?: { label: string; text: string }[] }[];
   /** 더벨 형식 개요 한 문단 */
@@ -54,10 +57,28 @@ export async function publishBriefingVideo(built: BuiltBriefing): Promise<string
   // 덮어쓴 뒤 CDN 캐시가 옛 영상을 주지 않게 버전 쿼리를 붙인다.
   const url = `${base}/storage/v1/object/public/${BUCKET}/${objectPath}?v=${Date.now()}`;
 
+  // 소리만 따로 올린다 — 실패해도 영상 게시는 막지 않는다.
+  let audioUrl: string | undefined;
+  try {
+    const m4a = built.file.replace(/\.mp4$/, '') + '.m4a';
+    await extractAudio(built.file, m4a);
+    const audioPath = `${built.snapshot.dateKey}/briefing.m4a`;
+    const ar = await fetch(`${base}/storage/v1/object/${BUCKET}/${audioPath}`, {
+      method: 'POST',
+      headers: { ...(key.startsWith('sb_') ? {} : { Authorization: `Bearer ${key}` }), apikey: key, 'content-type': 'audio/mp4', 'x-upsert': 'true', 'cache-control': '300' },
+      body: await readFile(m4a),
+    });
+    if (ar.ok) audioUrl = `${base}/storage/v1/object/public/${BUCKET}/${audioPath}?v=${Date.now()}`;
+    else console.warn(`[publish] 소리 파일 업로드 실패 ${ar.status} — 영상만 게시`);
+  } catch (e) {
+    console.warn('[publish] 소리 파일 만들기 실패 — 영상만 게시:', e);
+  }
+
   const record: BriefingVideoRecord = {
     dateKey: built.snapshot.dateKey,
     program: built.snapshot.program ?? 'daily',
     url,
+    audioUrl,
     seconds: Math.round(built.seconds),
     headlines: built.snapshot.headlines.map(h => ({ title: h.title, url: h.url, label: h.label, source: h.source, headline: h.headline, brief: h.brief, points: h.points })),
     overview: built.overview,

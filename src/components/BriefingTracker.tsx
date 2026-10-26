@@ -19,7 +19,7 @@ function visitorId(): string {
   }
 }
 
-export default function BriefingTracker({ dateKey, token }: { dateKey: string; token?: string }) {
+export default function BriefingTracker({ dateKey, token, title }: { dateKey: string; token?: string; title?: string }) {
   useEffect(() => {
     const vid = visitorId();
     const sent = new Set<string>();
@@ -33,23 +33,31 @@ export default function BriefingTracker({ dateKey, token }: { dateKey: string; t
 
     send('open');
 
-    const video = document.querySelector('video');
-    if (!video) return;
-    const onPlay = () => send('play');
-    const onTime = () => {
-      if (video.duration > 0 && video.currentTime >= video.duration * 0.5) send('half');
-    };
-    const onEnded = () => send('complete');
-
-    video.addEventListener('play', onPlay);
-    video.addEventListener('timeupdate', onTime);
-    video.addEventListener('ended', onEnded);
-    return () => {
-      video.removeEventListener('play', onPlay);
-      video.removeEventListener('timeupdate', onTime);
-      video.removeEventListener('ended', onEnded);
-    };
-  }, [dateKey, token]);
+    // 영상과 '소리로 듣기'(audio) 둘 다 같은 이벤트로 잰다 — 소리로만 들어도 시청으로 본다.
+    const media = Array.from(document.querySelectorAll<HTMLMediaElement>('video, audio'));
+    const cleanups = media.map(el => {
+      const onPlay = () => {
+        send('play');
+        // 잠금화면·알림창에 제목이 뜨게(소리로 듣기를 백그라운드에서 켰을 때)
+        if (el.tagName === 'AUDIO' && 'mediaSession' in navigator && title) {
+          try { navigator.mediaSession.metadata = new MediaMetadata({ title, artist: 'SparkScope 브리핑' }); } catch { /* 지원 안 하는 브라우저 */ }
+        }
+      };
+      const onTime = () => {
+        if (el.duration > 0 && el.currentTime >= el.duration * 0.5) send('half');
+      };
+      const onEnded = () => send('complete');
+      el.addEventListener('play', onPlay);
+      el.addEventListener('timeupdate', onTime);
+      el.addEventListener('ended', onEnded);
+      return () => {
+        el.removeEventListener('play', onPlay);
+        el.removeEventListener('timeupdate', onTime);
+        el.removeEventListener('ended', onEnded);
+      };
+    });
+    return () => cleanups.forEach(f => f());
+  }, [dateKey, token, title]);
 
   return null;
 }

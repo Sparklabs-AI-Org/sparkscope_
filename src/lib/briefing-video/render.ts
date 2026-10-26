@@ -13,6 +13,11 @@ import ffmpegPath from 'ffmpeg-static';
 const run = promisify(execFile);
 export const GAP_SECONDS = 0.6;
 
+/** 영상의 소리만 m4a로 뽑는다 — 화면이 꺼져도 재생되는 '소리로 듣기'용(휴대폰 브라우저는 <video>를 백그라운드에서 멈춘다). 재인코딩 없이 복사. */
+export async function extractAudio(mp4: string, outM4a: string): Promise<void> {
+  await ffmpeg(['-i', mp4, '-vn', '-c:a', 'copy', '-movflags', '+faststart', outM4a]);
+}
+
 async function ffmpeg(args: string[]) {
   if (!ffmpegPath) throw new Error('ffmpeg-static 바이너리를 찾지 못했습니다');
   await run(ffmpegPath, ['-y', '-loglevel', 'error', ...args], { maxBuffer: 64 * 1024 * 1024 });
