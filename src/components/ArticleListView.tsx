@@ -43,6 +43,9 @@ const CATEGORY_BUTTONS = [
   { id: 'portfolio_company', label: '포트폴리오', on: 'bg-spark-purple border-spark-purple text-white', off: 'bg-spark-light-purple/40 border-spark-purple/30 text-spark-purple hover:border-spark-purple' },
   { id: 'industry_trend', label: '스타트업계', on: 'bg-amber-500 border-amber-500 text-white', off: 'bg-amber-50 border-amber-200 text-amber-800 hover:border-amber-500' },
   { id: 'competitor', label: 'AC·VC', on: 'bg-red-600 border-red-600 text-white', off: 'bg-red-50 border-red-200 text-red-800 hover:border-red-500' },
+  // 깡프로·데모데이 큐레이션(2026-10-28) — 색은 기사 테이블 배지(ArticlesTable)와 같게.
+  { id: 'policy_support', label: '정책·지원사업', on: 'bg-sky-600 border-sky-600 text-white', off: 'bg-sky-50 border-sky-200 text-sky-800 hover:border-sky-500' },
+  { id: 'fund_invest', label: '투자·펀드', on: 'bg-emerald-600 border-emerald-600 text-white', off: 'bg-emerald-50 border-emerald-200 text-emerald-800 hover:border-emerald-500' },
 ] as const;
 
 function ymd(d: Date | string): string {

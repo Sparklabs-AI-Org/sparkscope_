@@ -433,8 +433,10 @@ async function loadDashboardData(
     // 트레이드오프가 실측으로 확인됨. AC·VC·스타트업계 필터를 눌렀을 때 15건 제한은 남지만,
     // 기본 화면(전체보기)에서 포트폴리오사 비중을 지키는 쪽을 택함.
     needArticles
-      ? Promise.all(Object.entries({ sparklabs_self: 150, portfolio_company: 150, competitor: 15, industry_trend: 15 }).map(([category, take]) =>
-          fetchRecentTabArticles(where, category, take, now, category === 'portfolio_company' ? 3 : undefined),
+      // 정책·지원사업 / 투자·펀드(깡프로·데모데이 큐레이션)도 DB에 쌓이게 한다(2026-10-28 소윤). 분석을 안 타 priorityScore가
+      // 0이라 점수순이면 밀린다 — 최근 3일은 점수와 상관없이 보장하는 방식으로 읽는다.
+      ? Promise.all(Object.entries({ sparklabs_self: 150, portfolio_company: 150, competitor: 15, industry_trend: 15, policy_support: 40, fund_invest: 30 }).map(([category, take]) =>
+          fetchRecentTabArticles(where, category, take, now, category === 'portfolio_company' || category === 'policy_support' || category === 'fund_invest' ? 3 : undefined),
         )).then(arr => arr.flat())
       : EMPTY,
     // take:20이면 회사 하나가 같은 사건을 거의 동일한 제목으로 여러 매체에 실어(예: IPO
