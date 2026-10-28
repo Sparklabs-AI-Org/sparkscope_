@@ -17,7 +17,11 @@ interface Item {
   source: string;
   pubDate: string | Date;
   snippet?: string | null;
+  importance?: string | null;
 }
+
+const IMPORTANCE_RANK: Record<string, number> = { CRITICAL: 4, HIGH: 3, MEDIUM: 2, LOW: 1 };
+const rank = (a: Item) => IMPORTANCE_RANK[a.importance ?? ''] ?? 0;
 
 const kstDay = (d: string | Date) => new Date(new Date(d).getTime() + 9 * 3600 * 1000).toISOString().slice(0, 10);
 const WEEKDAY = ['일', '월', '화', '수', '목', '금', '토'];
@@ -45,7 +49,10 @@ export function CuratedFeed({ kind, items, rangeLabel }: { kind: 'policy' | 'fun
     ? items.filter(a => a.source === PINNED_SOURCE && /TOP\s?\d+/i.test(a.title)).slice(0, 2)
     : [];
   const pinnedIds = new Set(pinned.map(a => a.id));
-  const ordered = [...pinned, ...items.filter(a => !pinnedIds.has(a.id))];
+  // 카드는 중요도 순(같으면 최신 순) — 큰 카드에 그 기간 가장 중요한 기사가 선다(2026-10-28 소윤).
+  const byImportance = items.filter(a => !pinnedIds.has(a.id))
+    .sort((x, y) => rank(y) - rank(x) || new Date(y.pubDate).getTime() - new Date(x.pubDate).getTime());
+  const ordered = [...pinned, ...byImportance];
   const [hero, ...rest] = ordered;
   const cards = rest.slice(0, CARDS - 1);
 

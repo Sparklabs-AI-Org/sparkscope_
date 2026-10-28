@@ -24,7 +24,14 @@ const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 export type PolicyBucket = 'sparklabs_self' | 'portfolio_company' | 'competitor' | 'policy_support' | 'fund_invest' | 'noise';
 
 export interface ClassifyItem { title: string; body?: string | null }
-export interface ClassifyResult { category: PolicyBucket; matchedKeyword?: string }
+export interface ClassifyResult {
+  category: PolicyBucket;
+  matchedKeyword?: string;
+  /** CRITICAL / HIGH / MEDIUM / LOW — 대시보드 카드 순서(큰 카드가 가장 중요한 기사). 회사 이름으로 가른 기사는 비운다. */
+  importance?: string;
+  /** 해외 소식이면 true — 대시보드 투자·펀드 탭은 국내만 보여준다(해외는 Inter 쪽 영역). */
+  isOverseas?: boolean;
+}
 
 const SYSTEM = `스파크랩(한국의 액셀러레이터·VC) 대시보드에 스타트업 뉴스 큐레이션 기사를 칸별로 나눕니다.
 각 기사를 아래 넷 중 하나로 분류하세요.
@@ -41,7 +48,16 @@ const SYSTEM = `스파크랩(한국의 액셀러레이터·VC) 대시보드에 �
   ("앤트로픽 IPO에 SKT·네이버 함박웃음"), 빅테크 IPO 자체 기사도 none입니다 — fund는 스타트업이 투자를 받거나
   벤처펀드가 만들어지는 소식만입니다.
 
-JSON으로만: {"items":[{"i":0,"c":"policy"},{"i":1,"c":"acvc","house":"해시드"},...]} — 모든 번호를 빠짐없이.`;
+그리고 각 기사에
+- "imp": 한국 스타트업·투자 업계 사람에게 얼마나 중요한지 1~5. 고르게 쓰세요(대부분 3이 되지 않게).
+  5 = 1,000억 원 이상 펀드 결성·투자, 모태·성장펀드 같은 정부 출자 사업 결과, 창업·벤처 제도의 큰 변화
+  4 = 300억 원 이상 투자 유치·펀드 결성, 주요 기관의 출자·GP 선정, 전국 단위 지원사업 공고
+  3 = 그보다 작은 투자·펀드, 지역 단위 지원사업, 업계 동향 분석
+  2 = 단신·주간 정리·인터뷰·행사
+  1 = 참고용 가이드·칼럼
+- "kr": 한국(국내 기업·기관·정부)이 주체인 소식이면 true, 해외 소식이면 false
+
+JSON으로만: {"items":[{"i":0,"c":"policy","imp":4,"kr":true},{"i":1,"c":"acvc","house":"해시드","imp":2,"kr":true},...]} — 모든 번호를 빠짐없이.`;
 
 async function classifyWithAI(items: ClassifyItem[]): Promise<ClassifyResult[]> {
   const out: ClassifyResult[] = [];
@@ -58,12 +74,17 @@ async function classifyWithAI(items: ClassifyItem[]): Promise<ClassifyResult[]> 
           { role: 'user', content: chunk.map((a, n) => `${n}. ${a.title}${a.body ? ` — ${a.body.replace(/\s+/g, ' ').slice(0, 300)}` : ''}`).join('\n') },
         ],
       });
-      const rows = (JSON.parse(resp.choices[0]?.message?.content ?? '{}').items ?? []) as { i: number; c: string; house?: string }[];
+      const rows = (JSON.parse(resp.choices[0]?.message?.content ?? '{}').items ?? []) as { i: number; c: string; house?: string; imp?: number; kr?: boolean }[];
       for (const r of rows) {
         if (!Number.isInteger(r.i) || r.i < 0 || r.i >= chunk.length) continue;
-        if (r.c === 'fund') fallback[r.i] = { category: 'fund_invest' };
+        const meta = {
+          importance: r.imp === 5 ? 'CRITICAL' : r.imp === 4 ? 'HIGH' : r.imp === 3 ? 'MEDIUM' : 'LOW',
+          ...(typeof r.kr === 'boolean' ? { isOverseas: !r.kr } : {}),
+        };
+        if (r.c === 'fund') fallback[r.i] = { category: 'fund_invest', ...meta };
         else if (r.c === 'none') fallback[r.i] = { category: 'noise' };
-        else if (r.c === 'acvc' && r.house?.trim()) fallback[r.i] = { category: 'competitor', matchedKeyword: r.house.trim() };
+        else if (r.c === 'acvc' && r.house?.trim()) fallback[r.i] = { category: 'competitor', matchedKeyword: r.house.trim(), ...meta };
+        else fallback[r.i] = { category: 'policy_support', ...meta };
       }
     } catch (e) {
       console.warn('[policy-classify] 분류 실패 — 이 묶음은 정책·지원사업으로 둔다:', e);

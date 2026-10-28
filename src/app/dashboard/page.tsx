@@ -784,7 +784,8 @@ async function loadDashboardData(
   // 의존해서 한 칸만 끼워 넣어도 전부 밀리므로, 이 탭 것만 따로 읽는다.
   const policyArticles = needPolicy
     ? (await prisma.article.findMany({
-        where: { ...where, category: tab === 'fund' ? 'fund_invest' : 'policy_support' },
+        // 투자·펀드는 국내 소식만 — 해외 딜은 Inter(해외 트렌드) 영역이다(2026-10-28 소윤). 판정 전 기사(null)는 보여준다.
+        where: { ...where, ...(tab === 'fund' ? { category: 'fund_invest', OR: [{ isOverseas: null }, { isOverseas: false }] } : { category: 'policy_support' }) },
         orderBy: [{ pubDate: 'desc' }],
         take: 300,
         select: { ...LIST_SELECT, bodyText: true },

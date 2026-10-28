@@ -83,6 +83,8 @@ export async function GET(request: NextRequest) {
             matchedKeyword: b.matchedKeyword ?? a.matchedKeyword,
             category: b.category === 'noise' ? a.category : b.category,
             isNoise: b.category === 'noise',
+            importance: b.importance ?? null,
+            isOverseas: b.isOverseas ?? null,
             priorityScore: a.basePriority,
             bodyText: a.body ? a.body.slice(0, 3000) : null,
           },
