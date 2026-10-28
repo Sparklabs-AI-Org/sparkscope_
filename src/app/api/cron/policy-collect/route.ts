@@ -85,6 +85,7 @@ export async function GET(request: NextRequest) {
             isNoise: b.category === 'noise',
             importance: b.importance ?? null,
             isOverseas: b.isOverseas ?? null,
+            curationTopic: b.curationTopic ?? null,
             priorityScore: a.basePriority,
             bodyText: a.body ? a.body.slice(0, 3000) : null,
           },

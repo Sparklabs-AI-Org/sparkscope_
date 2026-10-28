@@ -23,7 +23,7 @@ import { classifyPolicyItems } from '../src/lib/sparkscope/policy-classify';
     if (!process.argv.includes('--meta') && b.category === (process.argv.includes('--fund') ? 'fund_invest' : 'policy_support')) continue;
     // --meta: 칸은 그대로 두고 중요도·국내/해외만 채운다(2026-10-28 컬럼 추가 후 기존 기사 보충).
     if (process.argv.includes('--meta')) {
-      if (b.category !== 'noise') await prisma.article.update({ where: { id: r.id }, data: { importance: b.importance ?? null, isOverseas: b.isOverseas ?? null } });
+      if (b.category !== 'noise') await prisma.article.update({ where: { id: r.id }, data: { importance: b.importance ?? null, isOverseas: b.isOverseas ?? null, curationTopic: b.curationTopic ?? null } });
       continue;
     }
     // --fund는 '관계없음'만 반영한다 — GP 선정 기사가 AC·VC로 옮겨 가는 등 칸 사이 이동은 처음 분류를 믿는다.
@@ -32,7 +32,7 @@ import { classifyPolicyItems } from '../src/lib/sparkscope/policy-classify';
       where: { id: r.id },
       data: b.category === 'noise'
         ? { isNoise: true }
-        : { category: b.category, importance: b.importance ?? null, isOverseas: b.isOverseas ?? null, ...(b.matchedKeyword ? { matchedKeyword: b.matchedKeyword } : {}) },
+        : { category: b.category, importance: b.importance ?? null, isOverseas: b.isOverseas ?? null, curationTopic: b.curationTopic ?? null, ...(b.matchedKeyword ? { matchedKeyword: b.matchedKeyword } : {}) },
     });
   }
   console.log(`${rows.length}건`, tally);

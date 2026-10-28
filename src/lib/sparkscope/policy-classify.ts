@@ -31,6 +31,8 @@ export interface ClassifyResult {
   importance?: string;
   /** 해외 소식이면 true — 대시보드 투자·펀드 탭은 국내만 보여준다(해외는 Inter 쪽 영역). */
   isOverseas?: boolean;
+  /** 세부 분류 — 정책: grant/policy/ecosystem, 투자: round/fund/market. 탭 안에서 이 기준으로 묶는다. */
+  curationTopic?: string;
 }
 
 const SYSTEM = `스파크랩(한국의 액셀러레이터·VC) 대시보드에 스타트업 뉴스 큐레이션 기사를 칸별로 나눕니다.
@@ -56,8 +58,11 @@ const SYSTEM = `스파크랩(한국의 액셀러레이터·VC) 대시보드에 �
   2 = 단신·주간 정리·인터뷰·행사
   1 = 참고용 가이드·칼럼
 - "kr": 한국(국내 기업·기관·정부)이 주체인 소식이면 true, 해외 소식이면 false
+- "sub": 세부 분류 — policy면 "grant"(지원사업·공모·모집 공고와 공고 정리) / "policy"(정부 정책·제도·규제·법안) /
+  "ecosystem"(창업 생태계 동향·통계·행사), fund면 "round"(개별 스타트업 투자 유치) / "fund"(펀드 결성·출자·GP 선정) /
+  "market"(투자 시장 동향·통계·분석). acvc·none은 생략
 
-JSON으로만: {"items":[{"i":0,"c":"policy","imp":4,"kr":true},{"i":1,"c":"acvc","house":"해시드","imp":2,"kr":true},...]} — 모든 번호를 빠짐없이.`;
+JSON으로만: {"items":[{"i":0,"c":"policy","imp":4,"kr":true,"sub":"grant"},{"i":1,"c":"acvc","house":"해시드","imp":2,"kr":true},...]} — 모든 번호를 빠짐없이.`;
 
 async function classifyWithAI(items: ClassifyItem[]): Promise<ClassifyResult[]> {
   const out: ClassifyResult[] = [];
@@ -74,17 +79,18 @@ async function classifyWithAI(items: ClassifyItem[]): Promise<ClassifyResult[]> 
           { role: 'user', content: chunk.map((a, n) => `${n}. ${a.title}${a.body ? ` — ${a.body.replace(/\s+/g, ' ').slice(0, 300)}` : ''}`).join('\n') },
         ],
       });
-      const rows = (JSON.parse(resp.choices[0]?.message?.content ?? '{}').items ?? []) as { i: number; c: string; house?: string; imp?: number; kr?: boolean }[];
+      const rows = (JSON.parse(resp.choices[0]?.message?.content ?? '{}').items ?? []) as { i: number; c: string; house?: string; imp?: number; kr?: boolean; sub?: string }[];
       for (const r of rows) {
         if (!Number.isInteger(r.i) || r.i < 0 || r.i >= chunk.length) continue;
         const meta = {
           importance: r.imp === 5 ? 'CRITICAL' : r.imp === 4 ? 'HIGH' : r.imp === 3 ? 'MEDIUM' : 'LOW',
           ...(typeof r.kr === 'boolean' ? { isOverseas: !r.kr } : {}),
         };
-        if (r.c === 'fund') fallback[r.i] = { category: 'fund_invest', ...meta };
+        const sub = (r.c === 'fund' ? ['round', 'fund', 'market'] : ['grant', 'policy', 'ecosystem']).includes(r.sub ?? '') ? r.sub : undefined;
+        if (r.c === 'fund') fallback[r.i] = { category: 'fund_invest', ...meta, curationTopic: sub ?? 'market' };
         else if (r.c === 'none') fallback[r.i] = { category: 'noise' };
         else if (r.c === 'acvc' && r.house?.trim()) fallback[r.i] = { category: 'competitor', matchedKeyword: r.house.trim(), ...meta };
-        else fallback[r.i] = { category: 'policy_support', ...meta };
+        else fallback[r.i] = { category: 'policy_support', ...meta, curationTopic: sub ?? 'ecosystem' };
       }
     } catch (e) {
       console.warn('[policy-classify] 분류 실패 — 이 묶음은 정책·지원사업으로 둔다:', e);

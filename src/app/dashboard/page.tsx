@@ -788,7 +788,7 @@ async function loadDashboardData(
         where: { ...where, ...(tab === 'fund' ? { category: 'fund_invest', OR: [{ isOverseas: null }, { isOverseas: false }] } : { category: 'policy_support' }) },
         orderBy: [{ pubDate: 'desc' }],
         take: 300,
-        select: { ...LIST_SELECT, bodyText: true },
+        select: { ...LIST_SELECT, bodyText: true, curationTopic: true },
       })).map(({ bodyText, ...a }) => ({
         ...a, companyName: undefined, portfolioStatus: null,
         // 카드에 한 줄 미리보기 — 본문 첫머리(머리 괄호 안내문은 뗀다). 본문 전체를 화면에 넘기지 않는다.

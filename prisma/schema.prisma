@@ -158,6 +158,8 @@ model Article {
   importance       String? // CRITICAL / HIGH / MEDIUM / LOW
   // 깡프로·데모데이 큐레이션의 해외 소식 표시(policy-classify.ts) — 대시보드 투자·펀드 탭은 국내만. 일반 수집은 null
   isOverseas       Boolean?
+  // 큐레이션 세부 분류(policy-classify.ts) — 정책: grant/policy/ecosystem, 투자: round/fund/market. 일반 수집은 null
+  curationTopic    String?
   tone             String? // POSITIVE / NEUTRAL / NEGATIVE / MIXED
   oneLiner         String?
   ourTake          String? // 본부 관점 한 줄
