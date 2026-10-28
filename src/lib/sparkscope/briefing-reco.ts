@@ -288,24 +288,21 @@ const GROUP_NAME: Record<Group, string> = {
  *     한쪽 포폴이 모자라면 다른 쪽으로, 그래도 비면 AI 트렌드를 더 → 마지막으로 스타트업계
  */
 function quotas(avail: Record<Group, number>, total: number): Record<Group, number> {
-  // 2026-10-28 소윤: 정책 칸 고정 — 해외 AI 반, 깡프로·데모데이(정책·지원사업) 반. 투자·펀드 1칸은 정책 쪽 몫에 넣는다.
-  // 데일리 10개 = 스파크랩 1 · AI 3 · 정책 2 + 투자 1 · 포폴 3(해외 1). 한쪽이 모자라면 포폴 → AI·정책 번갈아 채운다.
-  const half = total >= 12 ? 4 : 3;
+  // 2026-10-28 소윤: 정책·지원사업 2칸 · 투자·펀드 2칸 보장, 나머지는 해외 AI 트렌드.
+  // 데일리·위클리 10개 = 스파크랩 1 · 정책 2 · 투자 2 · 포폴 최대 2 · 해외 AI 나머지(3 이상).
+  // 위클리 정책 2칸은 데모데이 주간 공고 정리 고정(pickByTiers의 Y 풀). 한쪽이 모자라면 해외 AI가 채운다.
   const q: Record<Group, number> = { S: 0, P: 0, D: 0, G: 0, Y: 0, T: 0 };
   q.S = Math.min(1, avail.S);
-  q.G = Math.min(half, avail.G);
-  q.T = Math.min(1, avail.T);
-  q.Y = Math.min(half - q.T, avail.Y);
-  q.T = Math.min(half - q.Y, avail.T);
-  let room = total - q.S - q.G - q.Y - q.T;
-  q.D = Math.min(total >= 12 ? 2 : 1, avail.D, room); room -= q.D;
-  q.P = Math.min(room, avail.P); room -= q.P;
-  const moreD = Math.min(room, avail.D - q.D); q.D += moreD; room -= moreD;
-  while (room > 0) {
-    const before = room;
-    for (const g of ['G', 'Y', 'T'] as Group[]) if (room > 0 && q[g] < avail[g]) { q[g]++; room--; }
-    if (room === before) break;
-  }
+  q.Y = Math.min(2, avail.Y);
+  q.T = Math.min(2, avail.T);
+  let room = total - q.S - q.Y - q.T;
+  const pf = Math.min(2, Math.max(0, room - 3));   // 해외 AI 3칸은 남긴다
+  q.P = Math.min(pf, avail.P);
+  q.D = Math.min(pf - q.P, avail.D);
+  room -= q.P + q.D;
+  q.G = Math.min(room, avail.G); room -= q.G;
+  // AI가 모자라면 포폴 → 정책 → 투자 순으로 더 받는다.
+  for (const g of ['P', 'D', 'Y', 'T'] as Group[]) { const more = Math.min(room, avail[g] - q[g]); q[g] += more; room -= more; }
   return q;
 }
 
@@ -428,7 +425,7 @@ export async function pickByTiers(w: BroadcastWindow): Promise<{ picked: Briefin
     where: { portfolioStatus: { in: ['Exit', 'Written-off'] } }, select: { name: true },
   })).map(t => t.name));
   const notExit = (c: { company?: string; title: string }) => !c.company || !exitNames.has(c.company) || isAchievement(c.title);
-  const rankOf = (a: { importance?: string }) => IMPORTANCE_RANK[a.importance ?? ''] ?? 0;
+  const rankOf = (a: { importance?: string | null }) => IMPORTANCE_RANK[a.importance ?? ''] ?? 0;
   const weekly = w.program === 'weekly';
   // 위클리도 최근 7일(지난주 데일리·지난 위클리) 브리핑에 나간 기사·회사는 다시 넣지 않는다(2026-10-26 소윤 결정 B —
   // 위클리가 지난주 데일리를 절반가량 그대로 다시 쓰고 매주 비슷하다는 의견). 예전엔 한 주 정리라 이 규칙을 껐다.
@@ -547,27 +544,31 @@ export async function pickByTiers(w: BroadcastWindow): Promise<{ picked: Briefin
     .filter((c, i, arr) => arr.findIndex(x => x.url === c.url) === i)
     .slice(0, 16);
 
-  // 정책·지원사업 — 깡프로 스타트업 뉴스·데모데이가 고른 기사(2026-10-28 소윤: 정책 칸 고정).
-  // 다이제스트 후보(분석을 거친 기사)에는 없어서 따로 읽는다.
-  // 중심은 데모데이의 지원사업 공고 정리("K-Startup 주간 창업공고 TOP 10", "가장 많이 본 정부지원사업 TOP 100") — 소윤 2026-10-28.
-  // 깡프로 기사는 정부·지자체 지원사업·정책·출자처럼 제목에 정책 성격이 드러나는 것만 뒤에 붙인다(일반 업계 기사·칼럼은 뺀다).
-  const POLICY_TOPIC = /지원사업|지원\s?(확대|강화|최대|연장)|공모|모집|창업공고|정부|지자체|중기부|중소벤처기업부|과기정통부|금융위|서울시|경기도|정책|규제|법안|모태펀드|출자|바우처|이용권|TIPS|팁스/;
-  const Y = (await prisma.article.findMany({
-    // 데모데이 공고 정리는 주 1회(월요일) 올라와 데일리 기간(전날 08:10~)에 안 걸린다 — 7일 안의 글을 보고, 이미 나간 건 fresh가 거른다.
-    where: { category: 'policy_support', isNoise: false, pubDate: { gte: new Date(Math.min(w.since.getTime(), (w.until ?? new Date()).getTime() - 7 * 864e5)), ...(w.until ? { lt: w.until } : {}) } },
-    select: { id: true, title: true, link: true, source: true, pubDate: true, bodyText: true },
-    orderBy: { pubDate: 'desc' },
-    take: 40,
-  })).filter(a => (a.source === '데모데이' || a.pubDate >= w.since) && POLICY_TOPIC.test(a.title) && !STOCK_TICKER.test(a.title) && !PERSONNEL.test(a.title))
-    .sort((x, y) => Number(y.source === '데모데이') - Number(x.source === '데모데이'))
-    .map(a => ({
-      kind: 'intra' as const, ref: a.id, title: a.title.replace(/\s+-\s+[^-]{1,20}$/, '').trim() || a.title,
-      summary: a.bodyText ? a.bodyText.replace(/\s+/g, ' ').slice(0, 160) : a.title,
-      source: a.source, url: a.link, label: CATEGORY_LABEL.policy_support, pubDate: a.pubDate.toISOString(), category: 'policy_support',
-    }))
-    .filter(fresh)
-    .filter((c, i, arr) => arr.findIndex(x => x.url === c.url) === i)
-    .slice(0, 20);
+  // 정책·지원사업 — 깡프로·데모데이에서 나눈 기사(policy-classify.ts → policy_support).
+  // 위클리: 데모데이 주간 공고 정리 최신 회차 2편(K-Startup 주간 창업공고 TOP 10 · 정부지원사업 TOP 100)을 고정 2칸으로(2026-10-28 소윤).
+  //   본문(순위표)은 브리핑 워크플로의 fill-demoday-roundups.ts가 채운다. 데일리가 다루지 않으므로 '최근 브리핑 제외'를 하지 않는다.
+  // 데일리: 지원사업 공고·정책·제도 기사 중 중요도 순(공고 정리 글은 위클리 몫이라 뺀다). 생태계·동향은 뒤로.
+  const ROUNDUP = /TOP\s?\d+/i;
+  const toPolicy = (a: { id: string; title: string; link: string; source: string; pubDate: Date; bodyText: string | null }) => ({
+    kind: 'intra' as const, ref: a.id, title: a.title.replace(/\s+-\s+[^-]{1,20}$/, '').trim() || a.title,
+    summary: a.bodyText ? a.bodyText.replace(/\s+/g, ' ').slice(0, 160) : a.title,
+    source: a.source, url: a.link, label: CATEGORY_LABEL.policy_support, pubDate: a.pubDate.toISOString(), category: 'policy_support',
+  });
+  const policySelect = { id: true, title: true, link: true, source: true, pubDate: true, bodyText: true, importance: true, curationTopic: true } as const;
+  const Y = weekly
+    ? (await prisma.article.findMany({
+        where: { category: 'policy_support', isNoise: false, source: '데모데이', title: { contains: 'TOP' }, pubDate: { gte: new Date((w.until ?? new Date()).getTime() - 8 * 864e5), ...(w.until ? { lt: w.until } : {}) } },
+        select: policySelect, orderBy: { pubDate: 'desc' }, take: 2,
+      })).sort((x, y) => Number(/TOP\s?10\b/.test(y.title)) - Number(/TOP\s?10\b/.test(x.title))).map(toPolicy)
+    : (await prisma.article.findMany({
+        where: { category: 'policy_support', isNoise: false, pubDate: { gte: w.since, ...(w.until ? { lt: w.until } : {}) } },
+        select: policySelect, orderBy: { pubDate: 'desc' }, take: 40,
+      })).filter(a => !ROUNDUP.test(a.title) && !STOCK_TICKER.test(a.title) && !PERSONNEL.test(a.title))
+        .sort((x, y) => Number(y.curationTopic !== 'ecosystem') - Number(x.curationTopic !== 'ecosystem') || rankOf(y) - rankOf(x))
+        .map(toPolicy)
+        .filter(fresh)
+        .filter((c, i, arr) => arr.findIndex(x => x.url === c.url) === i)
+        .slice(0, 20);
 
   // AI 칸은 해외 우선 — 국내 AI는 [국내] 표시를 달아 글로벌 그룹 뒤에 붙인다(AI가 해외 매체급일 때만 고른다).
   const GA = [...G, ...DA];
@@ -627,7 +628,9 @@ export async function pickByTiers(w: BroadcastWindow): Promise<{ picked: Briefin
   // 뒤쪽(우선순위 낮은) 칸을 빼고 다시 채운다. 두 번까지.
   const tierGroup = Object.fromEntries(Object.entries(GROUP_TIER).map(([g, t]) => [t, g])) as Record<number, Group>;
   for (let round = 0; round < 2; round++) {
-    const drop = new Set([...(await sameEventDuplicates(picked)), ...(await alreadyBriefedEvents(picked, briefed.titles))]);
+    const drop = new Set([...(await sameEventDuplicates(picked)), ...(await alreadyBriefedEvents(picked, briefed.titles))]
+      // 위클리 공고 정리 2칸은 고정 — 지난주 회차와 제목이 비슷해 '같은 사건'으로 잡히지 않게.
+      .filter(i => !(weekly && tiers[i] === GROUP_TIER.Y)));
     if (drop.size === 0) break;
     const removedGroups: Group[] = [];
     for (let i = picked.length - 1; i >= 0; i--) {
@@ -649,7 +652,9 @@ export async function pickByTiers(w: BroadcastWindow): Promise<{ picked: Briefin
     }
   }
   // 칸 순서대로(스파크랩 → 국내 포폴 → 해외 포폴 → AI → 스타트업계) 보이게 정렬
-  const order = picked.map((c, i) => ({ c, t: tiers[i] })).sort((a, b) => a.t - b.t);
+  // 같은 칸 안에서는 고른 순서 그대로 — 위클리 공고 정리만 창업공고 TOP 10을 TOP 100보다 앞에.
+  const top10First = (c: BriefingCandidate) => Number(weekly && /TOP\s?10\b/.test(c.title));
+  const order = picked.map((c, i) => ({ c, t: tiers[i] })).sort((a, b) => a.t - b.t || top10First(b.c) - top10First(a.c));
   picked.splice(0, picked.length, ...order.map(x => x.c));
   tiers.splice(0, tiers.length, ...order.map(x => x.t));
   return { picked, tiers };
