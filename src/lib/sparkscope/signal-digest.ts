@@ -206,13 +206,24 @@ async function loadCurated(): Promise<{ policy: CuratedArticle[]; fund: CuratedA
     const { prisma } = await import('@/lib/prisma');
     const { sendWindowStart } = await import('./review');
     const since = sendWindowStart();
+    const RANK: Record<string, number> = { CRITICAL: 4, HIGH: 3, MEDIUM: 2, LOW: 1 };
+    const TOPIC_ORDER: Record<string, number> = { grant: 0, policy: 1, fund: 0, round: 1 };
     const read = async (category: string) => (await prisma.article.findMany({
-      where: { category, isNoise: false, pubDate: { gte: since } },
-      select: { title: true, link: true, source: true, pubDate: true, bodyText: true },
+      where: { category, isNoise: false, pubDate: { gte: since, lte: new Date() },
+        // 투자·펀드는 대시보드처럼 국내 소식만(해외 딜은 Inter 영역).
+        ...(category === 'fund_invest' ? { OR: [{ isOverseas: null }, { isOverseas: false }] } : {}) },
+      select: { title: true, link: true, source: true, pubDate: true, bodyText: true, importance: true, curationTopic: true },
       orderBy: { pubDate: 'desc' },
-      take: CURATED_LIMIT,
-    })).map(a => ({ title: a.title, link: a.link, source: a.source, pubDate: a.pubDate, snippet: cleanSnippet(a.bodyText, 110) }));
-    // 데모데이 공고 정리는 월요일 10시 반쯤 올라와 화요일 메일에 실린다.
+      take: 40,
+    }))
+      // 대시보드와 같은 순서 — 데모데이 공고 정리 → 세부 분류(공고 → 정책·제도 / 펀드 → 투자 유치) → 중요도. 생태계·동향은 메일에 싣지 않는다.
+      .filter(a => a.curationTopic !== 'ecosystem')
+      .sort((x, y) =>
+        Number(/TOP\s?\d+/i.test(y.title) && y.source === '데모데이') - Number(/TOP\s?\d+/i.test(x.title) && x.source === '데모데이')
+        || (TOPIC_ORDER[x.curationTopic ?? ''] ?? 2) - (TOPIC_ORDER[y.curationTopic ?? ''] ?? 2)
+        || (RANK[y.importance ?? ''] ?? 0) - (RANK[x.importance ?? ''] ?? 0))
+      .slice(0, CURATED_LIMIT)
+      .map(a => ({ title: a.title, link: a.link, source: a.source, pubDate: a.pubDate, snippet: cleanSnippet(a.bodyText, 110) }));
     const [policy, fund] = await Promise.all([read('policy_support'), read('fund_invest')]);
     return { policy, fund };
   } catch (e: any) {
