@@ -778,8 +778,8 @@ export const EN: Record<string, string> = {
   '**⭐ 스크랩함** — 별표 친 기사를 한곳에 모아 봅니다.\n**⚙️ 키워드 관리** — 어떤 회사·인물을 감시할지 정합니다.\n**🔍 노이즈 제안** — 잘못 걸린 기사를 신고하면 여기 쌓입니다.':
     '**⭐ Saved articles** — everything you starred, in one place.\n**⚙️ Keyword settings** — decide which companies and people to monitor.\n**🔍 Noise suggestions** — reports of wrongly matched articles land here.',
   '네 개의 섹션': 'Four sections',
-  '**🏢 스파크랩** — 우리 자사가 어디에, 어떤 논조로 실렸나\n**📊 포트폴리오사** — 투자사 노출량과 부정 이슈\n**🏁 업계 모니터링** — 다른 AC·VC는 뭘 하고 있나\n**📋 최근 수집 기사** — 수집된 기사 원문 목록\n\n탭을 바꾸면 아래 패널이 통째로 바뀝니다.':
-    '**🏢 SparkLabs** — where we were covered, and in what tone\n**📊 Portfolio companies** — coverage volume and negative issues\n**🏁 Industry monitoring** — what other ACs and VCs are doing\n**📋 Recently collected** — the raw article list\n\nSwitching tabs replaces the entire panel below.',
+  '**🏢 스파크랩** — 우리 자사가 어디에, 어떤 논조로 실렸나\n**📊 포트폴리오사** — 투자사 노출량과 부정 이슈\n**🏁 AC·VC 업계** — 다른 AC·VC는 뭘 하고 있나\n**📑 정책·지원사업** — 정부·지자체 지원사업 공고와 창업 정책\n**💰 투자·펀드** — 투자 유치와 펀드 결성 소식\n\n탭을 바꾸면 아래 패널이 통째로 바뀝니다.':
+    '**🏢 SparkLabs** — where we were covered, and in what tone\n**📊 Portfolio companies** — coverage volume and negative issues\n**🏁 AC·VC industry** — what other ACs and VCs are doing\n**📑 Policy & grants** — government support programs and startup policy\n**💰 Funding & funds** — fundraises and new funds\n\nSwitching tabs replaces the entire panel below.',
   '언제부터 언제까지 볼지': 'Choosing the window',
   '여기서 고른 기간이 **이 화면 모든 숫자의 기준**입니다.\n7일·1개월·3개월 버튼으로 빠르게, 날짜를 직접 찍어서 정밀하게 볼 수 있어요.':
     'The period you pick here is **the basis for every number on this screen**.\nUse the 7d / 1m / 3m buttons for speed, or set exact dates for precision.',
@@ -1481,6 +1481,13 @@ export const EN: Record<string, string> = {
   '{range} · {n}건 · 깡프로 스타트업 뉴스가 고른 기사 + 데모데이 정책·자금 글': '{range} · {n} articles · picked by Kkangpro Startup News + Demoday policy & funding posts',
   '{range} 내 수집된 정책·지원사업 기사가 없습니다.': 'No policy & grant articles collected in {range}.',
   '오늘의 정책·지원사업': "Today's policy & grants",
+  '투자·펀드': 'Funding & funds',
+  '오늘의 투자·펀드': "Today's funding & funds",
+  '최근 투자·펀드': 'Recent funding & funds',
+  '최근 정책·지원사업': 'Recent policy & grants',
+  '💰 투자·펀드': '💰 Funding & funds',
+  '🏁 AC·VC 업계': '🏁 AC·VC industry',
+  '{range} 내 수집된 기사가 없습니다.': 'No articles collected in {range}.',
   '가장 최근 정책·지원사업': 'Latest policy & grants',
   '{n}건 · 깡프로 스타트업 뉴스 · 데모데이': '{n} articles · Kkangpro Startup News · Demoday',
   '+{n}건 더보기': '+{n} more',

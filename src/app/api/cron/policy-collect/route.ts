@@ -22,6 +22,7 @@ import {
   DEMODAY_SOURCE,
 } from '@/lib/sparkscope/policy-collect';
 import { fillMissingBodies } from '@/lib/sparkscope/collector';
+import { classifyPolicyItems } from '@/lib/sparkscope/policy-classify';
 import { prisma } from '@/lib/prisma';
 
 export const runtime = 'nodejs';
@@ -43,7 +44,7 @@ export async function GET(request: NextRequest) {
     const known = new Set(
       (
         await prisma.article.findMany({
-          where: { source: DEMODAY_SOURCE, category: 'policy_support' },
+          where: { source: DEMODAY_SOURCE },  // 칸이 나뉘어 policy_support가 아닌 글도 있다
           select: { link: true },
         })
       ).map(a => a.link),
@@ -63,9 +64,13 @@ export async function GET(request: NextRequest) {
     const filledBodies = await fillMissingBodies(raw);
     console.log(`[cron:policy-collect] 본문 채움 ${filledBodies}/${raw.length}건`);
 
+    // 칸 나누기 — 정책·지원사업 / 투자·펀드 / AC·VC 업계 / 스파크랩 / 포트폴리오사, 관계없는 기사는 노이즈(2026-10-28 소윤).
+    const buckets = await classifyPolicyItems(raw.map(a => ({ title: a.title, body: a.body })));
+
     let saved = 0;
     let skipped = 0;
-    for (const a of raw) {
+    for (const [i, a] of raw.entries()) {
+      const b = buckets[i] ?? { category: 'policy_support' as const };
       try {
         const res = await prisma.article.upsert({
           where: { link: a.link },
@@ -74,8 +79,10 @@ export async function GET(request: NextRequest) {
             link: a.link,
             source: a.source,
             pubDate: a.pubDate,
-            matchedKeyword: a.matchedKeyword,
-            category: a.category,
+            // 회사·투자사에 걸린 기사는 matchedKeyword가 그 이름이 된다(그 칸 화면이 이 이름으로 묶는다).
+            matchedKeyword: b.matchedKeyword ?? a.matchedKeyword,
+            category: b.category === 'noise' ? a.category : b.category,
+            isNoise: b.category === 'noise',
             priorityScore: a.basePriority,
             bodyText: a.body ? a.body.slice(0, 3000) : null,
           },

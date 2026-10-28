@@ -10,7 +10,8 @@ export type Category =
   | 'portfolio_company_gv'   // 글로벌벤처스 포트폴리오사 — 영문 뉴스라 수집 소스가 또 다르다
   | 'competitor'
   | 'industry_trend'
-  | 'policy_support';  // 정책·지원사업 큐레이션 — 회사가 아니라 주제로 모은다(policy-collect.ts)
+  | 'policy_support'  // 정책·지원사업 큐레이션 — 회사가 아니라 주제로 모은다(policy-collect.ts)
+  | 'fund_invest';     // 투자 유치·펀드 결성 — 깡프로·데모데이 큐레이션을 나눈 것(policy-classify.ts)
 
 export type Importance = 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW';
 export type Tone = 'POSITIVE' | 'NEUTRAL' | 'NEGATIVE' | 'MIXED';

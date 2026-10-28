@@ -39,6 +39,7 @@ const CATEGORY_BADGE: Record<string, { label: string; cls: string }> = {
   competitor: { label: 'AC·VC', cls: 'bg-red-100 text-red-800' },
   industry_trend: { label: '스타트업계', cls: 'bg-amber-100 text-amber-800' },
   policy_support: { label: '정책·지원사업', cls: 'bg-sky-100 text-sky-800' },
+  fund_invest: { label: '투자·펀드', cls: 'bg-emerald-100 text-emerald-800' },
   live: { label: '실시간🔍', cls: 'bg-blue-100 text-blue-800 font-semibold' },
 };
 

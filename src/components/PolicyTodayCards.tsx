@@ -1,5 +1,5 @@
 'use client';
-// 오늘의 정책·지원사업 — 아래 표(원본 DB 뷰) 위에 얹는 읽기용 요약.
+// 오늘의 정책·지원사업 / 투자·펀드 — 그날 들어온 큐레이션 기사 카드(아래 원본 표는 2026-10-28 뺐다).
 // 표는 정렬·검색·CSV를 위한 밀도 높은 화면이라 "오늘 뭐 났나"를 훑기엔 맞지 않는다.
 // 기본은 한 줄(6개)만 보여주고, 더보기를 누르면 그날치를 모두 펼친다.
 import { useState } from 'react';
@@ -18,10 +18,12 @@ interface Item {
 }
 
 export function PolicyTodayCards({
+  kind = 'policy',
   items,
   label,
   isToday,
 }: {
+  kind?: 'policy' | 'fund';
   items: Item[];
   label: string;
   isToday: boolean;
@@ -38,7 +40,9 @@ export function PolicyTodayCards({
     <div className="mb-5 rounded-2xl border border-sky-200 bg-sky-50/40 p-5">
       <div className="mb-4 flex flex-wrap items-baseline gap-x-2 gap-y-1">
         <span className="text-[15px] font-extrabold text-sky-900">
-          {isToday ? t('오늘의 정책·지원사업') : t('가장 최근 정책·지원사업')}
+          {kind === 'fund'
+            ? (isToday ? t('오늘의 투자·펀드') : t('최근 투자·펀드'))
+            : (isToday ? t('오늘의 정책·지원사업') : t('최근 정책·지원사업'))}
         </span>
         <span className="text-xs font-semibold text-sky-700">{label}</span>
         <span className="text-xs text-sky-700/70">

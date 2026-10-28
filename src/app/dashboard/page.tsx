@@ -52,6 +52,7 @@ const TABS = [
   { id: 'competitor', label: '🏁 업계 모니터링' },
   { id: 'articles', label: '📋 최근 수집 기사' },
   { id: 'policy', label: '📑 정책·지원사업' },
+  { id: 'fund', label: '💰 투자·펀드' },
   { id: 'synergy', label: '🤝 시너지' },
 ] as const;
 export type TabId = (typeof TABS)[number]['id'];
@@ -93,7 +94,8 @@ const REGION_LABEL: Record<RegionId, string> = {
 };
 const REGION_VIEWS: Record<RegionId, readonly TabId[]> = {
   // 정책·지원사업은 국내 정부지원사업 큐레이션이라 한국 관점에만 둔다(대만·GV엔 해당 없음).
-  kr: ['portfolio', 'sparklabs', 'competitor', 'policy'],
+  // 2026-10-28 소윤: 스파크랩 → 포트폴리오사 → AC·VC 업계 → 정책·지원사업 → 투자·펀드 순.
+  kr: ['sparklabs', 'portfolio', 'competitor', 'policy', 'fund'],
   tw: ['portfolio', 'sparklabs'],
   // 대만과 같은 이유로 업계 모니터링 탭을 만들지 않는다 — competitor 감시대상이
   // 전부 한국 AC·VC라 영구 0건 탭이 된다.
@@ -113,8 +115,9 @@ const VIEW_LABEL: Record<RegionId, Partial<Record<TabId, string>>> = {
   kr: {
     portfolio: '📊 포트폴리오사',
     sparklabs: '🏢 스파크랩 직접 언급',
-    competitor: '🏁 한국 업계 모니터링',
+    competitor: '🏁 AC·VC 업계',
     policy: '📑 정책·지원사업',
+    fund: '💰 투자·펀드',
   },
   tw: {
     portfolio: '📊 포트폴리오사',
@@ -328,14 +331,14 @@ async function loadDashboardData(
   // 여기 조건은 아래 JSX의 `{tab === ...}` 조건과 짝이다. 한쪽만 고치면 화면이 빈다.
   // 정책·지원사업은 회사 단위 지표(스파크랩 언급·포폴사 노출·피칭)와 무관한 주제 큐레이션이라
   // KPI 4칸과 급증 배너를 띄우지 않는다 — 다른 탭의 숫자가 그대로 얹혀 오해를 준다(2026-10-26 소윤 요청).
-  const needKpi = tab !== 'competitor' && tab !== SYNERGY_TAB && tab !== 'policy';  // 상단 KPI 4칸
+  const needKpi = tab !== 'competitor' && tab !== SYNERGY_TAB && tab !== 'policy' && tab !== 'fund';  // 상단 KPI 4칸
   const needSpikes = needKpi;                                        // 급증 배너
   const needArticles = tab === 'articles' || (tab === 'portfolio' && portfolioView);
   const needPortfolio = tab === 'portfolio';                         // 위기·TOP15·피칭·긍부정
   const needSparklabs = tab === 'sparklabs';                         // 매체 분포·톤·펀드
   const needCompetitor = tab === 'competitor';                       // 경쟁사 패널
   const needPulses = tab === 'articles';                             // AC·VC / 스타트업계 한 줄
-  const needPolicy = tab === 'policy';                               // 정책·지원사업 큐레이션
+  const needPolicy = tab === 'policy' || tab === 'fund';             // 정책·지원사업 / 투자·펀드 큐레이션
   const EMPTY: never[] = [];
   // AI가 생성한 문장(위기 원인·경쟁사 트렌드)은 사전계산된 한국어를 저장해두므로,
   // EN 화면이면 그 문장의 영어판을 채워서 읽는다(DashboardInsight JSON 안에 캐시된다).
@@ -775,12 +778,12 @@ async function loadDashboardData(
     companyName: portfolioNameOf.get(a.matchedKeyword) ?? a.matchedKeyword,
     portfolioStatus: portfolioStatusOf.get(a.matchedKeyword) ?? null,
   }));
-  // 정책·지원사업 — 깡프로 큐레이션(policy-collect.ts)이 넣은 기사. 회사가 아니라 주제로
+  // 정책·지원사업 / 투자·펀드 — 깡프로·데모데이 큐레이션(policy-collect.ts → policy-classify.ts)이 나눈 기사. 회사가 아니라 주제로
   // 묶인 것이라 포트폴리오 이름 매핑이 없다. 위의 큰 Promise.all 튜플은 구조 분해 순서에
   // 의존해서 한 칸만 끼워 넣어도 전부 밀리므로, 이 탭 것만 따로 읽는다.
   const policyArticles = needPolicy
     ? (await prisma.article.findMany({
-        where: { ...where, category: 'policy_support' },
+        where: { ...where, category: tab === 'fund' ? 'fund_invest' : 'policy_support' },
         orderBy: [{ pubDate: 'desc' }],
         take: 300,
         select: LIST_SELECT,
@@ -793,10 +796,13 @@ async function loadDashboardData(
     if (policyArticles.length === 0) return { items: EMPTY as typeof policyArticles, label: '', isToday: false };
     const kstDay = (d: Date) => new Date(d.getTime() + 9 * 3600 * 1000).toISOString().slice(0, 10);
     const newest = kstDay(policyArticles[0]!.pubDate);
-    const sameDay = policyArticles.filter(a => kstDay(a.pubDate) === newest);
-    const [, mm, dd] = newest.split('-');
-    // 그날치를 전부 넘긴다 — 처음 6개만 보여주고 더보기로 펼치는 건 카드 컴포넌트가 한다.
-    return { items: sameDay, label: `${mm}.${dd}`, isToday: newest === fmt(getKstNow()) };
+    // 원본 표를 뺀 뒤로(2026-10-28) 카드가 유일한 목록이라 최근 7일치를 보여준다 — 데모데이 공고 정리는 주 1회(월)라
+    // 하루치만 보이면 화요일부터 사라진다.
+    const oldest = kstDay(new Date(new Date(`${newest}T00:00:00+09:00`).getTime() - 6 * 864e5));
+    const week = policyArticles.filter(a => kstDay(a.pubDate) >= oldest);
+    const md = (d: string) => d.slice(5).replace('-', '.');
+    // 처음 6개만 보여주고 더보기로 펼치는 건 카드 컴포넌트가 한다.
+    return { items: week, label: `${md(oldest)} ~ ${md(newest)}`, isToday: false };
   })();
 
   const portfolioTop = portfolioTop15.map(g => {
@@ -1280,7 +1286,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: { 
 
       {/* 이슈 급증 배너 + KPI — 경쟁사·시너지 탭 제외 (시너지는 기사 집계와 무관) */}
       {/* 조건은 위 needKpi와 반드시 같아야 한다 — 한쪽만 고치면 빈 칸이 뜨거나 0이 찍힌다. */}
-      {tab !== 'competitor' && tab !== SYNERGY_TAB && tab !== 'policy' && (
+      {tab !== 'competitor' && tab !== SYNERGY_TAB && tab !== 'policy' && tab !== 'fund' && (
         <>
           {data.spikes.length > 0 && !portfolioView && (
             <div data-tour="spike-banner" className="mb-6 space-y-2">
@@ -1496,39 +1502,18 @@ export default async function DashboardPage({ searchParams }: { searchParams: { 
       {/* 오늘의 큐레이션 — 표 위에 얹는 읽기용 요약. 펼치기가 있어 클라이언트 컴포넌트로 뺐다.
           오늘치가 아직 없으면(크론은 평일 10:10) 가장 최근 발행일을 대신 보여준다 —
           빈 칸을 띄우면 "수집이 멈췄나" 하고 헷갈린다. 날짜를 머리말에 적어 구분한다. */}
-      {tab === 'policy' && (
+      {(tab === 'policy' || tab === 'fund') && (
         <PolicyTodayCards
+          kind={tab}
           items={data.policyToday.items}
           label={data.policyToday.label}
           isToday={data.policyToday.isToday}
         />
       )}
-
-      {tab === 'policy' && (
-        <div id="policy-table" className="scroll-mt-4 bg-white p-5 rounded-2xl border border-spark-border shadow-card">
-          <div className="mb-4">
-            <div className="font-bold">📑 {tr('정책·지원사업')}</div>
-            <div className="text-xs text-gray-500 mt-0.5">
-              {tr('{range} · {n}건 · 깡프로 스타트업 뉴스가 고른 기사 + 데모데이 정책·자금 글', { range: range.label, n: data.policyArticles.length })}
-            </div>
-            <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-spark-border/60 pt-3">
-              <span className="text-xs font-semibold text-gray-500 whitespace-nowrap">📅 {tr('기간')}</span>
-              <DateRangePicker key={`${range.from}_${range.to}`} from={range.from} to={range.to} min={MIN_DATE} max={fmt(getKstNow())} company={data.selectedCompany} tab={tab} />
-            </div>
-          </div>
-          <ArticleListView
-            articles={data.policyArticles as any}
-            canScrap={canScrap}
-            canBookmark={canBookmark}
-            canReport={canManageContent}
-            canRequestReport={canRequestReport}
-            showSearch={true}
-            csvName={tr('정책·지원사업')}
-            // 정책·지원사업 기사는 AI 분석(중요도·피칭·논조)을 태우지 않아 칸이 늘 '—'다 — 열을 뺀다(2026-10-26 소윤).
-            showPitchColumn={false}
-            showInternal={false}
-            emptyText={tr('{range} 내 수집된 정책·지원사업 기사가 없습니다.', { range: range.label })}
-          />
+      {/* 원본 표(DB 뷰)는 2026-10-28 뺐다(소윤) — 정책·AC·VC·투자·관계없는 기사가 섞여 보이던 화면. 지금은 칸별 탭으로 나뉜다. */}
+      {(tab === 'policy' || tab === 'fund') && data.policyToday.items.length === 0 && (
+        <div className="rounded-2xl border border-spark-border bg-white p-8 text-center text-sm text-spark-muted">
+          {tr('{range} 내 수집된 기사가 없습니다.', { range: range.label })}
         </div>
       )}
 
