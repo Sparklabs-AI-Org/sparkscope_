@@ -270,13 +270,13 @@ const AI_TOPIC = /AI|인공지능|생성형|LLM|GPT|에이전트|챗봇|딥러�
 
 /** 추천 칸 종류 — 화면의 "추천①~⑤"가 이 순서다. */
 export const SLOT_LABEL: Record<number, string> = {
-  1: '스파크랩', 2: '국내 포트폴리오', 3: '해외 포트폴리오', 4: 'AI 트렌드', 5: '스타트업계',
+  1: '스파크랩', 2: '국내 포트폴리오', 3: '해외 포트폴리오', 4: 'AI 트렌드', 5: '투자·펀드',
 };
 
 type Group = 'S' | 'P' | 'D' | 'G' | 'T';
 const GROUP_TIER: Record<Group, number> = { S: 1, P: 2, D: 3, G: 4, T: 5 };
 const GROUP_NAME: Record<Group, string> = {
-  S: '스파크랩 자사 소식', P: '국내 포트폴리오사 소식', D: '해외 포트폴리오사 소식(대만·글로벌벤처스)', G: '글로벌 AI 기업·업계 소식', T: '스타트업계 소식',
+  S: '스파크랩 자사 소식', P: '국내 포트폴리오사 소식', D: '해외 포트폴리오사 소식(대만·글로벌벤처스)', G: '글로벌 AI 기업·업계 소식', T: '투자 유치·펀드 결성 소식',
 };
 
 /**
@@ -300,9 +300,13 @@ function quotas(avail: Record<Group, number>, total: number): Record<Group, numb
   const moreP = Math.min(room, avail.P - q.P); q.P += moreP; room -= moreP;
   const moreD = Math.min(room, avail.D - q.D); q.D += moreD; room -= moreD;
   room += aiBase - q.G;                         // AI가 모자라면 그 칸도 남는다
-  // 남은 자리는 AI와 스타트업계가 나눈다 — AI가 전부 가져가면 포트폴리오가 적은 날 목록이 AI로만 찬다.
-  const moreG = Math.min(Math.ceil(room / 2), avail.G - q.G); q.G += moreG; room -= moreG;
-  q.T = Math.min(room, avail.T); room -= q.T;
+  // 투자·펀드 소식(T)은 최소 2칸 — 스타트업 입장에서 가장 궁금한 건 누가 투자했고 받았는지, 어떤 펀드가 생겼는지다
+  // (2026-10-28 소윤). 포폴이 많아 자리가 없으면 포폴 칸에서 덜어 온다.
+  const tBase = Math.min(2, avail.T);
+  while (room < tBase && (q.P > 1 || q.D > 0)) { if (q.P > 1) q.P--; else q.D--; room++; }
+  q.T = Math.min(tBase, room); room -= q.T;
+  // 남은 자리는 투자·펀드 소식 먼저, 그다음 해외 AI.
+  const moreT = Math.min(room, avail.T - q.T); q.T += moreT; room -= moreT;
   q.G += Math.min(room, avail.G - q.G);
   return q;
 }
@@ -314,10 +318,12 @@ const RANK_SYSTEM = `당신은 스파크랩(한국의 스타트업 액셀러레�
 - 스파크랩·포트폴리오사에 직접 영향을 주는 사건 > 업계 전반에 큰 사건 > 일반 소식.
 - 투자 유치·인수합병·상장·대형 계약·신제품 출시·규제 변화처럼 "사건"이 있는 기사를 우선합니다.
 - 주가 등락·행사 스케치·인터뷰·칼럼은 뒤로 미룹니다.
-- "스타트업계" 그룹은 투자 유치·인수합병·상장·자금조달처럼 금액과 투자사가 드러나는 딜 소식을 우선합니다(더벨 데일리 브리핑 방식). 일반 시황·정책 해설·행사 소식은 뒤로 미룹니다.
 - 같은 사건을 다룬 기사는 그룹이 달라도 하나만 고릅니다(국내 기사와 해외 기사가 같은 사건일 수 있음).
-- "글로벌 AI" 그룹은 해외 AI 소식을 우선합니다(OpenAI·Anthropic·구글·메타·엔비디아 등). [국내] 표시 기사는
-  해외 주요 매체(로이터·블룸버그·TechCrunch 등)도 다룰 만큼 큰 사건일 때만 고르고, 아니면 해외 기사를 고르세요.
+- "글로벌 AI" 그룹은 해외 AI 소식만 고르는 게 원칙입니다(OpenAI·Anthropic·구글·메타·엔비디아 등). [국내] 표시 기사는
+  "삼성이 Anthropic에 투자"처럼 해외 주요 매체도 크게 다룰 사건일 때만, 그것도 최대 1건입니다. 국내 기업의 제품 출시·행사·
+  협약·전시회 소식은 고르지 마세요.
+- "투자 유치·펀드 결성" 그룹은 누가 투자했는지·누가 투자받았는지(금액·라운드·투자사), 어떤 펀드가 결성·조성됐는지가
+  분명한 기사를 고르세요. 정책 설명·행사 소식은 고르지 마세요.
 
 - "해외 포트폴리오사" 그룹은 대만·글로벌벤처스 포트폴리오사 소식입니다. 주가·매출 조회 페이지, 회사명만 우연히 겹친 기사(날씨·일반 명사 등)는 고르지 마세요.
 
@@ -502,13 +508,30 @@ export async function pickByTiers(w: BroadcastWindow): Promise<{ picked: Briefin
       kind: 'inter' as const, ref: c.url, title: c.title, summary: c.cellLabel, source: c.media, url: c.url,
       label: INTER_LABEL, pubDate: new Date().toISOString(), companies: c.companies.map(x => x.name),
     })),
-  ].filter(fresh);
+    // 해외 AI 기사 전체(해외 트렌드 판정 통과분) — TOP 5와 카드 3장만으로는 국내 AI를 막으면 10칸이 안 찼다(2026-10-28).
+    // 이 기간 기사 중 최신 40건을 후보로 넣고, 무엇이 중요한지는 선정 AI가 고른다. 요약 칸은 분류 사유라 대본 재료로 쓰지 않는다.
+    ...(await prisma.interNewsVerdict.findMany({
+      where: { relevant: true, domain: 'ai', news: { publishedAt: { gte: w.since, ...(w.until ? { lt: w.until } : {}) } } },
+      include: { news: { select: { title: true, url: true, source: true, publishedAt: true } } },
+      orderBy: { news: { publishedAt: 'desc' } },
+      take: 40,
+    })).map(v => ({
+      kind: 'inter' as const, ref: v.news.url, title: v.titleKo || v.news.title, summary: v.reason, source: v.news.source,
+      url: v.news.url, label: INTER_LABEL, pubDate: v.news.publishedAt.toISOString(),
+    })),
+  ].filter((c, i, arr) => arr.findIndex(x => x.url === c.url) === i).filter(fresh);
 
   // 스타트업계 — 다이제스트 "스타트업계 뉴스" 섹션(국내 AI 칸과 겹치지 않게 AI 주제는 뺀다).
-  const T = data.industryArticles
-    .filter(a => isKorean(a.title) && !AI_TOPIC.test(a.title) && !STOCK_TICKER.test(a.title) && !weakForBriefing(a))
-    .map(a => fromArticle(a, idByLink))
-    .filter(fresh);
+  // 투자·펀드 소식 — 스타트업계·AC·VC 기사 중 제목에 투자 유치·투자 집행·펀드 결성이 드러나는 것(2026-10-28 소윤).
+  // 예전 '스타트업계' 칸은 일반 업계 소식이라 쓸데없는 기사가 많았다.
+  const DEAL = /투자\s?(유치|받|했|집행|단행|확보|참여|결정)|시리즈\s?[A-F]|프리\s?[AB]|시드\s?(투자|라운드)|브릿지\s?투자|억\s?원?\s?(규모\s?)?(투자|조달)|펀드\s?(결성|조성|출범|출자|모집|클로징)|출자\s?(사업|선정)|모태펀드|벤처펀드|엑시트|인수합병|M&A|IPO|상장\s?(추진|예정|성공)/i;
+  const T = buildClusteredPool(candidates.filter(a =>
+    (a.category === 'industry_trend' || a.category === 'competitor')
+    && isKorean(a.title) && DEAL.test(a.title) && !STOCK_TICKER.test(a.title) && !weakForBriefing(a)))
+    .map(a => ({ ...fromArticle(a, idByLink), label: '💰 투자·펀드' }))
+    .filter(fresh)
+    .sort((x, y) => rankOf(y) - rankOf(x))
+    .slice(0, 12);
 
   // AI 칸은 해외 우선 — 국내 AI는 [국내] 표시를 달아 글로벌 그룹 뒤에 붙인다(AI가 해외 매체급일 때만 고른다).
   const GA = [...G, ...DA];
@@ -530,8 +553,14 @@ export async function pickByTiers(w: BroadcastWindow): Promise<{ picked: Briefin
   const tiers: number[] = [];
   const used = new Set<string>();
   const usedLeads = new Set<string>();
+  // 국내 AI는 최대 1건 — AI 트렌드는 해외 중심(2026-10-28 소윤: 국내 AI 5건이 다 쓸데없었다).
+  let domesticAiTaken = 0;
   const take = (g: Group, c: BriefingCandidate): boolean => {
     if (used.has(c.url)) return false;
+    if (g === 'G' && c.label.includes('국내')) {
+      if (domesticAiTaken >= 1) return false;
+      domesticAiTaken++;
+    }
     // AI 칸에 같은 회사 소식이 둘 들어가지 않게("구글, 제미나이 4 발표"·"구글, 새 제미니 모델 발표" — 같은 사건).
     const lead = g === 'G' ? c.title.split(/[,，·…\s]/)[0] : '';
     if (lead && usedLeads.has(lead)) return false;
