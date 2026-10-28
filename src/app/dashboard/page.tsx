@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { getLocale, getT } from '@/lib/i18n/server';
 import { ensureArticleEnDeep, ensureArticleKoDeep } from '@/lib/sparkscope/translate-content';
 import { articleTitle } from '@/lib/sparkscope/article-title';
-import { CuratedFeed } from '@/components/CuratedFeed';
+import { CuratedFeed, IndustryCuratedList } from '@/components/CuratedFeed';
 import { cleanSnippet } from '@/lib/sparkscope/snippet';
 import { MARKET_KEYWORD } from '@/lib/sparkscope/policy-classify';
 import { prisma } from '@/lib/prisma';
@@ -188,10 +188,12 @@ function getKstNow() {
 
 // defaultMonths: 기본 조회 기간(개월). 보통 3개월이지만, 기사 백필이 그만큼 안 된 화면은
 // 더 짧게 준다 — 데이터 없는 구간까지 조회해놓고 "기사가 없다"고 보여주면 오해를 준다.
-function resolveRange(searchParams: { from?: string; to?: string }, defaultMonths = 3) {
+function resolveRange(searchParams: { from?: string; to?: string }, defaultMonths = 3, defaultDays?: number) {
   const todayStr = fmt(getKstNow());
   const def = getKstNow();
-  def.setUTCMonth(def.getUTCMonth() - defaultMonths); // 기본 기간 (유의미한 흐름 파악)
+  // 기본 기간 (유의미한 흐름 파악). defaultDays가 있으면 그 일수(정책·투자 탭은 7일 — 매일 들어오는 소식이라).
+  if (defaultDays) def.setUTCDate(def.getUTCDate() - defaultDays);  // DateRangePicker 7일 프리셋과 같은 계산(오늘-7)
+  else def.setUTCMonth(def.getUTCMonth() - defaultMonths);
   let from = isValidYmd(searchParams.from) ? clamp(searchParams.from, MIN_DATE, todayStr) : fmt(def);
   let to = isValidYmd(searchParams.to) ? clamp(searchParams.to, MIN_DATE, todayStr) : todayStr;
   if (from > to) [from, to] = [to, from];
@@ -200,7 +202,7 @@ function resolveRange(searchParams: { from?: string; to?: string }, defaultMonth
   const isDefaultRange = to === todayStr && from === fmt(def);
   const pretty = (s: string) => { const [y, m, d] = s.split('-'); return `${y}.${Number(m)}.${Number(d)}`; };
   const label = isDefaultRange
-    ? getT()('최근 {n}개월', { n: defaultMonths })
+    ? (defaultDays ? getT()('최근 {n}일', { n: defaultDays }) : getT()('최근 {n}개월', { n: defaultMonths }))
     : `${pretty(from)} ~ ${pretty(to)}`;
   return { from, to, label, isDefaultRange };
 }
@@ -803,7 +805,10 @@ async function loadDashboardData(
   const policyArticles = needPolicy
     ? (await prisma.article.findMany({
         // 투자·펀드는 국내 소식만 — 해외 딜은 Inter(해외 트렌드) 영역이다(2026-10-28 소윤). 판정 전 기사(null)는 보여준다.
-        where: { ...where, ...(tab === 'fund' ? { category: 'fund_invest', OR: [{ isOverseas: null }, { isOverseas: false }] } : { category: 'policy_support' }) },
+        // 정책 탭에서 생태계·동향은 뺀다 — 업계 동향 탭이 보여준다(2026-10-28 소윤, DB 분류는 그대로).
+        where: { ...where, ...(tab === 'fund'
+          ? { category: 'fund_invest', OR: [{ isOverseas: null }, { isOverseas: false }] }
+          : { category: 'policy_support', OR: [{ curationTopic: null }, { curationTopic: { not: 'ecosystem' } }] }) },
         orderBy: [{ pubDate: 'desc' }],
         take: 300,
         select: { ...LIST_SELECT, bodyText: true, curationTopic: true },
@@ -813,6 +818,16 @@ async function loadDashboardData(
         snippet: cleanSnippet(bodyText, 140),
       }))
     : EMPTY;
+  // 업계 동향 탭 아래 '업계 전반·생태계' 목록 — 깡프로·데모데이에서 나눈 것 중 특정 하우스가 아닌 소식
+  // (투자 시장 동향 = competitor '업계 전반', 창업 생태계·동향 = policy_support ecosystem). 하우스별 카드에는 안 들어가서 따로 보여 준다(2026-10-28 소윤).
+  const industryCurated = needCompetitor
+    ? (await prisma.article.findMany({
+        where: { ...where, OR: [{ category: 'competitor', matchedKeyword: MARKET_KEYWORD }, { category: 'policy_support', curationTopic: 'ecosystem' }] },
+        orderBy: { pubDate: 'desc' },
+        take: 60,
+        select: { id: true, title: true, titleKo: true, titleEn: true, link: true, source: true, pubDate: true, importance: true },
+      }))
+    : [];
   // 데모데이 주간 공고 정리(창업공고 TOP 10 · 정부지원사업 TOP 100) — 주차를 골라 보는 칸이라 조회 기간과 상관없이 전부 읽는다.
   // 주 2편씩이라 1년이어도 100건 남짓이다.
   const weeklyRoundups = tab === 'policy'
@@ -884,6 +899,7 @@ async function loadDashboardData(
     articles: enrichedArticles,
     policyArticles,
     weeklyRoundups,
+    industryCurated,
     portfolioNames,
     selectedCompany: company,
     selectedCompanyName,
@@ -962,7 +978,8 @@ export default async function DashboardPage({ searchParams }: { searchParams: { 
   // 탭이 항상 비어 보이므로 3개월까지는 고를 수 있게 남긴다. 1년은 여전히 감춘다 —
   // 그 위 구간은 수집 자체가 안 돼 있어 눌러도 늘어나지 않는다.
   const isTwSelf = region === 'tw' && tab === 'sparklabs';
-  const range = resolveRange(searchParams);
+  // 정책·지원사업 / 투자·펀드는 기본 7일(2026-10-28 소윤) — 3개월이면 공고·딜이 너무 많아 최근 것이 묻힌다.
+  const range = resolveRange(searchParams, 3, rawTab === 'policy' || rawTab === 'fund' ? 7 : undefined);
   // 세션·권한을 데이터 조회보다 먼저 푼다 — loadDashboardData가 "어느 탭을, 어떤 화면으로
   // 그릴지"를 알아야 그 탭에 필요한 쿼리만 돌 수 있기 때문이다(2026-10-06 성능 작업).
   // 예전엔 데이터를 먼저 다 읽고 그 뒤에 tab을 포트폴리오사로 되돌렸다.
@@ -1030,7 +1047,8 @@ export default async function DashboardPage({ searchParams }: { searchParams: { 
 
   // 탭 링크: 현재 기간·회사 필터를 유지한 채 tab만 바꾼다.
   const tabHref = (t: TabId) => {
-    const params = new URLSearchParams({ from: range.from, to: range.to, tab: t, scope });
+    // 기본 기간을 보고 있으면 날짜를 넘기지 않는다 — 탭마다 기본이 달라서(정책·투자 7일, 나머지 3개월) 그 탭의 기본으로 열리게.
+    const params = new URLSearchParams(range.isDefaultRange ? { tab: t, scope } : { from: range.from, to: range.to, tab: t, scope });
     if (data.selectedCompany) params.set('company', data.selectedCompany);
     if (region !== 'kr') params.set('country', region);
     return `/dashboard?${params.toString()}`;
@@ -1487,6 +1505,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: { 
             rangeLabel={range.label}
             overallTrend={data.overallTrend}
           />
+          <IndustryCuratedList items={data.industryCurated as any} rangeLabel={range.label} />
         </div>
       )}
 

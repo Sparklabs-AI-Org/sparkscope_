@@ -40,7 +40,7 @@ const TOPICS: Record<'policy' | 'fund', { id: string; label: string }[]> = {
   policy: [
     { id: 'grant', label: '📋 지원사업 공고' },
     { id: 'policy', label: '🏛️ 정책·제도' },
-    { id: 'ecosystem', label: '🌱 생태계·동향' },
+    // 생태계·동향(ecosystem)은 업계 동향 탭으로 옮겼다(2026-10-28 소윤) — DB 분류는 그대로.
   ],
   // 시장 동향(market)은 대시보드에서 뺐다 — 업계 동향 탭이 다루는 내용이라 그쪽으로 보낸다(policy-classify.ts, 2026-10-28 소윤).
   fund: [
@@ -171,7 +171,7 @@ export function CuratedFeed({ kind, items, roundups = [], rangeLabel }: { kind: 
     : t('정부·지자체 지원사업 공고와 창업 정책');
 
   const topics = TOPICS[kind];
-  // 판정 전·다른 칸 값이면 마지막 묶음(생태계·동향 / 시장 동향)으로 둔다.
+  // 판정 전·다른 칸 값이면 마지막 묶음(정책·제도 / 투자 유치)으로 둔다.
   const topicOf = (a: Item) => (topics.some(x => x.id === a.curationTopic) ? a.curationTopic! : topics[topics.length - 1]!.id);
   const pool = topic ? items.filter(a => topicOf(a) === topic) : items;
   const byImportance = (list: Item[]) => [...list]
@@ -200,7 +200,8 @@ export function CuratedFeed({ kind, items, roundups = [], rangeLabel }: { kind: 
 
       <div className="mt-3 flex flex-wrap gap-1.5">
         {[...topics.map(x => ({ id: x.id as string | null, label: t(x.label) })), { id: null as string | null, label: t('전체') }].map(x => {
-          const n = x.id ? items.filter(a => topicOf(a) === x.id).length : items.length;
+          // 건수는 세부 분류 칩에만 — '전체'에는 붙이지 않는다(2026-10-28 소윤).
+          const n = x.id ? items.filter(a => topicOf(a) === x.id).length : null;
           const active = topic === x.id;
           return (
             <button
@@ -211,7 +212,7 @@ export function CuratedFeed({ kind, items, roundups = [], rangeLabel }: { kind: 
                 active ? 'border-spark-purple bg-spark-purple text-white' : 'border-spark-border bg-white text-spark-ink-soft hover:border-spark-purple/40 hover:text-spark-purple'
               }`}
             >
-              {x.label} <span className={active ? 'text-white/80' : 'text-spark-muted'}>{n}</span>
+              {x.label}{n !== null && <> <span className={active ? 'text-white/80' : 'text-spark-muted'}>{n}</span></>}
             </button>
           );
         })}
@@ -320,5 +321,42 @@ function TopicList({ topics, pool, topicOf, byImportance }: {
         );
       })}
     </div>
+  );
+}
+
+/**
+ * 업계 동향 탭 아래 — 특정 하우스가 아닌 업계 전반·창업 생태계 소식(깡프로·데모데이 큐레이션). 중요도 → 최신 순, 처음 10건 + 더보기.
+ */
+export function IndustryCuratedList({ items, rangeLabel }: { items: Item[]; rangeLabel: string }) {
+  const t = useT();
+  const locale = useLocale() === 'en' ? 'en' : 'ko';
+  const [all, setAll] = useState(false);
+  if (items.length === 0) return null;
+  const sorted = [...items].sort((x, y) => rank(y) - rank(x) || new Date(y.pubDate).getTime() - new Date(x.pubDate).getTime());
+  const shown = all ? sorted : sorted.slice(0, 10);
+  return (
+    <section className="mt-6 overflow-hidden rounded-2xl border border-spark-border bg-white">
+      <div className="flex flex-wrap items-baseline gap-2 border-b border-spark-border bg-spark-subtle px-5 py-3">
+        <span className="text-[16px] font-extrabold tracking-tight text-spark-ink">🌱 {t('업계 전반·생태계')}</span>
+        <span className="text-[12px] text-spark-muted">{t('특정 하우스가 아닌 투자 시장·창업 생태계 소식')}</span>
+        <span className="ml-auto text-[12px] text-spark-muted">{rangeLabel} · {items.length}{t('건')}</span>
+      </div>
+      <ul className="divide-y divide-spark-border/60 px-5">
+        {shown.map(a => (
+          <li key={a.id}>
+            <a href={a.link} target="_blank" rel="noopener noreferrer" className="group flex items-baseline gap-4 py-2.5">
+              <span className="min-w-0 flex-1 truncate text-[13.5px] font-semibold text-gray-900 group-hover:text-spark-purple">{articleTitle(a, locale)}</span>
+              <span className="shrink-0 text-[11.5px] text-gray-400">{t(a.source)} · {dayLabel(kstDay(a.pubDate), locale)}</span>
+            </a>
+          </li>
+        ))}
+      </ul>
+      {sorted.length > 10 && (
+        <button type="button" onClick={() => setAll(v => !v)}
+          className="w-full border-t border-spark-border bg-spark-subtle py-2 text-[12.5px] font-bold text-spark-ink-soft hover:text-spark-purple">
+          {all ? `${t('접기')} ↑` : `${t('더보기')} (${sorted.length - 10}${t('건')}) ↓`}
+        </button>
+      )}
+    </section>
   );
 }
