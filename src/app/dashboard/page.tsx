@@ -4,6 +4,7 @@ import { getLocale, getT } from '@/lib/i18n/server';
 import { ensureArticleEnDeep, ensureArticleKoDeep } from '@/lib/sparkscope/translate-content';
 import { articleTitle } from '@/lib/sparkscope/article-title';
 import { CuratedFeed } from '@/components/CuratedFeed';
+import { cleanSnippet } from '@/lib/sparkscope/snippet';
 import { prisma } from '@/lib/prisma';
 import { ArticleListView } from '@/components/ArticleListView';
 import { SignalBanner } from '@/components/SignalBanner';
@@ -790,7 +791,7 @@ async function loadDashboardData(
       })).map(({ bodyText, ...a }) => ({
         ...a, companyName: undefined, portfolioStatus: null,
         // 카드에 한 줄 미리보기 — 본문 첫머리(머리 괄호 안내문은 뗀다). 본문 전체를 화면에 넘기지 않는다.
-        snippet: bodyText ? bodyText.replace(/\s+/g, ' ').replace(/^(\[[^\]]{0,80}\]\s*)+/, '').slice(0, 120) : null,
+        snippet: cleanSnippet(bodyText, 140),
       }))
     : EMPTY;
 

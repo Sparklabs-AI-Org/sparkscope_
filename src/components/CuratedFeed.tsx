@@ -1,12 +1,11 @@
 'use client';
-// 정책·지원사업 / 투자·펀드 탭 — 깡프로·데모데이 큐레이션 기사를 조회 기간 안에서 날짜별로 보여준다.
-// 예전엔 최근 하루(뒤엔 7일)치 카드 6장 + 원본 표였는데, 표는 빼고(2026-10-28) 카드만 남겼더니 화면이 비어 보였다(소윤).
-// 정책 탭은 데모데이의 주간 공고 정리(창업공고 TOP 10 · 정부지원사업 TOP 100)를 맨 위에 고정한다 — 이 탭에서 가장 쓸모 있는 글이다.
+// 정책·지원사업 / 투자·펀드 탭 — 깡프로·데모데이 큐레이션 기사. 오늘의 시그널(SignalBanner)과 같은 배치로
+// 큰 카드 1장 + 작은 카드 6장만 보여주고, 조회 기간의 전체 목록은 '전체 목록 보기'로 펼친다(2026-10-28 소윤).
 import { useState } from 'react';
 import { useT, useLocale } from '@/lib/i18n/client';
 import { articleTitle } from '@/lib/sparkscope/article-title';
 
-const DAYS_SHOWN = 5;
+const CARDS = 7;
 const PINNED_SOURCE = '데모데이';
 
 interface Item {
@@ -33,92 +32,118 @@ function dayLabel(day: string, locale: 'ko' | 'en'): string {
 export function CuratedFeed({ kind, items, rangeLabel }: { kind: 'policy' | 'fund'; items: Item[]; rangeLabel: string }) {
   const t = useT();
   const locale = useLocale() === 'en' ? 'en' : 'ko';
-  const [showAll, setShowAll] = useState(false);
+  const [showList, setShowList] = useState(false);
 
   const title = kind === 'fund' ? t('투자·펀드') : t('정책·지원사업');
   const sub = kind === 'fund'
     ? t('투자 유치·펀드 결성·출자 소식')
     : t('정부·지자체 지원사업 공고와 창업 정책');
 
-  // 데모데이 공고 정리는 최신 회차 2편만 위에 고정하고, 날짜별 목록에서는 뺀다(두 번 보이지 않게).
+  // 오늘의 시그널처럼 큰 카드 1장 + 작은 카드 6장(2026-10-28 소윤: 정보가 너무 많다).
+  // 정책 탭은 데모데이 주간 공고 정리 최신 회차를 앞에 둔다 — 이 탭에서 가장 쓸모 있는 글이다.
   const pinned = kind === 'policy'
     ? items.filter(a => a.source === PINNED_SOURCE && /TOP\s?\d+/i.test(a.title)).slice(0, 2)
     : [];
   const pinnedIds = new Set(pinned.map(a => a.id));
+  const ordered = [...pinned, ...items.filter(a => !pinnedIds.has(a.id))];
+  const [hero, ...rest] = ordered;
+  const cards = rest.slice(0, CARDS - 1);
+
   const byDay = new Map<string, Item[]>();
   for (const a of items) {
-    if (pinnedIds.has(a.id)) continue;
     const day = kstDay(a.pubDate);
     byDay.set(day, [...(byDay.get(day) ?? []), a]);
   }
   const days = [...byDay.keys()].sort().reverse();
-  const shownDays = showAll ? days : days.slice(0, DAYS_SHOWN);
 
   return (
-    <div className="rounded-2xl border border-spark-border bg-white p-5 shadow-card">
-      <div className="mb-4 flex flex-wrap items-baseline gap-x-2 gap-y-1">
-        <span className="text-[16px] font-extrabold text-spark-ink">{kind === 'fund' ? '💰' : '📑'} {title}</span>
-        <span className="text-xs text-spark-muted">{sub}</span>
-        <span className="ml-auto text-xs text-spark-muted">
+    <div className="rounded-2xl border border-spark-border bg-white p-5">
+      <div className="flex flex-wrap items-baseline gap-x-2.5 gap-y-1.5">
+        <h2 className="text-[19px] font-extrabold tracking-tight">{kind === 'fund' ? '💰' : '📑'} {title}</h2>
+        <span className="text-[13px] text-spark-muted">{sub}</span>
+        <span className="ml-auto text-[12px] text-spark-muted">
           {t('{range} · {n}건 · 깡프로 스타트업 뉴스 · 데모데이', { range: rangeLabel, n: items.length })}
         </span>
       </div>
 
-      {pinned.length > 0 && (
-        <div className="mb-5 grid grid-cols-1 gap-3 md:grid-cols-2">
-          {pinned.map(a => (
-            <a
-              key={a.id}
-              href={a.link}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="group rounded-xl border border-sky-200 bg-sky-50/60 p-4 transition-colors hover:border-sky-400"
-            >
-              <div className="mb-1 text-[11px] font-bold text-sky-700">📌 {t('이번 주 지원사업 공고 정리')} · {dayLabel(kstDay(a.pubDate), locale)}</div>
-              <div className="text-[14px] font-bold leading-snug text-gray-900 group-hover:text-sky-800">{articleTitle(a, locale)}</div>
-              {a.snippet && <div className="mt-1.5 line-clamp-2 text-[12.5px] leading-relaxed text-gray-600">{a.snippet}</div>}
-            </a>
-          ))}
+      {!hero ? (
+        <div className="mt-4 rounded-xl border border-spark-border bg-spark-subtle p-8 text-center text-[13px] text-spark-muted">
+          {t('{range} 내 수집된 기사가 없습니다.', { range: rangeLabel })}
         </div>
-      )}
-
-      {days.length === 0 && pinned.length === 0 && (
-        <div className="py-10 text-center text-sm text-spark-muted">{t('{range} 내 수집된 기사가 없습니다.', { range: rangeLabel })}</div>
-      )}
-
-      <div className="space-y-5">
-        {shownDays.map(day => (
-          <section key={day}>
-            <div className="mb-1.5 flex items-center gap-2">
-              <span className="text-[12px] font-bold text-spark-ink-soft">{dayLabel(day, locale)}</span>
-              <span className="text-[11px] text-spark-muted">{byDay.get(day)!.length}{t('건')}</span>
-              <span className="h-px flex-1 bg-spark-border/70" />
+      ) : (
+        <>
+          <a
+            href={hero.link}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="group mt-4 block rounded-xl border border-spark-purple/25 border-l-4 border-l-spark-purple bg-gradient-to-br from-spark-light-purple/55 via-white to-white p-5 shadow-card"
+          >
+            <div className="mb-2 flex flex-wrap items-center gap-2">
+              <span className="rounded-md border border-spark-purple/30 bg-white px-2 py-0.5 text-[11px] font-bold text-spark-purple">{t(hero.source)}</span>
+              {pinnedIds.has(hero.id) && <span className="text-[11.5px] font-bold text-sky-700">📌 {t('이번 주 지원사업 공고 정리')}</span>}
+              <span className="text-[11px] tabular-nums text-spark-muted">{dayLabel(kstDay(hero.pubDate), locale)}</span>
             </div>
-            <ul className="divide-y divide-spark-border/60">
-              {byDay.get(day)!.map(a => (
+            <div className="text-[18px] font-extrabold leading-snug tracking-tight text-spark-ink group-hover:text-spark-purple">{articleTitle(hero, locale)}</div>
+            {hero.snippet && <p className="mt-2 line-clamp-2 text-[13px] leading-relaxed text-spark-ink-soft">{hero.snippet}</p>}
+          </a>
+
+          {cards.length > 0 && (
+            <ol className="mt-4 grid grid-cols-1 gap-2.5 sm:grid-cols-2 xl:grid-cols-3">
+              {cards.map(a => (
                 <li key={a.id}>
-                  <a href={a.link} target="_blank" rel="noopener noreferrer" className="group flex items-start gap-4 py-2.5">
-                    <div className="min-w-0 flex-1">
-                      <div className="text-[14px] font-semibold leading-snug text-gray-900 group-hover:text-spark-purple">{articleTitle(a, locale)}</div>
-                      {a.snippet && <div className="mt-0.5 truncate text-[12px] text-gray-500">{a.snippet}</div>}
+                  <a
+                    href={a.link}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="group flex h-full flex-col rounded-xl border border-spark-border bg-white px-3.5 py-3 transition-colors hover:border-spark-purple/30"
+                  >
+                    <div className="mb-1 flex flex-wrap items-center gap-x-2 text-[11px] text-spark-muted">
+                      <span className="font-semibold text-spark-ink-soft">{t(a.source)}</span>
+                      {pinnedIds.has(a.id) && <span className="font-bold text-sky-700">📌 {t('공고 정리')}</span>}
+                      <span className="tabular-nums">{dayLabel(kstDay(a.pubDate), locale)}</span>
                     </div>
-                    <span className="shrink-0 pt-0.5 text-[11.5px] font-medium text-gray-400">{t(a.source)}</span>
+                    <div className="line-clamp-2 text-[14px] font-bold leading-snug text-spark-ink group-hover:text-spark-purple">{articleTitle(a, locale)}</div>
                   </a>
                 </li>
               ))}
-            </ul>
-          </section>
-        ))}
-      </div>
+            </ol>
+          )}
 
-      {days.length > DAYS_SHOWN && (
-        <button
-          type="button"
-          onClick={() => setShowAll(v => !v)}
-          className="mt-4 w-full rounded-lg border border-spark-border bg-spark-subtle py-2 text-[12.5px] font-bold text-spark-ink-soft transition-colors hover:border-spark-purple/40 hover:text-spark-purple"
-        >
-          {showAll ? `${t('접기')} ↑` : `${t('이전 날짜 더보기')} (${days.length - DAYS_SHOWN}${t('일')}) ↓`}
-        </button>
+          {items.length > CARDS && (
+            <button
+              type="button"
+              onClick={() => setShowList(v => !v)}
+              aria-expanded={showList}
+              className="mt-4 w-full rounded-lg border border-spark-border bg-spark-subtle py-2 text-[12.5px] font-bold text-spark-ink-soft transition-colors hover:border-spark-purple/40 hover:text-spark-purple"
+            >
+              {showList ? `${t('접기')} ↑` : `${t('전체 목록 보기')} (${items.length}${t('건')}) ↓`}
+            </button>
+          )}
+
+          {showList && (
+            <div className="mt-4 space-y-4">
+              {days.map(day => (
+                <section key={day}>
+                  <div className="mb-1 flex items-center gap-2">
+                    <span className="text-[12px] font-bold text-spark-ink-soft">{dayLabel(day, locale)}</span>
+                    <span className="text-[11px] text-spark-muted">{byDay.get(day)!.length}{t('건')}</span>
+                    <span className="h-px flex-1 bg-spark-border/70" />
+                  </div>
+                  <ul className="divide-y divide-spark-border/60">
+                    {byDay.get(day)!.map(a => (
+                      <li key={a.id}>
+                        <a href={a.link} target="_blank" rel="noopener noreferrer" className="group flex items-baseline gap-4 py-2">
+                          <span className="min-w-0 flex-1 truncate text-[13.5px] font-semibold text-gray-900 group-hover:text-spark-purple">{articleTitle(a, locale)}</span>
+                          <span className="shrink-0 text-[11.5px] text-gray-400">{t(a.source)}</span>
+                        </a>
+                      </li>
+                    ))}
+                  </ul>
+                </section>
+              ))}
+            </div>
+          )}
+        </>
       )}
     </div>
   );

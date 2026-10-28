@@ -14,6 +14,7 @@
  *    파트너로 나가는 데이터와 같은 내용으로 유지하려는 목적도 있다.
  */
 import type { SignalFeed, FeedItem } from './signal-feed';
+import { cleanSnippet } from './snippet';
 
 const esc = (s: string) =>
   s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -210,7 +211,7 @@ async function loadCurated(): Promise<{ policy: CuratedArticle[]; fund: CuratedA
       select: { title: true, link: true, source: true, pubDate: true, bodyText: true },
       orderBy: { pubDate: 'desc' },
       take: CURATED_LIMIT,
-    })).map(a => ({ title: a.title, link: a.link, source: a.source, pubDate: a.pubDate, snippet: a.bodyText ? a.bodyText.replace(/\s+/g, ' ').replace(/^(\[[^\]]{0,80}\]\s*)+/, '').slice(0, 110) : null }));
+    })).map(a => ({ title: a.title, link: a.link, source: a.source, pubDate: a.pubDate, snippet: cleanSnippet(a.bodyText, 110) }));
     // 데모데이 공고 정리는 월요일 10시 반쯤 올라와 화요일 메일에 실린다.
     const [policy, fund] = await Promise.all([read('policy_support'), read('fund_invest')]);
     return { policy, fund };
