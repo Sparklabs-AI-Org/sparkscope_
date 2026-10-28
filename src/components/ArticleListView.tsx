@@ -24,7 +24,7 @@ interface Article {
   isBookmarked?: boolean;
   isNoise?: boolean;
   titleOnlyFallback?: boolean;
-  /** 깡프로·데모데이 큐레이션 기사 — 전체보기에서 최근 3일치를 보장한다. */
+  /** 깡프로·데모데이 큐레이션 기사 — 점수와 상관없이 전체보기에 넣는다. */
   curated?: boolean;
 }
 
@@ -103,10 +103,9 @@ export function ArticleListView({ articles, canScrap = false, canBookmark = fals
       const top = [...articles]
         .sort((a, b) => (b.priorityScore - a.priorityScore) || (+new Date(b.pubDate) - +new Date(a.pubDate)))
         .slice(0, 120);
-      // 깡프로·데모데이 큐레이션은 점수가 없어 위 120건에 못 든다 — 최근 3일치는 함께 넣는다(2026-10-28 소윤).
-      const recentCut = Date.now() - 3 * 864e5;
+      // 깡프로·데모데이 큐레이션은 점수가 없어 위 120건에 못 든다 — 읽어 온 것은 전부 함께 넣는다(2026-10-28 소윤).
       const topIds = new Set(top.map(a => a.id));
-      list = [...top, ...articles.filter(a => a.curated && !topIds.has(a.id) && +new Date(a.pubDate) >= recentCut)];
+      list = [...top, ...articles.filter(a => a.curated && !topIds.has(a.id))];
     }
     if (showSearch && q.trim()) {
       const s = q.trim().toLowerCase();
