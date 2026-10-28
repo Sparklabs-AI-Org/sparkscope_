@@ -74,6 +74,9 @@ export interface DigestData {
   // 바이오 트렌드 TOP 5 — aiSignals와 같은 구조·같은 선정 규칙이고 도메인만 다르다.
   // 관심 분야가 갈려서 구독도 따로 끄고 켠다(subscription.ts).
   bioSignals?: import('./signal-feed').SignalFeed | null;
+  // 정책·지원사업 / 투자·펀드 — 깡프로·데모데이 큐레이션(attachAiSignals가 채운다). 없으면 섹션이 빠진다.
+  policyArticles?: import('./signal-digest').CuratedArticle[];
+  fundArticles?: import('./signal-digest').CuratedArticle[];
   // 검수 콘솔에서 편집자가 카테고리별로 붙이는 한 줄 요약 (있으면 섹션 상단에 렌더)
   categorySummaries?: {
     sparklabs_self?: string;

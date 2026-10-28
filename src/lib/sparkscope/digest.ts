@@ -284,6 +284,10 @@ ${SIGNAL_EMAIL_CSS}
     ${data.competitorArticles.map(a => renderArticle(a, {})).join('\n')}
   </div>` : ''}
 
+  ${renderCuratedSection('📑 정책·지원사업', data.policyArticles)}
+
+  ${renderCuratedSection('💰 투자·펀드', data.fundArticles)}
+
   ${data.industryArticles.length > 0 ? `
   <div class="section">
     <div class="section-label">🚀 스타트업계 뉴스</div>
@@ -426,6 +430,23 @@ function renderArticle(a: AnalyzedArticle, opts: { citation?: boolean; keyword?:
       ${take ? `<div class="article-take">${escape(take)}</div>` : ''}
       <div class="article-meta">${escape(a.source)} · ${formatFullDate(a.pubDate)}</div>
     </div>`;
+}
+
+// ── 정책·지원사업 / 투자·펀드 — 깡프로·데모데이 큐레이션. 분석을 안 태워 우리 관점 대신 본문 첫머리를 보여준다.
+function renderCuratedSection(label: string, items?: import('./signal-digest').CuratedArticle[]): string {
+  if (!items?.length) return '';
+  return `
+  <div class="section">
+    <div class="section-label">${label}</div>
+    ${items.map(a => `
+    <div class="article">
+      <div class="article-headline">
+        <a href="${escape(safeArticleHref(a.link, a.title, a.source))}" target="_blank">${escape(a.title)}</a>
+      </div>
+      ${a.snippet ? `<div class="article-take">${escape(a.snippet)}…</div>` : ''}
+      <div class="article-meta">${escape(a.source)} · ${formatFullDate(new Date(a.pubDate))}</div>
+    </div>`).join('\n')}
+  </div>`;
 }
 
 // ── 우리 관점 한 줄: AI(ourTake) 우선, 없으면 정직한 fallback (‘관련/매체명 조합’ 금지) ──

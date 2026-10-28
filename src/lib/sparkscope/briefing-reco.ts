@@ -528,13 +528,24 @@ export async function pickByTiers(w: BroadcastWindow): Promise<{ picked: Briefin
   // 투자·펀드 소식 — 스타트업계·AC·VC 기사 중 제목에 투자 유치·투자 집행·펀드 결성이 드러나는 것(2026-10-28 소윤).
   // 예전 '스타트업계' 칸은 일반 업계 소식이라 쓸데없는 기사가 많았다.
   const DEAL = /투자\s?(유치|받|했|집행|단행|확보|참여|결정)|시리즈\s?[A-F]|프리\s?[AB]|시드\s?(투자|라운드)|브릿지\s?투자|억\s?원?\s?(규모\s?)?(투자|조달)|펀드\s?(결성|조성|출범|출자|모집|클로징)|출자\s?(사업|선정)|모태펀드|벤처펀드|엑시트|인수합병|M&A|IPO|상장\s?(추진|예정|성공)/i;
-  const T = buildClusteredPool(candidates.filter(a =>
+  // 깡프로·데모데이에서 나눈 투자·펀드 기사(policy-classify.ts → fund_invest)를 앞에 둔다 — 사람이 고른 큐레이션이다.
+  const fundRows = (await prisma.article.findMany({
+    where: { category: 'fund_invest', isNoise: false, pubDate: { gte: w.since, ...(w.until ? { lt: w.until } : {}) } },
+    select: { id: true, title: true, link: true, source: true, pubDate: true, bodyText: true },
+    orderBy: { pubDate: 'desc' },
+    take: 20,
+  })).filter(a => !STOCK_TICKER.test(a.title)).map(a => ({
+    kind: 'intra' as const, ref: a.id, title: a.title, summary: a.bodyText ? a.bodyText.replace(/\s+/g, ' ').slice(0, 160) : a.title,
+    source: a.source, url: a.link, label: '💰 투자·펀드', pubDate: a.pubDate.toISOString(), category: 'fund_invest',
+  }));
+  const T = [...fundRows, ...buildClusteredPool(candidates.filter(a =>
     (a.category === 'industry_trend' || a.category === 'competitor')
     && isKorean(a.title) && DEAL.test(a.title) && !STOCK_TICKER.test(a.title) && !weakForBriefing(a)))
     .map(a => ({ ...fromArticle(a, idByLink), label: '💰 투자·펀드' }))
+    .sort((x, y) => rankOf(y) - rankOf(x))]
     .filter(fresh)
-    .sort((x, y) => rankOf(y) - rankOf(x))
-    .slice(0, 12);
+    .filter((c, i, arr) => arr.findIndex(x => x.url === c.url) === i)
+    .slice(0, 16);
 
   // 정책·지원사업 — 깡프로 스타트업 뉴스·데모데이가 고른 기사(2026-10-28 소윤: 정책 칸 고정).
   // 다이제스트 후보(분석을 거친 기사)에는 없어서 따로 읽는다.

@@ -169,6 +169,8 @@ export const SIGNAL_EMAIL_CSS = `
 export async function attachAiSignals<T extends {
   aiSignals?: SignalFeed | null;
   bioSignals?: SignalFeed | null;
+  policyArticles?: CuratedArticle[];
+  fundArticles?: CuratedArticle[];
 }>(data: T): Promise<T> {
   const { buildSignalFeed } = await import('./signal-feed');
   // 포트폴리오 소식이 적은 날은 AI 트렌드를 늘린다(메일 전용 — 파트너 발행은 runner에서 5건으로 자른다).
@@ -182,8 +184,38 @@ export async function attachAiSignals<T extends {
       return null;
     }
   };
-  const [ai, bio] = await Promise.all([load('ai'), load('bio')]);
+  const [ai, bio, curated] = await Promise.all([load('ai'), load('bio'), loadCurated()]);
   data.aiSignals = ai;
   data.bioSignals = bio;
+  data.policyArticles = curated.policy;
+  data.fundArticles = curated.fund;
   return data;
+}
+
+/**
+ * 정책·지원사업 / 투자·펀드 섹션 — 깡프로·데모데이 큐레이션을 나눈 기사(policy-classify.ts).
+ * 분석(중요도·우리 관점)을 태우지 않은 기사라 다이제스트 후보 풀 밖에서 따로 읽는다. 기간은 메일 기사와 같다
+ * (지난 메일 확정 이후). 이 함수가 모든 메일 경로(크론·검수 미리보기·수동 발송·브리핑)에서 불리므로 여기 붙였다.
+ * 실패하면 두 섹션 없이 보낸다.
+ */
+export interface CuratedArticle { title: string; link: string; source: string; pubDate: Date; snippet: string | null }
+const CURATED_LIMIT = 5;
+async function loadCurated(): Promise<{ policy: CuratedArticle[]; fund: CuratedArticle[] }> {
+  try {
+    const { prisma } = await import('@/lib/prisma');
+    const { sendWindowStart } = await import('./review');
+    const since = sendWindowStart();
+    const read = async (category: string) => (await prisma.article.findMany({
+      where: { category, isNoise: false, pubDate: { gte: since } },
+      select: { title: true, link: true, source: true, pubDate: true, bodyText: true },
+      orderBy: { pubDate: 'desc' },
+      take: CURATED_LIMIT,
+    })).map(a => ({ title: a.title, link: a.link, source: a.source, pubDate: a.pubDate, snippet: a.bodyText ? a.bodyText.replace(/\s+/g, ' ').replace(/^(\[[^\]]{0,80}\]\s*)+/, '').slice(0, 110) : null }));
+    // 데모데이 공고 정리는 월요일 10시 반쯤 올라와 화요일 메일에 실린다.
+    const [policy, fund] = await Promise.all([read('policy_support'), read('fund_invest')]);
+    return { policy, fund };
+  } catch (e: any) {
+    console.error(`[Digest] 정책·투자 섹션 생성 실패 — 그 섹션 없이 발송합니다: ${e?.message}`);
+    return { policy: [], fund: [] };
+  }
 }
