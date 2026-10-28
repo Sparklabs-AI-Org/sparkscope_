@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { getLocale, getT } from '@/lib/i18n/server';
 import { ensureArticleEnDeep, ensureArticleKoDeep } from '@/lib/sparkscope/translate-content';
 import { articleTitle } from '@/lib/sparkscope/article-title';
-import { PolicyTodayCards } from '@/components/PolicyTodayCards';
+import { CuratedFeed } from '@/components/CuratedFeed';
 import { prisma } from '@/lib/prisma';
 import { ArticleListView } from '@/components/ArticleListView';
 import { SignalBanner } from '@/components/SignalBanner';
@@ -786,24 +786,13 @@ async function loadDashboardData(
         where: { ...where, category: tab === 'fund' ? 'fund_invest' : 'policy_support' },
         orderBy: [{ pubDate: 'desc' }],
         take: 300,
-        select: LIST_SELECT,
-      })).map(a => ({ ...a, companyName: undefined, portfolioStatus: null }))
+        select: { ...LIST_SELECT, bodyText: true },
+      })).map(({ bodyText, ...a }) => ({
+        ...a, companyName: undefined, portfolioStatus: null,
+        // 카드에 한 줄 미리보기 — 본문 첫머리(머리 괄호 안내문은 뗀다). 본문 전체를 화면에 넘기지 않는다.
+        snippet: bodyText ? bodyText.replace(/\s+/g, ' ').replace(/^(\[[^\]]{0,80}\]\s*)+/, '').slice(0, 120) : null,
+      }))
     : EMPTY;
-
-  // 가장 최근 발행일 한 묶음 — 위 카드 영역용. 이미 읽어온 policyArticles에서 고르므로
-  // 추가 쿼리가 없다. policyArticles는 pubDate 내림차순이라 첫 건의 날짜가 가장 최근이다.
-  const policyToday = (() => {
-    if (policyArticles.length === 0) return { items: EMPTY as typeof policyArticles, label: '', isToday: false };
-    const kstDay = (d: Date) => new Date(d.getTime() + 9 * 3600 * 1000).toISOString().slice(0, 10);
-    const newest = kstDay(policyArticles[0]!.pubDate);
-    // 원본 표를 뺀 뒤로(2026-10-28) 카드가 유일한 목록이라 최근 7일치를 보여준다 — 데모데이 공고 정리는 주 1회(월)라
-    // 하루치만 보이면 화요일부터 사라진다.
-    const oldest = kstDay(new Date(new Date(`${newest}T00:00:00+09:00`).getTime() - 6 * 864e5));
-    const week = policyArticles.filter(a => kstDay(a.pubDate) >= oldest);
-    const md = (d: string) => d.slice(5).replace('-', '.');
-    // 처음 6개만 보여주고 더보기로 펼치는 건 카드 컴포넌트가 한다.
-    return { items: week, label: `${md(oldest)} ~ ${md(newest)}`, isToday: false };
-  })();
 
   const portfolioTop = portfolioTop15.map(g => {
     const count = g._count._all;
@@ -864,7 +853,6 @@ async function loadDashboardData(
     kpi: { total, sparklabsCount: sparklabsCountFiltered, portfolioCount, pitchCount },
     articles: enrichedArticles,
     policyArticles,
-    policyToday,
     portfolioNames,
     selectedCompany: company,
     selectedCompanyName,
@@ -1502,19 +1490,9 @@ export default async function DashboardPage({ searchParams }: { searchParams: { 
       {/* 오늘의 큐레이션 — 표 위에 얹는 읽기용 요약. 펼치기가 있어 클라이언트 컴포넌트로 뺐다.
           오늘치가 아직 없으면(크론은 평일 10:10) 가장 최근 발행일을 대신 보여준다 —
           빈 칸을 띄우면 "수집이 멈췄나" 하고 헷갈린다. 날짜를 머리말에 적어 구분한다. */}
+      {/* 정책·지원사업 / 투자·펀드 — 조회 기간의 기사를 날짜별로. 원본 표는 2026-10-28 뺐다(소윤). */}
       {(tab === 'policy' || tab === 'fund') && (
-        <PolicyTodayCards
-          kind={tab}
-          items={data.policyToday.items}
-          label={data.policyToday.label}
-          isToday={data.policyToday.isToday}
-        />
-      )}
-      {/* 원본 표(DB 뷰)는 2026-10-28 뺐다(소윤) — 정책·AC·VC·투자·관계없는 기사가 섞여 보이던 화면. 지금은 칸별 탭으로 나뉜다. */}
-      {(tab === 'policy' || tab === 'fund') && data.policyToday.items.length === 0 && (
-        <div className="rounded-2xl border border-spark-border bg-white p-8 text-center text-sm text-spark-muted">
-          {tr('{range} 내 수집된 기사가 없습니다.', { range: range.label })}
-        </div>
+        <CuratedFeed kind={tab} items={data.policyArticles as any} rangeLabel={range.label} />
       )}
 
       {tab === 'articles' &&
