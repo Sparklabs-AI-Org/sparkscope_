@@ -437,7 +437,14 @@ async function loadDashboardData(
       // 0이라 점수순이면 밀린다 — 최근 3일은 점수와 상관없이 보장하는 방식으로 읽는다.
       ? Promise.all(Object.entries({ sparklabs_self: 150, portfolio_company: 150, competitor: 15, industry_trend: 15, policy_support: 40, fund_invest: 30 }).map(([category, take]) =>
           fetchRecentTabArticles(where, category, take, now, category === 'portfolio_company' || category === 'policy_support' || category === 'fund_invest' ? 3 : undefined),
-        )).then(arr => arr.flat())
+        ).concat(
+          // 깡프로·데모데이에서 업계 동향(competitor)으로 나눈 기사 — 분석을 안 타(analyzedAt 없음) 점수가 0이라 위 상위 15건에 못 든다.
+          // 최근 3일치는 따로 보장한다(2026-10-28 소윤).
+          prisma.article.findMany({
+            where: { ...where, category: 'competitor', analyzedAt: null, pubDate: { gte: new Date(Math.max(since.getTime(), now.getTime() - 3 * 864e5)), lte: until } },
+            orderBy: { pubDate: 'desc' }, take: 40, select: LIST_SELECT,
+          }),
+        )).then(arr => arr.flat().filter((a, i, all) => all.findIndex(x => x.id === a.id) === i))
       : EMPTY,
     // take:20이면 회사 하나가 같은 사건을 거의 동일한 제목으로 여러 매체에 실어(예: IPO
     // 뉴스가 11건 전부 pitchScore 100) 상위 20건을 독점할 수 있다. 그러면 바로 아래
@@ -773,8 +780,15 @@ async function loadDashboardData(
     portfolioTargets.map(t => [t.primaryKeyword, insightLocale === 'en' ? (t.englishName || tr(t.name)) : t.name]),
   );
   const portfolioStatusOf = new Map(portfolioTargets.map(t => [t.primaryKeyword, t.portfolioStatus]));
+  const curatedCompetitorIds = new Set(
+    needArticles
+      ? (await prisma.article.findMany({ where: { id: { in: cleanedArticles.filter(a => a.category === 'competitor').map(a => a.id) }, analyzedAt: null }, select: { id: true } })).map(a => a.id)
+      : [],
+  );
   const enrichedArticles = cleanedArticles.map(a => ({
     ...a,
+    // 깡프로·데모데이 큐레이션 — 점수가 없어 '날짜순 전체보기'(점수 상위 120건)에서 밀리므로 최근 3일은 목록이 보장한다.
+    curated: a.category === 'policy_support' || a.category === 'fund_invest' || curatedCompetitorIds.has(a.id),
     companyName: a.category === 'portfolio_company' ? (portfolioNameOf.get(a.matchedKeyword) ?? a.matchedKeyword) : undefined,
     portfolioStatus: a.category === 'portfolio_company' ? (portfolioStatusOf.get(a.matchedKeyword) ?? null) : null,
   }));
