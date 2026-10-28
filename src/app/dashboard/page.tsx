@@ -795,6 +795,16 @@ async function loadDashboardData(
         snippet: cleanSnippet(bodyText, 140),
       }))
     : EMPTY;
+  // 데모데이 주간 공고 정리(창업공고 TOP 10 · 정부지원사업 TOP 100) — 주차를 골라 보는 칸이라 조회 기간과 상관없이 전부 읽는다.
+  // 주 2편씩이라 1년이어도 100건 남짓이다.
+  const weeklyRoundups = tab === 'policy'
+    ? (await prisma.article.findMany({
+        where: { category: 'policy_support', isNoise: false, source: '데모데이', title: { contains: 'TOP' } },
+        orderBy: { pubDate: 'desc' },
+        take: 200,
+        select: { id: true, title: true, link: true, source: true, pubDate: true },
+      }))
+    : [];
 
   const portfolioTop = portfolioTop15.map(g => {
     const count = g._count._all;
@@ -855,6 +865,7 @@ async function loadDashboardData(
     kpi: { total, sparklabsCount: sparklabsCountFiltered, portfolioCount, pitchCount },
     articles: enrichedArticles,
     policyArticles,
+    weeklyRoundups,
     portfolioNames,
     selectedCompany: company,
     selectedCompanyName,
@@ -1494,7 +1505,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: { 
           빈 칸을 띄우면 "수집이 멈췄나" 하고 헷갈린다. 날짜를 머리말에 적어 구분한다. */}
       {/* 정책·지원사업 / 투자·펀드 — 조회 기간의 기사를 날짜별로. 원본 표는 2026-10-28 뺐다(소윤). */}
       {(tab === 'policy' || tab === 'fund') && (
-        <CuratedFeed kind={tab} items={data.policyArticles as any} rangeLabel={range.label} />
+        <CuratedFeed kind={tab} items={data.policyArticles as any} roundups={data.weeklyRoundups as any} rangeLabel={range.label} />
       )}
 
       {tab === 'articles' &&

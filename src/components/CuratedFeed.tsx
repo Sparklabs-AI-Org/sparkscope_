@@ -49,8 +49,116 @@ const TOPICS: Record<'policy' | 'fund', { id: string; label: string }[]> = {
   ],
 };
 const HERO_DAYS = 7;
+/** 데모데이 주간 공고 정리 글 — 지원사업 공고 칸에서 오른쪽 주차별 칸으로 따로 모은다. */
+const isRoundup = (a: Item) => a.source === PINNED_SOURCE && /TOP\s?\d+/i.test(a.title);
 
-export function CuratedFeed({ kind, items, rangeLabel }: { kind: 'policy' | 'fund'; items: Item[]; rangeLabel: string }) {
+// ── 주차 계산(KST, 월요일 시작). 데모데이 표기("10월 4주차" = 10/26 월요일)와 같게 월요일 날짜÷7 올림으로 센다.
+function mondayOf(day: string): string {
+  const d = new Date(`${day}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() - ((d.getUTCDay() + 6) % 7));
+  return d.toISOString().slice(0, 10);
+}
+function weekLabel(monday: string, locale: 'ko' | 'en'): string {
+  const [, mm, dd] = monday.split('-').map(Number);
+  const n = Math.ceil(dd! / 7);
+  return locale === 'en' ? `Week ${n} of ${new Date(`${monday}T00:00:00Z`).toLocaleString('en-US', { month: 'short', timeZone: 'UTC' })}` : `${mm}월 ${n}주차`;
+}
+
+/**
+ * 지원사업 공고 칸 — 왼쪽은 개별 공고, 오른쪽은 데모데이 주간 공고 정리를 주차별로(2026-10-28 소윤).
+ * 주차는 ◀ ▶ 또는 달력에서 날짜를 고르면 그 날이 속한 주로 간다. 정리 글이 없는 주를 고르면 그렇다고 알려 준다.
+ */
+function GrantSplit({ grants, roundups }: { grants: Item[]; roundups: Item[] }) {
+  const t = useT();
+  const locale = useLocale() === 'en' ? 'en' : 'ko';
+  const weeks = [...new Set(roundups.map(a => mondayOf(kstDay(a.pubDate))))].sort().reverse();
+  const [week, setWeek] = useState<string | null>(weeks[0] ?? null);
+  const idx = week ? weeks.indexOf(week) : -1;
+  const ofWeek = week ? roundups.filter(a => mondayOf(kstDay(a.pubDate)) === week) : [];
+  const step = (dir: 1 | -1) => {
+    // 정리 글이 없는 주를 보고 있으면 그 주에서 가장 가까운 있는 주로.
+    if (idx >= 0) { const next = weeks[idx + dir]; if (next) setWeek(next); return; }
+    const target = dir === 1 ? weeks.find(w => w < (week ?? '')) : [...weeks].reverse().find(w => w > (week ?? ''));
+    if (target) setWeek(target);
+  };
+
+  return (
+    <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-2">
+      <section className="overflow-hidden rounded-xl border border-spark-border">
+        <div className="flex items-baseline gap-2 border-b border-spark-border bg-spark-subtle px-4 py-2.5">
+          <span className="text-[15px] font-extrabold tracking-tight text-spark-ink">📋 {t('개별 공고')}</span>
+          <span className="rounded-md bg-white px-1.5 py-0.5 text-[11px] font-bold text-spark-muted">{grants.length}{t('건')}</span>
+        </div>
+        {grants.length === 0 ? (
+          <p className="px-4 py-8 text-center text-[13px] text-spark-muted">{t('이 기간에 수집된 공고가 없습니다.')}</p>
+        ) : (
+          <ul className="max-h-[560px] divide-y divide-spark-border/60 overflow-y-auto px-4">
+            {grants.map(a => (
+              <li key={a.id}>
+                <a href={a.link} target="_blank" rel="noopener noreferrer" className="group block py-2.5">
+                  <div className="text-[13.5px] font-semibold leading-snug text-gray-900 group-hover:text-spark-purple">{articleTitle(a, locale)}</div>
+                  <div className="mt-0.5 text-[11.5px] text-gray-400">{t(a.source)} · {dayLabel(kstDay(a.pubDate), locale)}</div>
+                </a>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
+      <section className="overflow-hidden rounded-xl border border-sky-200">
+        <div className="flex flex-wrap items-center gap-2 border-b border-sky-200 bg-sky-50 px-4 py-2.5">
+          <span className="text-[15px] font-extrabold tracking-tight text-sky-900">📌 {t('주간 공고 정리')}</span>
+          <div className="ml-auto flex items-center gap-1.5">
+            <button type="button" onClick={() => step(1)} disabled={idx === weeks.length - 1} aria-label={t('이전 주')}
+              className="rounded-md border border-sky-200 bg-white px-2 py-0.5 text-[12px] font-bold text-sky-800 disabled:opacity-40">◀</button>
+            <span className="min-w-[78px] text-center text-[13px] font-extrabold text-sky-900">{week ? weekLabel(week, locale) : '—'}</span>
+            <button type="button" onClick={() => step(-1)} disabled={idx === 0} aria-label={t('다음 주')}
+              className="rounded-md border border-sky-200 bg-white px-2 py-0.5 text-[12px] font-bold text-sky-800 disabled:opacity-40">▶</button>
+            <label className="flex items-center gap-1 rounded-md border border-sky-200 bg-white px-2 py-0.5 text-[12px] text-sky-800">
+              📅
+              <input
+                type="date"
+                aria-label={t('주차 고르기')}
+                className="bg-transparent text-[12px] outline-none"
+                value={week ?? ''}
+                onChange={e => e.target.value && setWeek(mondayOf(e.target.value))}
+              />
+            </label>
+          </div>
+        </div>
+        {ofWeek.length === 0 ? (
+          <p className="px-4 py-8 text-center text-[13px] text-spark-muted">
+            {weeks.length === 0 ? t('아직 수집된 주간 공고 정리가 없습니다.') : t('이 주에는 공고 정리 글이 없습니다. ◀ ▶로 가까운 주를 보세요.')}
+          </p>
+        ) : (
+          <ul className="space-y-2.5 p-4">
+            {ofWeek.map(a => (
+              <li key={a.id}>
+                <a href={a.link} target="_blank" rel="noopener noreferrer"
+                  className="group block rounded-lg border border-sky-200/80 bg-white p-3.5 transition-colors hover:border-sky-400">
+                  <div className="text-[14px] font-bold leading-snug text-gray-900 group-hover:text-sky-800">{articleTitle(a, locale)}</div>
+                  <div className="mt-1 text-[11.5px] text-gray-500">{t(a.source)} · {dayLabel(kstDay(a.pubDate), locale)}</div>
+                </a>
+              </li>
+            ))}
+          </ul>
+        )}
+        {weeks.length > 0 && (
+          <div className="flex flex-wrap gap-1.5 border-t border-sky-100 px-4 py-3">
+            {weeks.slice(0, 8).map(w => (
+              <button key={w} type="button" onClick={() => setWeek(w)}
+                className={`rounded-md px-2 py-0.5 text-[11.5px] font-bold ${w === week ? 'bg-sky-600 text-white' : 'bg-sky-50 text-sky-800 hover:bg-sky-100'}`}>
+                {weekLabel(w, locale)}
+              </button>
+            ))}
+          </div>
+        )}
+      </section>
+    </div>
+  );
+}
+
+export function CuratedFeed({ kind, items, roundups = [], rangeLabel }: { kind: 'policy' | 'fund'; items: Item[]; roundups?: Item[]; rangeLabel: string }) {
   const t = useT();
   const locale = useLocale() === 'en' ? 'en' : 'ko';
   const [topic, setTopic] = useState<string | null>(null);
@@ -108,7 +216,9 @@ export function CuratedFeed({ kind, items, rangeLabel }: { kind: 'policy' | 'fun
         })}
       </div>
 
-      {!hero ? (
+      {topic === 'grant' ? (
+        <GrantSplit grants={byImportance(pool.filter(a => !isRoundup(a)))} roundups={roundups} />
+      ) : !hero ? (
         <div className="mt-4 rounded-xl border border-spark-border bg-spark-subtle p-8 text-center text-[13px] text-spark-muted">
           {t('{range} 내 수집된 기사가 없습니다.', { range: rangeLabel })}
         </div>
