@@ -2,7 +2,7 @@
  * 본문(Article.bodyText)이 비어 있는 기사를 채운다 — 수집기가 일부 대상만 본문을 읽던 시기(~2026-10-22)의 빈칸 보충용.
  * 비어 있는 행만 건드리고, 이미 있는 본문은 덮어쓰지 않는다. 중간에 끊겨도 다시 실행하면 남은 것만 이어서 한다.
  *
- *   npx tsx --env-file=.env.local scripts/backfill-article-body.ts [--days 7] [--limit 2000] [--dry]
+ *   npx tsx --env-file=.env.local scripts/backfill-article-body.ts [--days 7] [--limit 2000] [--category policy_support] [--dry]
  */
 import { prisma } from '../src/lib/prisma';
 import { fillMissingBodies } from '../src/lib/sparkscope/collector';
@@ -16,9 +16,10 @@ function argOf(name: string): string | undefined {
 (async () => {
   const days = Number(argOf('--days') ?? 7);
   const limit = Number(argOf('--limit') ?? 2000);
+  const category = argOf('--category');
   const dry = process.argv.includes('--dry');
   const rows = await prisma.article.findMany({
-    where: { bodyText: null, isNoise: false, pubDate: { gte: new Date(Date.now() - days * 864e5) } },
+    where: { bodyText: null, isNoise: false, ...(category ? { category } : {}), pubDate: { gte: new Date(Date.now() - days * 864e5) } },
     select: { id: true, title: true, link: true, source: true, pubDate: true, matchedKeyword: true, category: true },
     orderBy: { pubDate: 'desc' },
     take: limit,

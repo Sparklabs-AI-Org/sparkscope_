@@ -216,8 +216,11 @@ export async function fetchDemodayUrls(): Promise<string[]> {
   return [...new Set(urls)].sort((a, b) => Number(a.split('/').pop()) - Number(b.split('/').pop()));
 }
 
-/** 글 한 편에서 제목과 발행일을 읽는다. */
-export async function fetchDemodayPost(url: string): Promise<{ title: string; pubDate: Date } | null> {
+/**
+ * 글 한 편에서 제목·발행일·요약을 읽는다. 본문은 페이지가 열린 뒤 브라우저에서 불러와 HTML에 없다(2026-10-28 실측) —
+ * 대신 og:description(공고 요약·상위 항목)을 본문 자리에 쓴다. 데일리 브리핑 정책 칸의 대본 재료다.
+ */
+export async function fetchDemodayPost(url: string): Promise<{ title: string; pubDate: Date; description: string | null } | null> {
   const res = await fetchText(url);
   if (!res?.ok) return null;
   const html = await res.text();
@@ -230,7 +233,8 @@ export async function fetchDemodayPost(url: string): Promise<{ title: string; pu
   const iso = html.match(/"datePublished"\s*:\s*"([^"]+)"/)?.[1];
   const pubDate = iso ? new Date(iso) : null;
   if (!pubDate || isNaN(pubDate.getTime())) return null;
-  return { title, pubDate };
+  const description = $('meta[property="og:description"]').attr('content')?.trim() || $('meta[name="description"]').attr('content')?.trim() || null;
+  return { title, pubDate, description };
 }
 
 /**
@@ -253,6 +257,7 @@ export async function collectDemodayArticles(knownLinks: Set<string>, max = 30):
       link: url,
       source: DEMODAY_SOURCE,
       pubDate: post.pubDate,
+      body: post.description ?? undefined,
       matchedKeyword: DEMODAY_SOURCE,
       category: POLICY_CATEGORY,
       basePriority: 0,

@@ -21,6 +21,7 @@ import {
   POLICY_CURATOR,
   DEMODAY_SOURCE,
 } from '@/lib/sparkscope/policy-collect';
+import { fillMissingBodies } from '@/lib/sparkscope/collector';
 import { prisma } from '@/lib/prisma';
 
 export const runtime = 'nodejs';
@@ -57,6 +58,11 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ ok: true, collected: 0, saved: 0 });
     }
 
+    // 본문을 읽어 둔다 — 데일리 브리핑 정책 칸의 대본 재료(Article.bodyText). 예전엔 제목만 저장해서
+    // 영상이 제목만 보고 문장을 지어야 했다(2026-10-28).
+    const filledBodies = await fillMissingBodies(raw);
+    console.log(`[cron:policy-collect] 본문 채움 ${filledBodies}/${raw.length}건`);
+
     let saved = 0;
     let skipped = 0;
     for (const a of raw) {
@@ -71,10 +77,11 @@ export async function GET(request: NextRequest) {
             matchedKeyword: a.matchedKeyword,
             category: a.category,
             priorityScore: a.basePriority,
+            bodyText: a.body ? a.body.slice(0, 3000) : null,
           },
           // 이미 있는 기사는 그대로 둔다 — 일반 수집기가 먼저 가져왔거나 사람이
-          // 스크랩·노이즈 표시를 해 뒀을 수 있다. 덮어쓰지 않는다.
-          update: {},
+          // 스크랩·노이즈 표시를 해 뒀을 수 있다. 덮어쓰지 않는다(비어 있던 본문만 채운다).
+          update: a.body ? { bodyText: a.body.slice(0, 3000) } : {},
           select: { collectedAt: true },
         });
         // upsert는 새로 만들었는지 알려주지 않는다. 방금 만든 행만 collectedAt이 지금에 가깝다.
