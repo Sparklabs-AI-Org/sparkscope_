@@ -65,7 +65,7 @@ function weekLabel(monday: string, locale: 'ko' | 'en'): string {
 }
 
 /**
- * 지원사업 공고 칸 — 왼쪽은 개별 공고, 오른쪽은 데모데이 주간 공고 정리를 주차별로(2026-10-28 소윤).
+ * 지원사업 공고 칸 — 위는 데모데이 주간 공고 정리를 주차별로, 아래는 개별 공고(2026-10-28 소윤).
  * 주차는 ◀ ▶ 또는 달력에서 날짜를 고르면 그 날이 속한 주로 간다. 정리 글이 없는 주를 고르면 그렇다고 알려 준다.
  */
 function GrantSplit({ grants, roundups }: { grants: Item[]; roundups: Item[] }) {
@@ -83,27 +83,7 @@ function GrantSplit({ grants, roundups }: { grants: Item[]; roundups: Item[] }) 
   };
 
   return (
-    <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-2">
-      <section className="overflow-hidden rounded-xl border border-spark-border">
-        <div className="flex items-baseline gap-2 border-b border-spark-border bg-spark-subtle px-4 py-2.5">
-          <span className="text-[15px] font-extrabold tracking-tight text-spark-ink">📋 {t('개별 공고')}</span>
-          <span className="rounded-md bg-white px-1.5 py-0.5 text-[11px] font-bold text-spark-muted">{grants.length}{t('건')}</span>
-        </div>
-        {grants.length === 0 ? (
-          <p className="px-4 py-8 text-center text-[13px] text-spark-muted">{t('이 기간에 수집된 공고가 없습니다.')}</p>
-        ) : (
-          <ul className="max-h-[560px] divide-y divide-spark-border/60 overflow-y-auto px-4">
-            {grants.map(a => (
-              <li key={a.id}>
-                <a href={a.link} target="_blank" rel="noopener noreferrer" className="group block py-2.5">
-                  <div className="text-[13.5px] font-semibold leading-snug text-gray-900 group-hover:text-spark-purple">{articleTitle(a, locale)}</div>
-                  <div className="mt-0.5 text-[11.5px] text-gray-400">{t(a.source)} · {dayLabel(kstDay(a.pubDate), locale)}</div>
-                </a>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
+    <div className="mt-4 flex flex-col gap-4">
 
       <section className="overflow-hidden rounded-xl border border-sky-200">
         <div className="flex flex-wrap items-center gap-2 border-b border-sky-200 bg-sky-50 px-4 py-2.5">
@@ -154,6 +134,26 @@ function GrantSplit({ grants, roundups }: { grants: Item[]; roundups: Item[] }) 
           </div>
         )}
       </section>
+      <section className="overflow-hidden rounded-xl border border-spark-border">
+        <div className="flex items-baseline gap-2 border-b border-spark-border bg-spark-subtle px-4 py-2.5">
+          <span className="text-[15px] font-extrabold tracking-tight text-spark-ink">📋 {t('개별 공고')}</span>
+          <span className="rounded-md bg-white px-1.5 py-0.5 text-[11px] font-bold text-spark-muted">{grants.length}{t('건')}</span>
+        </div>
+        {grants.length === 0 ? (
+          <p className="px-4 py-8 text-center text-[13px] text-spark-muted">{t('이 기간에 수집된 공고가 없습니다.')}</p>
+        ) : (
+          <ul className="max-h-[560px] divide-y divide-spark-border/60 overflow-y-auto px-4">
+            {grants.map(a => (
+              <li key={a.id}>
+                <a href={a.link} target="_blank" rel="noopener noreferrer" className="group block py-2.5">
+                  <div className="text-[13.5px] font-semibold leading-snug text-gray-900 group-hover:text-spark-purple">{articleTitle(a, locale)}</div>
+                  <div className="mt-0.5 text-[11.5px] text-gray-400">{t(a.source)} · {dayLabel(kstDay(a.pubDate), locale)}</div>
+                </a>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
     </div>
   );
 }
@@ -162,7 +162,7 @@ export function CuratedFeed({ kind, items, roundups = [], rangeLabel }: { kind: 
   const t = useT();
   const locale = useLocale() === 'en' ? 'en' : 'ko';
   const [topic, setTopic] = useState<string | null>(null);
-  const [showList, setShowList] = useState(false);
+  const [showList, setShowList] = useState(true);  // 펼친 상태가 기본(2026-10-28 소윤)
 
   const title = kind === 'fund' ? t('투자·펀드') : t('정책·지원사업');
   const sub = kind === 'fund'

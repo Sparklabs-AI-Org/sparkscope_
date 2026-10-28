@@ -95,8 +95,8 @@ const REGION_LABEL: Record<RegionId, string> = {
 };
 const REGION_VIEWS: Record<RegionId, readonly TabId[]> = {
   // 정책·지원사업은 국내 정부지원사업 큐레이션이라 한국 관점에만 둔다(대만·GV엔 해당 없음).
-  // 2026-10-28 소윤: 스파크랩 → 포트폴리오사 → AC·VC 업계 → 정책·지원사업 → 투자·펀드 순.
-  kr: ['sparklabs', 'portfolio', 'competitor', 'policy', 'fund'],
+  // 2026-10-28 소윤: 스파크랩 → 포트폴리오사 → 정책·지원사업 → 업계 동향 → 투자·펀드 순.
+  kr: ['sparklabs', 'portfolio', 'policy', 'competitor', 'fund'],
   tw: ['portfolio', 'sparklabs'],
   // 대만과 같은 이유로 업계 모니터링 탭을 만들지 않는다 — competitor 감시대상이
   // 전부 한국 AC·VC라 영구 0건 탭이 된다.
@@ -116,7 +116,7 @@ const VIEW_LABEL: Record<RegionId, Partial<Record<TabId, string>>> = {
   kr: {
     portfolio: '📊 포트폴리오사',
     sparklabs: '🏢 스파크랩 직접 언급',
-    competitor: '🏁 AC·VC 업계',
+    competitor: '🏁 업계 동향',
     policy: '📑 정책·지원사업',
     fund: '💰 투자·펀드',
   },
