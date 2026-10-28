@@ -121,15 +121,15 @@ export function CuratedFeed({ kind, items, rangeLabel }: { kind: 'policy' | 'fun
           )}
 
           {showList && (
-            <div className="mt-4 space-y-4">
+            <div className="mt-5 space-y-6">
               {days.map(day => (
-                <section key={day}>
-                  <div className="mb-1 flex items-center gap-2">
-                    <span className="text-[12px] font-bold text-spark-ink-soft">{dayLabel(day, locale)}</span>
-                    <span className="text-[11px] text-spark-muted">{byDay.get(day)!.length}{t('건')}</span>
-                    <span className="h-px flex-1 bg-spark-border/70" />
+                // 날짜 머리를 띠로 — 목록이 길어도 어디서 날짜가 바뀌는지 한눈에 보이게(2026-10-28 소윤).
+                <section key={day} className="overflow-hidden rounded-xl border border-spark-border">
+                  <div className="flex items-baseline gap-2 border-b border-spark-border bg-spark-subtle px-4 py-2.5">
+                    <span className="text-[15px] font-extrabold tracking-tight text-spark-ink">{dayLabel(day, locale)}</span>
+                    <span className="rounded-md bg-white px-1.5 py-0.5 text-[11px] font-bold text-spark-muted">{byDay.get(day)!.length}{t('건')}</span>
                   </div>
-                  <ul className="divide-y divide-spark-border/60">
+                  <ul className="divide-y divide-spark-border/60 px-4">
                     {byDay.get(day)!.map(a => (
                       <li key={a.id}>
                         <a href={a.link} target="_blank" rel="noopener noreferrer" className="group flex items-baseline gap-4 py-2">
