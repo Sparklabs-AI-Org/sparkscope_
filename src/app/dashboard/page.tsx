@@ -5,6 +5,7 @@ import { ensureArticleEnDeep, ensureArticleKoDeep } from '@/lib/sparkscope/trans
 import { articleTitle } from '@/lib/sparkscope/article-title';
 import { CuratedFeed } from '@/components/CuratedFeed';
 import { cleanSnippet } from '@/lib/sparkscope/snippet';
+import { MARKET_KEYWORD } from '@/lib/sparkscope/policy-classify';
 import { prisma } from '@/lib/prisma';
 import { ArticleListView } from '@/components/ArticleListView';
 import { SignalBanner } from '@/components/SignalBanner';
@@ -540,7 +541,8 @@ async function loadDashboardData(
   for (const a of competitorArticles) {
     if (!notNoise(a)) continue;
     const name = a.matchedKeyword;
-    if (!name) continue;
+    // '업계 전반'은 특정 하우스가 아닌 투자 시장 동향(깡프로·데모데이 큐레이션) — 하우스별 순위에 회사처럼 끼우지 않는다.
+    if (!name || name === MARKET_KEYWORD) continue;
     let s = competitorStatMap.get(name);
     if (!s) {
       s = { name: displayCompetitor(name), english: insightLocale === 'en' ? '' : (competitorEnglishOf.get(name) ?? ''), count: 0, negCount: 0, articles: [], negatives: [], titles: [] };
@@ -1287,7 +1289,8 @@ export default async function DashboardPage({ searchParams }: { searchParams: { 
 
       {/* 이슈 급증 배너 + KPI — 경쟁사·시너지 탭 제외 (시너지는 기사 집계와 무관) */}
       {/* 조건은 위 needKpi와 반드시 같아야 한다 — 한쪽만 고치면 빈 칸이 뜨거나 0이 찍힌다. */}
-      {tab !== 'competitor' && tab !== SYNERGY_TAB && tab !== 'policy' && tab !== 'fund' && (
+      {/* 스파크랩 탭에서는 그리지 않는다(2026-10-28 소윤) — 포트폴리오사 급증 배너·전체 KPI라 자사 화면과 맞지 않는다. */}
+      {tab !== 'competitor' && tab !== SYNERGY_TAB && tab !== 'policy' && tab !== 'fund' && tab !== 'sparklabs' && (
         <>
           {data.spikes.length > 0 && !portfolioView && (
             <div data-tour="spike-banner" className="mb-6 space-y-2">

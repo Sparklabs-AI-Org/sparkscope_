@@ -42,10 +42,10 @@ const TOPICS: Record<'policy' | 'fund', { id: string; label: string }[]> = {
     { id: 'policy', label: '🏛️ 정책·제도' },
     { id: 'ecosystem', label: '🌱 생태계·동향' },
   ],
+  // 시장 동향(market)은 대시보드에서 뺐다 — 업계 동향 탭이 다루는 내용이라 그쪽으로 보낸다(policy-classify.ts, 2026-10-28 소윤).
   fund: [
-    { id: 'round', label: '🚀 투자 유치' },
     { id: 'fund', label: '🏦 펀드 결성·출자' },
-    { id: 'market', label: '📊 시장 동향' },
+    { id: 'round', label: '🚀 투자 유치' },
   ],
 };
 const HERO_DAYS = 7;
@@ -161,7 +161,8 @@ function GrantSplit({ grants, roundups }: { grants: Item[]; roundups: Item[] }) 
 export function CuratedFeed({ kind, items, roundups = [], rangeLabel }: { kind: 'policy' | 'fund'; items: Item[]; roundups?: Item[]; rangeLabel: string }) {
   const t = useT();
   const locale = useLocale() === 'en' ? 'en' : 'ko';
-  const [topic, setTopic] = useState<string | null>(null);
+  // 첫 세부 분류가 기본 — 칩 순서는 세부 분류들 → 전체(2026-10-28 소윤).
+  const [topic, setTopic] = useState<string | null>(TOPICS[kind][0]!.id);
   const [showList, setShowList] = useState(true);  // 펼친 상태가 기본(2026-10-28 소윤)
 
   const title = kind === 'fund' ? t('투자·펀드') : t('정책·지원사업');
@@ -198,7 +199,7 @@ export function CuratedFeed({ kind, items, roundups = [], rangeLabel }: { kind: 
       </div>
 
       <div className="mt-3 flex flex-wrap gap-1.5">
-        {[{ id: null as string | null, label: t('전체') }, ...topics.map(x => ({ id: x.id as string | null, label: t(x.label) }))].map(x => {
+        {[...topics.map(x => ({ id: x.id as string | null, label: t(x.label) })), { id: null as string | null, label: t('전체') }].map(x => {
           const n = x.id ? items.filter(a => topicOf(a) === x.id).length : items.length;
           const active = topic === x.id;
           return (
@@ -218,6 +219,9 @@ export function CuratedFeed({ kind, items, roundups = [], rangeLabel }: { kind: 
 
       {topic === 'grant' ? (
         <GrantSplit grants={byImportance(pool.filter(a => !isRoundup(a)))} roundups={roundups} />
+      ) : topic === null ? (
+        // 전체는 카드 없이 세부 분류별 목록만(2026-10-28 소윤).
+        <TopicList topics={topics} pool={pool} topicOf={topicOf} byImportance={byImportance} />
       ) : !hero ? (
         <div className="mt-4 rounded-xl border border-spark-border bg-spark-subtle p-8 text-center text-[13px] text-spark-muted">
           {t('{range} 내 수집된 기사가 없습니다.', { range: rangeLabel })}
@@ -274,34 +278,47 @@ export function CuratedFeed({ kind, items, roundups = [], rangeLabel }: { kind: 
           )}
 
           {showList && (
-            <div className="mt-5 space-y-6">
-              {topics.filter(x => !topic || x.id === topic).map(x => {
-                const list = byImportance(pool.filter(a => topicOf(a) === x.id));
-                if (list.length === 0) return null;
-                return (
-                  // 세부 분류 머리를 띠로 — 목록이 길어도 묶음이 바뀌는 곳이 한눈에 보이게.
-                  <section key={x.id} className="overflow-hidden rounded-xl border border-spark-border">
-                    <div className="flex items-baseline gap-2 border-b border-spark-border bg-spark-subtle px-4 py-2.5">
-                      <span className="text-[15px] font-extrabold tracking-tight text-spark-ink">{t(x.label)}</span>
-                      <span className="rounded-md bg-white px-1.5 py-0.5 text-[11px] font-bold text-spark-muted">{list.length}{t('건')}</span>
-                    </div>
-                    <ul className="divide-y divide-spark-border/60 px-4">
-                      {list.map(a => (
-                        <li key={a.id}>
-                          <a href={a.link} target="_blank" rel="noopener noreferrer" className="group flex items-baseline gap-4 py-2">
-                            <span className="min-w-0 flex-1 truncate text-[13.5px] font-semibold text-gray-900 group-hover:text-spark-purple">{articleTitle(a, locale)}</span>
-                            <span className="shrink-0 text-[11.5px] text-gray-400">{t(a.source)} · {dayLabel(kstDay(a.pubDate), locale)}</span>
-                          </a>
-                        </li>
-                      ))}
-                    </ul>
-                  </section>
-                );
-              })}
-            </div>
+            <TopicList topics={topics.filter(x => x.id === topic)} pool={pool} topicOf={topicOf} byImportance={byImportance} />
           )}
         </>
       )}
+    </div>
+  );
+}
+
+/** 세부 분류별 목록 — 분류 머리를 띠로, 안은 중요도 순. 목록이 길어도 묶음이 바뀌는 곳이 한눈에 보이게. */
+function TopicList({ topics, pool, topicOf, byImportance }: {
+  topics: { id: string; label: string }[];
+  pool: Item[];
+  topicOf: (a: Item) => string;
+  byImportance: (list: Item[]) => Item[];
+}) {
+  const t = useT();
+  const locale = useLocale() === 'en' ? 'en' : 'ko';
+  return (
+    <div className="mt-5 space-y-6">
+      {topics.map(x => {
+        const list = byImportance(pool.filter(a => topicOf(a) === x.id));
+        if (list.length === 0) return null;
+        return (
+          <section key={x.id} className="overflow-hidden rounded-xl border border-spark-border">
+            <div className="flex items-baseline gap-2 border-b border-spark-border bg-spark-subtle px-4 py-2.5">
+              <span className="text-[15px] font-extrabold tracking-tight text-spark-ink">{t(x.label)}</span>
+              <span className="rounded-md bg-white px-1.5 py-0.5 text-[11px] font-bold text-spark-muted">{list.length}{t('건')}</span>
+            </div>
+            <ul className="divide-y divide-spark-border/60 px-4">
+              {list.map(a => (
+                <li key={a.id}>
+                  <a href={a.link} target="_blank" rel="noopener noreferrer" className="group flex items-baseline gap-4 py-2">
+                    <span className="min-w-0 flex-1 truncate text-[13.5px] font-semibold text-gray-900 group-hover:text-spark-purple">{articleTitle(a, locale)}</span>
+                    <span className="shrink-0 text-[11.5px] text-gray-400">{t(a.source)} · {dayLabel(kstDay(a.pubDate), locale)}</span>
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </section>
+        );
+      })}
     </div>
   );
 }

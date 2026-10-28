@@ -21,6 +21,9 @@ const MODEL = 'gpt-4.1';
 const BATCH = 20;
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
+/** 투자 시장 동향 기사의 matchedKeyword — 업계 동향 탭으로 보내되 하우스 이름이 아니라는 표시. */
+export const MARKET_KEYWORD = '업계 전반';
+
 export type PolicyBucket = 'sparklabs_self' | 'portfolio_company' | 'competitor' | 'policy_support' | 'fund_invest' | 'noise';
 
 export interface ClassifyItem { title: string; body?: string | null }
@@ -93,7 +96,9 @@ async function classifyWithAI(items: ClassifyItem[]): Promise<ClassifyResult[]> 
           ...(typeof r.kr === 'boolean' ? { isOverseas: !r.kr } : {}),
         };
         const sub = (r.c === 'fund' ? ['round', 'fund', 'market'] : ['grant', 'policy', 'ecosystem']).includes(r.sub ?? '') ? r.sub : undefined;
-        if (r.c === 'fund') fallback[r.i] = { category: 'fund_invest', ...meta, curationTopic: sub ?? 'market' };
+        // 투자 시장 동향·통계는 투자·펀드 탭이 아니라 업계 동향(competitor)으로 — 대시보드에서 시장 동향 칸을 뺐다(2026-10-28 소윤).
+        if (r.c === 'fund' && sub === 'market') fallback[r.i] = { category: 'competitor', matchedKeyword: MARKET_KEYWORD, ...meta, curationTopic: 'market' };
+        else if (r.c === 'fund') fallback[r.i] = { category: 'fund_invest', ...meta, curationTopic: sub ?? 'round' };
         else if (r.c === 'none') fallback[r.i] = { category: 'noise' };
         else if (r.c === 'acvc' && r.house?.trim()) fallback[r.i] = { category: 'competitor', matchedKeyword: r.house.trim(), ...meta };
         else fallback[r.i] = { category: 'policy_support', ...meta, curationTopic: sub ?? 'ecosystem' };
