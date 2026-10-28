@@ -5751,16 +5751,16 @@
   },
   {
     "name": "빔스튜디오",
-    "englishName": "VIIMstudio",
+    "englishName": "Beam Studio",
     "category": "portfolio_company",
     "status": "ACTIVE",
     "portfolioStatus": "Live",
     "tier": "A",
     "primaryKeyword": "빔스튜디오",
-    "helperKeywords": "김근재 패션AI",
-    "excludeWords": null,
+    "helperKeywords": null,
+    "excludeWords": "바이스벌사, VIIMstudio, VIIM, 김근재",
     "contextWords": null,
-    "notes": "패션 특화 AI 영상 제작 플랫폼, 서울패션위크 런웨이 연출 등에 활용"
+    "notes": "디지털 휴먼·실시간 AI 딥페이크 솔루션 기업(Beam Studio). 바이스벌사의 패션 AI 서비스 VIIMstudio(빔스튜디오)와 다른 회사"
   },
   {
     "name": "빌리지베이비",
