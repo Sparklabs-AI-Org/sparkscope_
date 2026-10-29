@@ -99,6 +99,7 @@ GitHub `schedule`은 예약보다 2~3시간 늦게 시작한다(9/11~9/28 실측
 |---|---|---|
 | 매일 05:20·05:40 | Vercel `/api/cron/gv-collect` · `taiwan-collect` | 해외 포트폴리오 수집 |
 | 매일 05:50 | Vercel → `daily-collect.yml` | 수집. 06:13 `schedule`은 예비 — 이미 돌았으면 `collect-guard.ts`가 건너뜀 |
+| 월~금 07:00 | Vercel `/api/cron/policy-collect` | 깡프로 스타트업 뉴스·데모데이 수집 → 정책·지원사업 / 투자·펀드 / 업계 동향으로 분류(`policy-classify.ts`). 08:10 확정 전에 끝나야 그날 메일·브리핑에 들어간다(10:10이던 것을 10-29에 당김) |
 | 월 07:30 | Vercel → `daily-briefing.yml` | 위클리 영상(오늘 수집 완료를 08:05까지 기다림) |
 | 월~금 08:10 | Vercel `/api/cron/daily-send-only?hold=1` | 브리핑 헤드라인 스냅샷 확정(메일은 영상이 나올 때까지 보류) |
 | 화~금 08:12 | Vercel → `daily-briefing.yml` | 데일리 영상(헤드라인 확정을 08:55까지 기다림) — 약 6분 |

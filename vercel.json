@@ -61,7 +61,7 @@
     },
     {
       "path": "/api/cron/policy-collect",
-      "schedule": "10 1 * * 1-5"
+      "schedule": "0 22 * * 0-4"
     }
   ]
 }

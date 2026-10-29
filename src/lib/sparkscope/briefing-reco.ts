@@ -524,10 +524,14 @@ export async function pickByTiers(w: BroadcastWindow): Promise<{ picked: Briefin
   // 스타트업계 — 다이제스트 "스타트업계 뉴스" 섹션(국내 AI 칸과 겹치지 않게 AI 주제는 뺀다).
   // 투자·펀드 소식 — 스타트업계·AC·VC 기사 중 제목에 투자 유치·투자 집행·펀드 결성이 드러나는 것(2026-10-28 소윤).
   // 예전 '스타트업계' 칸은 일반 업계 소식이라 쓸데없는 기사가 많았다.
-  const DEAL = /투자\s?(유치|받|했|집행|단행|확보|참여|결정)|시리즈\s?[A-F]|프리\s?[AB]|시드\s?(투자|라운드)|브릿지\s?투자|억\s?원?\s?(규모\s?)?(투자|조달)|펀드\s?(결성|조성|출범|출자|모집|클로징)|출자\s?(사업|선정)|모태펀드|벤처펀드|엑시트|인수합병|M&A|IPO|상장\s?(추진|예정|성공)/i;
+  // 엑시트·인수합병·M&A·IPO·상장은 뺐다 — 사모펀드·대기업 거래가 걸려 들어왔다(2026-10-29 10번 "IPO 약속 깼다" 골프존홀딩스 vs MBK 매각 분쟁).
+  // 이 칸은 스타트업이 투자를 받거나 벤처펀드가 만들어지는 소식만이다.
+  const DEAL = /투자\s?(유치|받|했|집행|단행|확보|참여|결정)|시리즈\s?[A-F]|프리\s?[AB]|시드\s?(투자|라운드)|브릿지\s?투자|억\s?원?\s?(규모\s?)?(투자|조달)|펀드\s?(결성|조성|출범|출자|모집|클로징)|출자\s?(사업|선정)|모태펀드|벤처펀드/i;
+  const NOT_STARTUP_DEAL = /MBK|사모펀드|PEF|경영권|매각|인수금융|바이아웃|먹튀/;
   // 깡프로·데모데이에서 나눈 투자·펀드 기사(policy-classify.ts → fund_invest)를 앞에 둔다 — 사람이 고른 큐레이션이다.
   const fundRows = (await prisma.article.findMany({
-    where: { category: 'fund_invest', isNoise: false, pubDate: { gte: w.since, ...(w.until ? { lt: w.until } : {}) } },
+    // 수집 시각 기준 — 깡프로 글은 새벽(01시께)에 올라오고 정책 수집은 10:10이라, 발행 시각으로 거르면 늘 창 앞에 걸려 빠졌다(2026-10-29).
+    where: { category: 'fund_invest', isNoise: false, collectedAt: { gte: w.since, ...(w.until ? { lt: w.until } : {}) } },
     select: { id: true, title: true, link: true, source: true, pubDate: true, bodyText: true },
     orderBy: { pubDate: 'desc' },
     take: 20,
@@ -537,7 +541,7 @@ export async function pickByTiers(w: BroadcastWindow): Promise<{ picked: Briefin
   }));
   const T = [...fundRows, ...buildClusteredPool(candidates.filter(a =>
     (a.category === 'industry_trend' || a.category === 'competitor')
-    && isKorean(a.title) && DEAL.test(a.title) && !STOCK_TICKER.test(a.title) && !weakForBriefing(a)))
+    && isKorean(a.title) && DEAL.test(a.title) && !NOT_STARTUP_DEAL.test(a.title) && !STOCK_TICKER.test(a.title) && !weakForBriefing(a)))
     .map(a => ({ ...fromArticle(a, idByLink), label: '💰 투자·펀드' }))
     .sort((x, y) => rankOf(y) - rankOf(x))]
     .filter(fresh)
@@ -561,7 +565,8 @@ export async function pickByTiers(w: BroadcastWindow): Promise<{ picked: Briefin
         select: policySelect, orderBy: { pubDate: 'desc' }, take: 2,
       })).sort((x, y) => Number(/TOP\s?10\b/.test(y.title)) - Number(/TOP\s?10\b/.test(x.title))).map(toPolicy)
     : (await prisma.article.findMany({
-        where: { category: 'policy_support', isNoise: false, pubDate: { gte: w.since, ...(w.until ? { lt: w.until } : {}) } },
+        // 수집 시각 기준(투자·펀드와 같은 이유)
+        where: { category: 'policy_support', isNoise: false, collectedAt: { gte: w.since, ...(w.until ? { lt: w.until } : {}) } },
         select: policySelect, orderBy: { pubDate: 'desc' }, take: 40,
       })).filter(a => !ROUNDUP.test(a.title) && !STOCK_TICKER.test(a.title) && !PERSONNEL.test(a.title))
         .sort((x, y) => Number(y.curationTopic !== 'ecosystem') - Number(x.curationTopic !== 'ecosystem') || rankOf(y) - rankOf(x))

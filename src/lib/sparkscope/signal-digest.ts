@@ -209,7 +209,8 @@ async function loadCurated(): Promise<{ policy: CuratedArticle[]; fund: CuratedA
     const RANK: Record<string, number> = { CRITICAL: 4, HIGH: 3, MEDIUM: 2, LOW: 1 };
     const TOPIC_ORDER: Record<string, number> = { grant: 0, policy: 1, fund: 0, round: 1 };
     const read = async (category: string) => (await prisma.article.findMany({
-      where: { category, isNoise: false, pubDate: { gte: since, lte: new Date() },
+      // 수집 시각 기준 — 깡프로 글은 새벽에 올라오고 정책 수집은 10:10이라 발행 시각으로 거르면 늘 메일 창 앞에 걸려 빠졌다(2026-10-29).
+      where: { category, isNoise: false, collectedAt: { gte: since, lte: new Date() },
         // 투자·펀드는 대시보드처럼 국내 소식만(해외 딜은 Inter 영역).
         ...(category === 'fund_invest' ? { OR: [{ isOverseas: null }, { isOverseas: false }] } : {}) },
       select: { title: true, link: true, source: true, pubDate: true, bodyText: true, importance: true, curationTopic: true },
