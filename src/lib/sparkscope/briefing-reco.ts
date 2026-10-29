@@ -314,7 +314,9 @@ const RANK_SYSTEM = `당신은 스파크랩(한국의 스타트업 액셀러레�
 - 투자 유치·인수합병·상장·대형 계약·신제품 출시·규제 변화처럼 "사건"이 있는 기사를 우선합니다.
 - 주가 등락·행사 스케치·인터뷰·칼럼은 뒤로 미룹니다. 기자 체험기("~해 보았다")·해설 기획("~하는 이유")·후원 콘텐츠는 고르지 마세요.
 - 같은 사건을 다룬 기사는 그룹이 달라도 하나만 고릅니다(국내 기사와 해외 기사가 같은 사건일 수 있음).
-- "글로벌 AI" 그룹은 해외 AI 소식만 고르는 게 원칙입니다(OpenAI·Anthropic·구글·메타·엔비디아 등). [국내] 표시 기사는
+- "글로벌 AI" 그룹은 VC·금융 업계 사람이 숫자와 함께 대화에 쓸 수 있는 해외 AI 소식을 고릅니다 — 돈의 흐름(대형 라운드·기업가치·M&A·IPO),
+  빅테크 AI 투자가 실적·주가에 준 영향, 경쟁 구도·가격 변화, 인프라·공급망, 규제·지정학, 글로벌 VC 움직임 순으로 우선합니다.
+  일반 모델·기능 출시와 개별 도입 사례는 고르지 마세요. 해외 AI 소식이 원칙입니다(OpenAI·Anthropic·구글·메타·엔비디아 등). [국내] 표시 기사는
   "삼성이 Anthropic에 투자"처럼 해외 주요 매체도 크게 다룰 사건일 때만, 그것도 최대 1건입니다. 국내 기업의 제품 출시·행사·
   협약·전시회 소식은 고르지 마세요.
 - "투자 유치·펀드 결성" 그룹은 누가 투자했는지·누가 투자받았는지(금액·라운드·투자사), 어떤 펀드가 결성·조성됐는지가
@@ -356,25 +358,120 @@ async function rankWithAI(
 }
 
 /**
- * 해외 AI 후보 중 사건 기사가 아닌 것(체험기·실험기·칼럼·의견·해설·기획·인터뷰·후원 콘텐츠)의 번호. 실패하면 빈 집합(선정은 그대로).
+ * 해외 AI 칸 규칙(2026-10-29 소윤) — "VC·금융 쪽 사람이 오늘 점심 자리에서 숫자와 함께 꺼낼 수 있는 이야기인가".
+ * 남기는 것: ① AI 쪽 돈의 흐름(1억 달러 이상 라운드·기업가치·M&A·IPO·대형 펀드) ② 빅테크 AI 투자가 실적·주가에 준 영향
+ * ③ 경쟁 구도 변화(가격 경쟁·수익 모델·대형 계약·판도 바꾸는 제휴) ④ 인프라·공급망(칩·데이터센터·전력 대형 계약·공급 부족)
+ * ⑤ 규제·지정학(규제·수출 통제·반독점) ⑥ 글로벌 VC 움직임(주요 투자사 AI 펀드·테제·대형 베팅).
+ * 모델 출시는 선두 연구소의 대표 모델이거나 가격·성능이 시장 구도를 바꿀 때만.
+ * 빼는 것: 보도자료성 제품·기능 출시, 개별 기업 도입 사례(대형 계약 제외), 해설·기획·체험기·칼럼·후원 콘텐츠, 숫자 없는 트렌드 기사.
+ * 남길 번호 집합을 돌려준다. 실패하면 전부 남긴다(선정은 그대로).
  */
-async function featureOrOpinion(items: BriefingCandidate[]): Promise<Set<number>> {
-  if (items.length === 0) return new Set();
+const FINANCE_RULES = `VC·금융 업계(벤처캐피털·액셀러레이터·글로벌 금융회사) 사람이 아침 브리핑에서 듣고, 점심 자리에서 숫자와 함께 꺼낼 수 있는
+AI 뉴스만 고릅니다. 기준 질문: "그래서 누가 돈을 벌고 누가 잃나"로 이어지는가.
+
+남길 것
+1. AI 쪽 돈의 흐름: 1억 달러 이상 투자 라운드, 기업가치 변화, 인수합병, IPO·상장 준비, 대형 펀드 결성
+2. 빅테크 AI 투자가 실적·주가에 준 영향: 설비투자 규모, 현금 소진, 실적·가이던스, 주가 반응
+3. 경쟁 구도 변화: 가격 인하 경쟁, 수익 모델 변화, 수억 달러 이상 고객 계약, 판도를 바꾸는 제휴
+4. 인프라·공급망: 칩·데이터센터·전력의 대규모 계약, 공급 부족, 가격 변동
+5. 규제·지정학: 미국·EU·중국 AI 규제, 반도체 수출 통제, 반독점 조사
+6. 글로벌 VC 움직임: 주요 투자사(a16z·세쿼이아·소프트뱅크 등)의 AI 펀드·투자 테제·대형 베팅
+- 모델 출시는 OpenAI·앤스로픽·구글·메타·xAI 등 선두 연구소의 대표 모델이거나, 가격·성능이 시장 구도를 바꿀 때만
+  (오픈소스가 상용 모델을 따라잡음, 가격이 절반 이하 등)
+
+뺄 것
+- 보도자료성 제품·기능 출시, 일반 모델·특화 모델 공개, 연구 데모, 벤치마크 자랑
+- 개별 기업의 AI 도입 사례(수억 달러 이상 계약이 아니면)
+- 해설·기획("~하는 이유", "~할 때 일어나는 일"), 기자 체험기, 칼럼·의견, 인터뷰, 기업 후원·제휴 콘텐츠
+- 금액·기업가치·점유율 같은 숫자가 없는 트렌드 기사`;
+
+async function financeRelevant(items: BriefingCandidate[]): Promise<Set<number>> {
+  const all = new Set(items.map((_, i) => i));
+  if (items.length === 0) return all;
   try {
     const resp = await openai.chat.completions.create({
       model: RANK_MODEL,
       temperature: 0,
       response_format: { type: 'json_object' },
       messages: [
-        { role: 'system', content: '아침 뉴스 브리핑 후보입니다. 사건 기사(기업·기관의 발표·출시·투자·인수·실적·규제·사고처럼 새로 일어난 일)가 아닌 것을 고르세요: 기자 체험기·실험기("~해 보았다"), 칼럼·의견·사설, 해설·기획("~하는 이유", "~할 때 일어나는 일"), 인물 인터뷰, 기업 후원·제휴 콘텐츠(sponsored, in partnership). JSON으로만: {"drop":[번호,...]} — 없으면 {"drop":[]}' },
+        { role: 'system', content: `${FINANCE_RULES}\n\n위 기준을 통과하는 후보의 번호만 고르세요. 애매하면 빼세요. JSON으로만: {"keep":[번호,...]}` },
         { role: 'user', content: items.map((c, i) => `${i}. [${c.source}] ${c.title} — ${c.summary}`).join('\n') },
       ],
     });
-    const drop = (JSON.parse(resp.choices[0]?.message?.content ?? '{}').drop ?? []) as number[];
-    return new Set(drop.filter(n => Number.isInteger(n) && n >= 0 && n < items.length));
+    const keep = (JSON.parse(resp.choices[0]?.message?.content ?? '{}').keep ?? []) as number[];
+    return new Set(keep.filter(n => Number.isInteger(n) && n >= 0 && n < items.length));
   } catch (e) {
-    console.warn('[briefing-reco] 사건 기사 판정 실패(건너뜀):', e);
-    return new Set();
+    console.warn('[briefing-reco] 금융 관련성 판정 실패(전부 남김):', e);
+    return all;
+  }
+}
+
+/** 본문을 읽을 수 있는 판 — 원래 기사가 되면 그대로, 아니면 같은 사건 다른 매체 기사로 바꾼 것, 둘 다 안 되면 null. */
+async function readableVersion(c: BriefingCandidate): Promise<BriefingCandidate | null> {
+  const { articleExcerpt } = await import('../briefing-video/article-text');
+  // 해외 기사는 원문 제목으로 대조한다 — 한국어 번역 제목을 주면 영문 본문과 낱말이 안 겹쳐 맞는 본문도 버린다(script.ts와 같은 이유).
+  const original = (await prisma.interNews.findUnique({ where: { url: c.url }, select: { title: true } }).catch(() => null))?.title
+    ?? (/[가-힣]/.test(c.title) && c.kind !== 'intra' ? '' : c.title);
+  if ((await articleExcerpt(c.url, original).catch(() => '')).length >= 150) return c;
+  for (const alt of await sameEventElsewhere(c)) {
+    const url = alt.url;
+    if ((await articleExcerpt(url).catch(() => '')).length >= 150) {
+      console.log(`[briefing-reco] 페이월 대체: ${c.source} → ${alt.source} (${c.title.slice(0, 30)})`);
+      return { ...c, url, ref: c.kind === 'intra' ? c.ref : url, source: alt.source };
+    }
+  }
+  return null;
+}
+
+/**
+ * 같은 사건을 다룬 다른 매체 기사 — 빙 뉴스 검색 결과에서 AI가 고른다. 제목 낱말 겹침으로는 못 찾는다
+ * (FT "Google shares tumble…" ↔ 로이터 "Alphabet stock sinks…" — 같은 사건인데 낱말이 다르다, 2026-10-29).
+ */
+async function sameEventElsewhere(c: BriefingCandidate): Promise<{ source: string; url: string }[]> {
+  try {
+    // 해외 트렌드 카드는 제목이 한국어 번역이라 원문 제목으로 찾는다.
+    const original = (await prisma.interNews.findUnique({ where: { url: c.url }, select: { title: true } }).catch(() => null))?.title ?? c.title;
+    // 제목 그대로 검색하면 그 매체 글만 나온다 — 짧은 영문 검색어(다른 표기 포함)를 만든다(FT 'Google shares tumble…' → 'Alphabet shares fall AI spending cash burn').
+    const qResp = await openai.chat.completions.create({
+      model: RANK_MODEL,
+      temperature: 0,
+      response_format: { type: 'json_object' },
+      messages: [
+        { role: 'system', content: '뉴스 제목을 보고 같은 사건을 다룬 다른 매체 기사를 찾을 영어 검색어를 4~6단어로 만드세요. 회사는 다른 매체가 쓸 법한 이름(예: Google 실적이면 Alphabet)으로, 숫자·인용·수식어는 빼고 사건의 핵심 낱말만. JSON으로만: {"q":"..."}' },
+        { role: 'user', content: original },
+      ],
+    });
+    const short = String(JSON.parse(qResp.choices[0]?.message?.content ?? '{}').q ?? '').trim();
+    // 구글 뉴스 검색은 찾긴 하지만 링크가 중계 주소라 실제 기사로 못 푼다(resolveGoogleNewsUrl이 null, 2026-10-29) —
+    // 빙 뉴스 RSS는 링크 안에 실제 주소(url=)를 담아 준다.
+    const q = (short || original).replace(/["'`“”‘’]/g, ' ').slice(0, 110);
+    const res = await fetch('https://www.bing.com/news/search?' + new URLSearchParams({ q, format: 'rss' }), {
+      headers: { 'User-Agent': 'Mozilla/5.0 (compatible; SparkScope/1.0)' },
+    });
+    if (!res.ok) return [];
+    const xml = await res.text();
+    const decode = (t: string) => t.replace(/&amp;/g, '&').replace(/&#39;/g, "'").replace(/&quot;/g, '"');
+    const hits = (xml.match(/<item>[\s\S]*?<\/item>/g) ?? []).slice(0, 10).map(b => {
+      const link = decode(b.match(/<link>([\s\S]*?)<\/link>/)?.[1] ?? '');
+      const url = (() => { try { return new URL(link).searchParams.get('url') ?? link; } catch { return ''; } })();
+      const source = (() => { try { return new URL(url).hostname.replace(/^www\./, ''); } catch { return ''; } })();
+      return { title: decode(b.match(/<title>([\s\S]*?)<\/title>/)?.[1] ?? ''), source, url };
+    }).filter(h => h.url && h.source && !c.url.includes(h.source));
+    if (hits.length === 0) return [];
+    const resp = await openai.chat.completions.create({
+      model: RANK_MODEL,
+      temperature: 0,
+      response_format: { type: 'json_object' },
+      messages: [
+        { role: 'system', content: '[기준 기사]와 같은 사건(같은 발표·실적·거래)을 다룬 [후보] 번호를 고르세요. 회사 이름 표기가 달라도(Google/Alphabet) 같은 사건이면 고릅니다. 다른 회사·다른 사건이면 고르지 마세요. JSON으로만: {"same":[번호,...]}' },
+        { role: 'user', content: `[기준 기사] ${original}\n\n[후보]\n${hits.map((h, i) => `${i}. ${h.title} (${h.source})`).join('\n')}` },
+      ],
+    });
+    const same = (JSON.parse(resp.choices[0]?.message?.content ?? '{}').same ?? []) as number[];
+    return same.filter(n => Number.isInteger(n) && hits[n]).slice(0, 4).map(n => ({ source: hits[n]!.source, url: hits[n]!.url }));
+  } catch (e) {
+    console.warn('[briefing-reco] 같은 사건 다른 매체 찾기 실패:', e);
+    return [];
   }
 }
 
@@ -543,10 +640,10 @@ export async function pickByTiers(w: BroadcastWindow): Promise<{ picked: Briefin
   ].filter((c, i, arr) => arr.findIndex(x => x.url === c.url) === i).filter(fresh)
     // 여러 소식을 묶은 뉴스레터("주요 뉴스: 앤스로픽 IPO 전망, 스마트 전력망, …" — MIT Tech Review The Download)는 한 사건이 아니라 뺀다.
     .filter(c => !/^(주요 뉴스|The Download)\s*[:：]/i.test(c.title));
-  // 체험기·칼럼·기획·후원 콘텐츠는 뺀다 — 사건(발표·출시·투자·실적·규제)이 아니라 대본에 쓸 사실이 없다
-  // (2026-10-29 "AI 에이전트들에게 판타지 축구팀을 맡겨보았다", 10-28 "AI가 완전히 통제를 벗어날 때 일어나는 일").
-  const notEvent = await featureOrOpinion(G);
-  const GE = G.filter((_, i) => !notEvent.has(i));
+  // VC·금융 업계 사람에게 쓸모 있는 것만 남긴다(2026-10-29 소윤 규칙 — financeRelevant 머리말). 보도자료성 모델·기능 출시,
+  // 개별 도입 사례, 체험기·기획·후원 콘텐츠, 숫자 없는 트렌드 기사는 뺀다.
+  const keepFinance = await financeRelevant(G);
+  const GE = G.filter((_, i) => keepFinance.has(i));
 
   // 스타트업계 — 다이제스트 "스타트업계 뉴스" 섹션(국내 AI 칸과 겹치지 않게 AI 주제는 뺀다).
   // 투자·펀드 소식 — 스타트업계·AC·VC 기사 중 제목에 투자 유치·투자 집행·펀드 결성이 드러나는 것(2026-10-28 소윤).
@@ -603,7 +700,9 @@ export async function pickByTiers(w: BroadcastWindow): Promise<{ picked: Briefin
         .slice(0, 20);
 
   // AI 칸은 해외 우선 — 국내 AI는 [국내] 표시를 달아 글로벌 그룹 뒤에 붙인다(AI가 해외 매체급일 때만 고른다).
-  const GA = [...GE, ...DA];
+  // 국내 AI도 같은 기준 — 금융·투자 쪽 사람에게 쓸모 있는 것만(10/29 '애딧 렌즈 모두의 창업 선정'이 AI 칸에 들어감).
+  const keepDomestic = await financeRelevant(DA);
+  const GA = [...GE, ...DA.filter((_, i) => keepDomestic.has(i))];
   const pools: Record<Group, BriefingCandidate[]> = { S, P, D, G: GA, Y, T };
   const counts = { S: S.length, P: P.length, D: D.length, G: GA.length, Y: Y.length, T: T.length };
   const total = BRIEFING_COUNT[w.program];
@@ -684,6 +783,28 @@ export async function pickByTiers(w: BroadcastWindow): Promise<{ picked: Briefin
     }
   }
   // 칸 순서대로(스파크랩 → 국내 포폴 → 해외 포폴 → AI → 스타트업계) 보이게 정렬
+  // 페이월(FT·WSJ·블룸버그 등)로 본문을 못 읽는 해외 AI 기사 — 같은 사건을 다룬 다른 매체에서 본문을 찾아 그 기사로 바꾼다.
+  // 없으면 빼고 같은 칸 다음 후보로 채운다(제목만으로 대본을 쓰면 숫자를 지어낼 위험, 2026-10-29 소윤 규칙).
+  for (let i = 0; i < picked.length; i++) {
+    if (tiers[i] !== GROUP_TIER.G) continue;
+    const swapped = await readableVersion(picked[i]!);
+    if (swapped) { picked[i] = swapped; continue; }
+    console.log(`[briefing-reco] 본문 없음·대체 기사 없음 — 제외: ${picked[i]!.title.slice(0, 40)}`);
+    picked.splice(i, 1); tiers.splice(i, 1); i--;
+    for (const c of [...(chosen?.G ?? []), ...pools.G]) {
+      if (picked.length >= total) break;
+      if (used.has(c.url)) continue;
+      const ok = await readableVersion(c);
+      if (ok && take('G', ok)) break;
+    }
+  }
+  // 해외 AI가 모자라 칸이 비면 국내 포폴 → 투자·펀드 → 정책 순으로 채운다(해외 AI 기준을 좁힌 뒤 10개가 안 차는 날이 생겼다).
+  for (const g of ['P', 'T', 'Y'] as Group[]) {
+    for (const c of [...(chosen?.[g] ?? []), ...pools[g]]) {
+      if (picked.length >= total) break;
+      take(g, c);
+    }
+  }
   // 같은 칸 안에서는 고른 순서 그대로 — 위클리 공고 정리만 창업공고 TOP 10을 TOP 100보다 앞에.
   const top10First = (c: BriefingCandidate) => Number(weekly && /TOP\s?10\b/.test(c.title));
   const order = picked.map((c, i) => ({ c, t: tiers[i] })).sort((a, b) => a.t - b.t || top10First(b.c) - top10First(a.c));
