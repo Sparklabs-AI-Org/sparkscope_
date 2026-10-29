@@ -312,7 +312,7 @@ const RANK_SYSTEM = `당신은 스파크랩(한국의 스타트업 액셀러레�
 중요도 기준
 - 스파크랩·포트폴리오사에 직접 영향을 주는 사건 > 업계 전반에 큰 사건 > 일반 소식.
 - 투자 유치·인수합병·상장·대형 계약·신제품 출시·규제 변화처럼 "사건"이 있는 기사를 우선합니다.
-- 주가 등락·행사 스케치·인터뷰·칼럼은 뒤로 미룹니다.
+- 주가 등락·행사 스케치·인터뷰·칼럼은 뒤로 미룹니다. 기자 체험기("~해 보았다")·해설 기획("~하는 이유")·후원 콘텐츠는 고르지 마세요.
 - 같은 사건을 다룬 기사는 그룹이 달라도 하나만 고릅니다(국내 기사와 해외 기사가 같은 사건일 수 있음).
 - "글로벌 AI" 그룹은 해외 AI 소식만 고르는 게 원칙입니다(OpenAI·Anthropic·구글·메타·엔비디아 등). [국내] 표시 기사는
   "삼성이 Anthropic에 투자"처럼 해외 주요 매체도 크게 다룰 사건일 때만, 그것도 최대 1건입니다. 국내 기업의 제품 출시·행사·
@@ -353,6 +353,29 @@ async function rankWithAI(
     }
   });
   return out;
+}
+
+/**
+ * 해외 AI 후보 중 사건 기사가 아닌 것(체험기·실험기·칼럼·의견·해설·기획·인터뷰·후원 콘텐츠)의 번호. 실패하면 빈 집합(선정은 그대로).
+ */
+async function featureOrOpinion(items: BriefingCandidate[]): Promise<Set<number>> {
+  if (items.length === 0) return new Set();
+  try {
+    const resp = await openai.chat.completions.create({
+      model: RANK_MODEL,
+      temperature: 0,
+      response_format: { type: 'json_object' },
+      messages: [
+        { role: 'system', content: '아침 뉴스 브리핑 후보입니다. 사건 기사(기업·기관의 발표·출시·투자·인수·실적·규제·사고처럼 새로 일어난 일)가 아닌 것을 고르세요: 기자 체험기·실험기("~해 보았다"), 칼럼·의견·사설, 해설·기획("~하는 이유", "~할 때 일어나는 일"), 인물 인터뷰, 기업 후원·제휴 콘텐츠(sponsored, in partnership). JSON으로만: {"drop":[번호,...]} — 없으면 {"drop":[]}' },
+        { role: 'user', content: items.map((c, i) => `${i}. [${c.source}] ${c.title} — ${c.summary}`).join('\n') },
+      ],
+    });
+    const drop = (JSON.parse(resp.choices[0]?.message?.content ?? '{}').drop ?? []) as number[];
+    return new Set(drop.filter(n => Number.isInteger(n) && n >= 0 && n < items.length));
+  } catch (e) {
+    console.warn('[briefing-reco] 사건 기사 판정 실패(건너뜀):', e);
+    return new Set();
+  }
 }
 
 /**
@@ -520,6 +543,10 @@ export async function pickByTiers(w: BroadcastWindow): Promise<{ picked: Briefin
   ].filter((c, i, arr) => arr.findIndex(x => x.url === c.url) === i).filter(fresh)
     // 여러 소식을 묶은 뉴스레터("주요 뉴스: 앤스로픽 IPO 전망, 스마트 전력망, …" — MIT Tech Review The Download)는 한 사건이 아니라 뺀다.
     .filter(c => !/^(주요 뉴스|The Download)\s*[:：]/i.test(c.title));
+  // 체험기·칼럼·기획·후원 콘텐츠는 뺀다 — 사건(발표·출시·투자·실적·규제)이 아니라 대본에 쓸 사실이 없다
+  // (2026-10-29 "AI 에이전트들에게 판타지 축구팀을 맡겨보았다", 10-28 "AI가 완전히 통제를 벗어날 때 일어나는 일").
+  const notEvent = await featureOrOpinion(G);
+  const GE = G.filter((_, i) => !notEvent.has(i));
 
   // 스타트업계 — 다이제스트 "스타트업계 뉴스" 섹션(국내 AI 칸과 겹치지 않게 AI 주제는 뺀다).
   // 투자·펀드 소식 — 스타트업계·AC·VC 기사 중 제목에 투자 유치·투자 집행·펀드 결성이 드러나는 것(2026-10-28 소윤).
@@ -576,7 +603,7 @@ export async function pickByTiers(w: BroadcastWindow): Promise<{ picked: Briefin
         .slice(0, 20);
 
   // AI 칸은 해외 우선 — 국내 AI는 [국내] 표시를 달아 글로벌 그룹 뒤에 붙인다(AI가 해외 매체급일 때만 고른다).
-  const GA = [...G, ...DA];
+  const GA = [...GE, ...DA];
   const pools: Record<Group, BriefingCandidate[]> = { S, P, D, G: GA, Y, T };
   const counts = { S: S.length, P: P.length, D: D.length, G: GA.length, Y: Y.length, T: T.length };
   const total = BRIEFING_COUNT[w.program];
