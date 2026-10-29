@@ -54,8 +54,10 @@ export async function sendDigestToSubscribers(params: {
   dryRun?: boolean;
   /** 오늘 영상이 아직 없을 때 — 영상 블록을 "준비 중" 안내로 바꾼다 */
   videoPending?: boolean;
+  /** 브리핑 발행 일시 중지 중 — 브리핑 링크 블록을 넣지 않는다(briefing.ts isBriefingPaused) */
+  briefingOff?: boolean;
 }): Promise<SubscriberSendResult | null> {
-  const { data, subject, baseUrl, dryRun, videoPending } = params;
+  const { data, subject, baseUrl, dryRun, videoPending, briefingOff } = params;
 
   const subscribers = await prisma.digestSubscriber.findMany({
     where: { active: true },
@@ -86,6 +88,7 @@ export async function sendDigestToSubscribers(params: {
       prefs,
       subscriberToken: SUBSCRIBER_TOKEN_PLACEHOLDER,
       videoPending,
+      briefingOff,
     });
     for (const p of people) {
       mails.push({

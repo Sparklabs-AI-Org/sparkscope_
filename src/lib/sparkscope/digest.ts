@@ -214,7 +214,7 @@ function mergeResidualDuplicates(list: AnalyzedArticle[]): AnalyzedArticle[] {
 export function renderDigestHtml(
   data: DigestData,
   baseUrl?: string,
-  opts: { prefs?: SectionPrefs; subscriberToken?: string; videoPending?: boolean } = {},
+  opts: { prefs?: SectionPrefs; subscriberToken?: string; videoPending?: boolean; briefingOff?: boolean } = {},
 ): string {
   const pStat = data.stats;
   const prefs = opts.prefs ?? ALL_SECTIONS;
@@ -240,7 +240,7 @@ ${SIGNAL_EMAIL_CSS}
     ${renderHeaderStats(pStat, prefs, data.inter)}
   </div>
 
-  ${opts.subscriberToken ? renderBriefingLink(data.date, base, opts.subscriberToken, !!opts.videoPending) : ''}
+  ${opts.subscriberToken && !opts.briefingOff ? renderBriefingLink(data.date, base, opts.subscriberToken, !!opts.videoPending) : ''}
   ${SHOW_SUBSCRIPTION_UI ? renderSubscriptionTip(base, opts.subscriberToken) : ''}
 
   ${data.weeklyFlow ? `

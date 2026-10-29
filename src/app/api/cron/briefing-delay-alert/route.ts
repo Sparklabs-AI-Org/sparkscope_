@@ -6,7 +6,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { adminEmails } from '@/lib/roles';
-import { kstDateKey, broadcastFor, loadBriefingSnapshot } from '@/lib/sparkscope/briefing';
+import { kstDateKey, broadcastFor, loadBriefingSnapshot, isBriefingPaused } from '@/lib/sparkscope/briefing';
 import { loadBriefingVideo } from '@/lib/briefing-video/publish';
 import { sendAdminAlert } from '@/lib/sparkscope/mailer';
 
@@ -21,6 +21,8 @@ export async function GET(req: Request) {
   const stage = u.searchParams.get('stage') === 'final' ? 'final' : 'late';
   const dry = u.searchParams.get('dry') === '1';
 
+  // 발행 일시 중지 중이면 영상이 없는 게 정상이다 — 지연 알림을 보내지 않는다.
+  if (await isBriefingPaused()) return NextResponse.json({ ok: true, status: 'paused' });
   const dateKey = kstDateKey();
   const kstNow = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Seoul' }));
   // Digest.date는 한국 날짜의 UTC 자정으로 저장된다 — 서버 시간대와 무관하게 같은 값을 만든다.

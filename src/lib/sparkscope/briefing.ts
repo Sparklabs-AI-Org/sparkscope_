@@ -305,3 +305,18 @@ export async function loadBriefingSnapshot(dateKey = kstDateKey()): Promise<Brie
   if (!row) return null;
   try { return JSON.parse(row.value) as BriefingSnapshot; } catch { return null; }
 }
+
+/**
+ * 브리핑 발행 일시 중지 스위치 — DashboardInsight(kind 'briefing_pause', key 'all') 한 줄이 있으면 멈춘 상태다(2026-10-29 소윤).
+ * 멈추면: 영상 제작(wait-for-briefing)·잔디(briefing-notify)·지연 알림(briefing-delay-alert)을 건너뛰고,
+ * 메일은 영상을 기다리지 않고 제시각에 나가되 브리핑 링크·"준비 중" 안내를 넣지 않는다.
+ * 켜고 끄기: npx tsx --env-file=.env.local scripts/briefing-pause.ts on|off|status
+ */
+export const BRIEFING_PAUSE = { kind: 'briefing_pause', key: 'all' } as const;
+export async function isBriefingPaused(): Promise<boolean> {
+  try {
+    return !!(await prisma.dashboardInsight.findUnique({ where: { kind_key: BRIEFING_PAUSE }, select: { key: true } }));
+  } catch {
+    return false;  // 판단 실패 시 평소대로(멈춤은 명시적으로 켠 경우만)
+  }
+}

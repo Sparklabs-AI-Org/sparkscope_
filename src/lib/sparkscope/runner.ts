@@ -22,7 +22,7 @@ import { buildDigestKeyMap, buildDigestContextMap, passesDigestGuard, sendWindow
 import { sendDigestEmail, buildSubject, isSendDomainVerified, sendOwnerAlert } from './mailer';
 import { sendDigestToSubscribers } from './digest-send';
 import { collectInterNews } from './inter-collect';
-import { publishBriefingSnapshot, loadDailyEdits, applyTop3Edits, kstDateKey } from './briefing';
+import { publishBriefingSnapshot, loadDailyEdits, applyTop3Edits, kstDateKey, isBriefingPaused } from './briefing';
 import { loadBriefingVideo } from '../briefing-video/publish';
 import { getBriefingRecommendation } from './briefing-reco';
 import { filterInterNewsWithGemini } from './inter-filter';
@@ -500,8 +500,10 @@ export async function runDailyDigest(opts: RunOptions = {}) {
     // 단 08:45까지만 기다린다. 그 뒤엔 메일을 제시각에 보내고 영상 자리에 "준비 중" 안내를 넣는다 —
     // 영상 하나 때문에 다이제스트 전체가 늦어지지 않게(2026-10-22 소윤 결정). 잔디는 영상이 나온 뒤에 따로 간다.
     const videoReady = !!(await loadBriefingVideo(kstDateKey()).catch(() => null));
+    // 브리핑 발행 일시 중지 중이면 영상을 기다리지 않고, 메일에 브리핑 링크·"준비 중" 안내도 넣지 않는다(briefing.ts isBriefingPaused).
+    const briefingPaused = await isBriefingPaused();
     const kstMinutes = kstNow.getHours() * 60 + kstNow.getMinutes();
-    const holdNow = !!opts.holdUntilVideo && !videoReady && kstMinutes < VIDEO_WAIT_UNTIL_MIN;
+    const holdNow = !!opts.holdUntilVideo && !briefingPaused && !videoReady && kstMinutes < VIDEO_WAIT_UNTIL_MIN;
     if (holdNow) skipped = 'waiting-for-video';
     // BCC는 DIGEST_BCC가 명시적으로 설정된 경우에만. (TEST_RECIPIENT로 폴백하면 중복 수신 위험)
     const bcc = opts.bcc ?? process.env.DIGEST_BCC ?? undefined;
@@ -536,7 +538,7 @@ export async function runDailyDigest(opts: RunOptions = {}) {
           const useSubscribers = process.env.DIGEST_USE_SUBSCRIBERS === 'true';
           const perSubscriber = opts.testRecipient || !useSubscribers
             ? null
-            : await sendDigestToSubscribers({ data, subject, baseUrl: opts.baseUrl, videoPending: !videoReady });
+            : await sendDigestToSubscribers({ data, subject, baseUrl: opts.baseUrl, videoPending: !videoReady, briefingOff: briefingPaused });
 
           if (perSubscriber) {
             mailResult = perSubscriber;

@@ -11,7 +11,7 @@
  */
 import { appendFileSync } from 'fs';
 import { prisma } from '../src/lib/prisma';
-import { broadcastFor, kstDateKey, loadBriefingSnapshot } from '../src/lib/sparkscope/briefing';
+import { broadcastFor, isBriefingPaused, kstDateKey, loadBriefingSnapshot } from '../src/lib/sparkscope/briefing';
 
 function out(skip: boolean) {
   if (process.env.GITHUB_OUTPUT) appendFileSync(process.env.GITHUB_OUTPUT, `skip=${skip}\n`);
@@ -19,6 +19,12 @@ function out(skip: boolean) {
 
 (async () => {
   const dateKey = kstDateKey();
+  // 발행 일시 중지 중이면 만들지 않는다(force여도) — 다시 시작은 scripts/briefing-pause.ts off.
+  if (await isBriefingPaused()) {
+    console.log('브리핑 발행 일시 중지 중 — 건너뜀');
+    out(true);
+    return;
+  }
   const weekly = broadcastFor().program === 'weekly';
   const video = await prisma.dashboardInsight.findUnique({ where: { kind_key: { kind: 'briefing_video', key: dateKey } } });
   if (video && process.env.FORCE !== '1') {
