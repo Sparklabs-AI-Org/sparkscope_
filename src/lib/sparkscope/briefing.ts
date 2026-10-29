@@ -313,10 +313,14 @@ export async function loadBriefingSnapshot(dateKey = kstDateKey()): Promise<Brie
  * 켜고 끄기: npx tsx --env-file=.env.local scripts/briefing-pause.ts on|off|status
  */
 export const BRIEFING_PAUSE = { kind: 'briefing_pause', key: 'all' } as const;
-export async function isBriefingPaused(): Promise<boolean> {
+/** 다이제스트 메일 발송 일시 중지 — 같은 방식(kind 'digest_pause'). 멈추면 runner가 발송만 건너뛴다(헤드라인 확정·기록은 그대로). */
+export const DIGEST_PAUSE = { kind: 'digest_pause', key: 'all' } as const;
+async function switchOn(k: { kind: string; key: string }): Promise<boolean> {
   try {
-    return !!(await prisma.dashboardInsight.findUnique({ where: { kind_key: BRIEFING_PAUSE }, select: { key: true } }));
+    return !!(await prisma.dashboardInsight.findUnique({ where: { kind_key: k }, select: { key: true } }));
   } catch {
     return false;  // 판단 실패 시 평소대로(멈춤은 명시적으로 켠 경우만)
   }
 }
+export const isBriefingPaused = () => switchOn(BRIEFING_PAUSE);
+export const isDigestPaused = () => switchOn(DIGEST_PAUSE);

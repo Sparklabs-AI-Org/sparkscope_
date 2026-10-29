@@ -22,7 +22,7 @@ import { buildDigestKeyMap, buildDigestContextMap, passesDigestGuard, sendWindow
 import { sendDigestEmail, buildSubject, isSendDomainVerified, sendOwnerAlert } from './mailer';
 import { sendDigestToSubscribers } from './digest-send';
 import { collectInterNews } from './inter-collect';
-import { publishBriefingSnapshot, loadDailyEdits, applyTop3Edits, kstDateKey, isBriefingPaused } from './briefing';
+import { publishBriefingSnapshot, loadDailyEdits, applyTop3Edits, kstDateKey, isBriefingPaused, isDigestPaused } from './briefing';
 import { loadBriefingVideo } from '../briefing-video/publish';
 import { getBriefingRecommendation } from './briefing-reco';
 import { filterInterNewsWithGemini } from './inter-filter';
@@ -509,7 +509,13 @@ export async function runDailyDigest(opts: RunOptions = {}) {
     const bcc = opts.bcc ?? process.env.DIGEST_BCC ?? undefined;
     // 2026-07-17은 발송 중단
     const isBlockDate = kstNow.getFullYear() === 2026 && kstNow.getMonth() === 6 && kstNow.getDate() === 17;
-    if (isBlockDate) {
+    const digestPaused = await isDigestPaused();
+    if (digestPaused) {
+      // 메일 발송 일시 중지(scripts/briefing-pause.ts on mail) — 2026-10-29 소윤 요청
+      skipped = 'digest_paused';
+      await prisma.digest.update({ where: { id: digestRecord.id }, data: { errorMsg: '발송 일시 중지(digest_pause)' } });
+      console.log('[runner] 메일 발송 일시 중지 중 — 건너뜀');
+    } else if (isBlockDate) {
       skipped = 'scheduled_pause_2026_07_17';
       await prisma.digest.update({ where: { id: digestRecord.id }, data: { errorMsg: '2026-07-17 발송 중단' } });
       console.log('[runner] 2026-07-17 발송 중단');

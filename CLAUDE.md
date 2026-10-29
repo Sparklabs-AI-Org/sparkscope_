@@ -138,7 +138,7 @@ GitHub `schedule`은 예약보다 2~3시간 늦게 시작한다(9/11~9/28 실측
   이미 있으면 `wait-for-briefing.ts`가 건너뛰어 두 번 만들지 않는다.
 - 검수 화면 편집(briefing_picks)은 **다음 방송일** 키로 저장된다 — 목요일에 고친 건 금요일분.
 - 코드: `src/lib/briefing-video/`, 페이지 `/briefing/[날짜]`(로그인 없이 열림 — 공개 헤드라인만).
-- **발행 일시 중지 스위치**: `npx tsx --env-file=.env.local scripts/briefing-pause.ts on|off|status`. 멈추면 영상 제작·잔디·지연 알림을 건너뛰고, 메일은 브리핑 링크 없이 제시각(08:30)에 나간다(`briefing.ts isBriefingPaused`). 2026-10-29 소윤 요청으로 켬 — 소윤이 다시 시작하라고 할 때 off.
+- **발행 일시 중지 스위치**: `npx tsx --env-file=.env.local scripts/briefing-pause.ts on|off|status [briefing|mail|all]`. briefing을 멈추면 영상 제작·잔디·지연 알림을 건너뛰고 메일은 브리핑 링크 없이 나간다(`isBriefingPaused`). mail을 멈추면 다이제스트 발송만 건너뛴다(`isDigestPaused`, 헤드라인 확정·기록은 그대로). 2026-10-29 소윤 요청으로 둘 다 켬 — 소윤이 다시 시작하라고 할 때 `off all`.
 
 ### 규칙
 
