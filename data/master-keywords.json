@@ -945,13 +945,13 @@
     "name": "모비인사이드",
     "englishName": null,
     "category": "competitor",
-    "status": "ACTIVE",
+    "status": "PAUSED",
     "tier": null,
     "primaryKeyword": "모비인사이드",
     "helperKeywords": null,
     "excludeWords": null,
     "contextWords": null,
-    "notes": null
+    "notes": "매체 — 투자사가 아님(2026-10-30 정리로 중지)"
   },
   {
     "name": "뮤렉스파트너스",
@@ -1137,13 +1137,13 @@
     "name": "스타트업레시피",
     "englishName": null,
     "category": "competitor",
-    "status": "ACTIVE",
+    "status": "PAUSED",
     "tier": null,
     "primaryKeyword": "스타트업레시피",
     "helperKeywords": null,
     "excludeWords": null,
     "contextWords": null,
-    "notes": null
+    "notes": "스타트업 전문 매체 — 투자사가 아님(2026-10-30 정리로 중지)"
   },
   {
     "name": "스타트업얼라이언스",
@@ -1413,13 +1413,13 @@
     "name": "유진투자증권",
     "englishName": null,
     "category": "competitor",
-    "status": "ACTIVE",
+    "status": "PAUSED",
     "tier": null,
     "primaryKeyword": "유진투자증권",
     "helperKeywords": null,
     "excludeWords": null,
     "contextWords": null,
-    "notes": null
+    "notes": "증권사 — 반도체·주가 애널리스트 인용 기사만 걸려 AC·VC 동향과 무관(2026-10-30 소윤 정리로 중지)"
   },
   {
     "name": "인사이트파트너스",

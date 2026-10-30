@@ -10,9 +10,12 @@
  *  자주 재시작되므로 이 캐시가 100% 하루 1회를 보장하진 않지만, on-demand 방식에서
  *  가능한 최선이고 비용은 크게 줄어든다.)
  */
-import Anthropic from '@anthropic-ai/sdk';
+import OpenAI from 'openai';
 
-const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+// 2026-10-30 Claude(claude-haiku-5-5) → OpenAI gpt-4.1. haiku 5.5가 답을 쓰기 전 '생각하기'에 max_tokens를 다 써서
+// 텍스트 없이 끝나 세 요약이 10/20부터 전부 비어 있었다. 공급자도 OpenAI 하나로 정리(ANTHROPIC_API_KEY 불필요).
+const MODEL = 'gpt-4.1';
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 const CACHE_TTL_MS = 26 * 60 * 60 * 1000; // 26시간 (키가 날짜 기반이라 사실상 자정마다 갱신, TTL은 안전장치)
 
@@ -51,21 +54,16 @@ function capTitles(titles: string[], n = 40): string[] {
   return titles.slice(0, n);
 }
 
-/**
- * 프롬프트 캐싱 (2026-10 SparkLabs 조직 공지로 적용).
- * 요청마다 같은 지시문은 전부 system에 두고 cache_control을 건다. 회사명·기간·건수·제목처럼
- * 매번 바뀌는 값은 user 메시지로만 보낸다 — 이 값이 system 앞쪽에 섞이면 캐시가 매번 깨진다.
- * 참고: Haiku 5.5는 512토큰 미만 접두부는 캐싱하지 않으므로, 지시문이 짧은 호출은
- * cache_read_input_tokens가 0으로 남을 수 있다(오류는 아님).
- */
-function cachedSystem(text: string): Anthropic.TextBlockParam[] {
-  return [{ type: 'text', text, cache_control: { type: 'ephemeral' } }];
-}
-
-function logCacheUsage(label: string, usage: Anthropic.Usage): void {
-  console.info(
-    `[competitor-insights] ${label} 토큰 — 입력 ${usage.input_tokens}, 캐시 읽기 ${usage.cache_read_input_tokens ?? 0}, 캐시 쓰기 ${usage.cache_creation_input_tokens ?? 0}`,
-  );
+/** 지시문은 system, 매번 바뀌는 값(회사명·기간·건수·제목)은 user로 — JSON 객체만 받는다. */
+async function askJson(system: string, user: string, maxTokens: number): Promise<any> {
+  const resp = await openai.chat.completions.create({
+    model: MODEL,
+    temperature: 0.2,
+    max_tokens: maxTokens,
+    response_format: { type: 'json_object' },
+    messages: [{ role: 'system', content: system }, { role: 'user', content: user }],
+  });
+  return JSON.parse(extractJson(resp.choices[0]?.message?.content ?? '{}'));
 }
 
 const COMPANY_TREND_SYSTEM = `당신은 벤처투자 업계 미디어 애널리스트입니다.
@@ -109,23 +107,12 @@ export async function summarizeCompetitorTrend(
   if (cached) return cached;
 
   try {
-    const resp = await anthropic.messages.create({
-      model: 'claude-haiku-5-5',
-      max_tokens: 400,
-      system: cachedSystem(COMPANY_TREND_SYSTEM),
-      messages: [{
-        role: 'user',
-        content: `경쟁사: ${company}
+    const parsed = await askJson(COMPANY_TREND_SYSTEM, `경쟁사: ${company}
 기간 표현: ${periodPhrase}
 ${periodPhrase} ${company} 관련 기사 ${competitorCount}건, 같은 기간 스파크랩 관련 기사 ${sparklabsCount}건.
 
 기사 제목:
-${capped.map((t, i) => `${i + 1}. ${t}`).join('\n')}`,
-      }],
-    });
-    logCacheUsage(company, resp.usage);
-    const text = resp.content[0]?.type === 'text' ? resp.content[0].text : '';
-    const parsed = JSON.parse(extractJson(text));
+${capped.map((t, i) => `${i + 1}. ${t}`).join('\n')}`, 400);
     const points = Array.isArray(parsed?.points)
       ? parsed.points.filter((p: unknown): p is string => typeof p === 'string' && p.trim().length > 0).slice(0, 3)
       : [];
@@ -172,24 +159,13 @@ export async function summarizeOverallTrend(
   if (cached) return cached;
 
   try {
-    const resp = await anthropic.messages.create({
-      model: 'claude-haiku-5-5',
-      max_tokens: 600,
-      system: cachedSystem(OVERALL_SYSTEM),
-      messages: [{
-        role: 'user',
-        content: `${periodPhrase} 경쟁 AC·VC 언론 노출 순위:
+    const parsed = await askJson(OVERALL_SYSTEM, `${periodPhrase} 경쟁 AC·VC 언론 노출 순위:
 ${competitors.map((c, i) => `${i + 1}. ${c.name} ${c.count}건 (부정 ${c.negCount}건)`).join('\n')}
 
 같은 기간 스파크랩 관련 기사: ${sparklabsCount}건
 
 주요 기사 제목:
-${capTitles(sampleTitles, 60).map((t, i) => `${i + 1}. ${t}`).join('\n')}`,
-      }],
-    });
-    logCacheUsage('전체 총평', resp.usage);
-    const text = resp.content[0]?.type === 'text' ? resp.content[0].text : '';
-    const parsed = JSON.parse(extractJson(text));
+${capTitles(sampleTitles, 60).map((t, i) => `${i + 1}. ${t}`).join('\n')}`, 600);
     const lines = Array.isArray(parsed?.lines)
       ? parsed.lines.filter((p: unknown): p is string => typeof p === 'string' && p.trim().length > 0).slice(0, 4)
       : [];
@@ -233,20 +209,9 @@ export async function summarizeCategoryPulse(
   if (cached) return cached[0] ?? null;
 
   try {
-    const resp = await anthropic.messages.create({
-      model: 'claude-haiku-5-5',
-      max_tokens: 200,
-      system: cachedSystem(CATEGORY_PULSE_SYSTEM),
-      messages: [{
-        role: 'user',
-        content: `분야: ${label}
+    const parsed = await askJson(CATEGORY_PULSE_SYSTEM, `분야: ${label}
 ${periodPhrase} 기사 ${capped.length}건 중 제목:
-${capped.map((t, i) => `${i + 1}. ${t}`).join('\n')}`,
-      }],
-    });
-    logCacheUsage(label, resp.usage);
-    const text = resp.content[0]?.type === 'text' ? resp.content[0].text : '';
-    const parsed = JSON.parse(extractJson(text));
+${capped.map((t, i) => `${i + 1}. ${t}`).join('\n')}`, 200);
     const line = typeof parsed?.line === 'string' ? parsed.line.trim() : '';
     if (!line) return null;
     setCached(key, [line]);
