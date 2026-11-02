@@ -46,7 +46,7 @@ export interface RunOptions {
 const STALE_RUN_THRESHOLD_MS = 3 * 60 * 60 * 1000;
 
 /** 메일이 영상을 기다리는 마지막 시각(KST 분) — 08:45. 지나면 "영상 준비 중" 안내로 메일을 먼저 보낸다. */
-const VIDEO_WAIT_UNTIL_MIN = 8 * 60 + 45;
+export const VIDEO_WAIT_UNTIL_MIN = 8 * 60 + 45;
 async function cleanupStaleRunLogs() {
   const cutoff = new Date(Date.now() - STALE_RUN_THRESHOLD_MS);
   const { count } = await prisma.runLog.updateMany({
@@ -212,6 +212,47 @@ export async function buildDigestForSend(analyzed: AnalyzedArticle[]): Promise<D
   return data;
 }
 
+/**
+ * 이미 분석해 둔 기사는 저장된 분석을 다시 쓰고, 처음 보는 기사만 AI로 분석한다(2026-11-02).
+ * 수집 창이 3일이라 어제·그제 기사가 매일 다시 들어와 gpt-4o-mini 분류 + gpt-4.1 심층분석을 또 받고, 같은 결과로 덮어쓰고 있었다.
+ * 같은 기사 판단은 저장 단계와 같다 — 링크가 같거나, 최근 14일 안에 매체+제목이 같으면(구글 링크는 수집 때마다 바뀐다).
+ * 칸(category·matchedKeyword)과 본문은 이번 수집 것을 쓴다 — 분류 승격(shouldPromote)이 이번 수집 기준으로 그대로 돈다.
+ */
+async function analyzeWithReuse(raw: RawArticle[], portfolioUniverse: string[], trendingTopics: string[]): Promise<AnalyzedArticle[]> {
+  const stored = await prisma.article.findMany({
+    where: { analyzedAt: { not: null }, pubDate: { gte: new Date(Date.now() - 14 * 864e5) } },
+    select: {
+      link: true, title: true, source: true, importance: true, tone: true, oneLiner: true, ourTake: true,
+      relatedCompanies: true, pitchScore: true, pitchTopic: true, riskFlag: true, isNoise: true, noiseReason: true, priorityScore: true,
+    },
+  });
+  const byLink = new Map(stored.map(r => [r.link, r]));
+  const byKey = new Map(stored.map(r => [`${normalizeSource(r.source)}::${normalizeTitleKey(r.title)}`, r]));
+  const reused: AnalyzedArticle[] = [];
+  const fresh: RawArticle[] = [];
+  for (const a of raw) {
+    const r = byLink.get(a.link) ?? byKey.get(`${normalizeSource(a.source)}::${normalizeTitleKey(a.title)}`);
+    if (!r || !r.importance || !r.tone) { fresh.push(a); continue; }
+    reused.push({
+      ...a,
+      importance: r.importance as AnalyzedArticle['importance'],
+      tone: r.tone as AnalyzedArticle['tone'],
+      oneLiner: r.oneLiner ?? a.title,
+      ourTake: r.ourTake ?? undefined,
+      relatedCompanies: (() => { try { return r.relatedCompanies ? JSON.parse(r.relatedCompanies) : []; } catch { return []; } })(),
+      pitchScore: r.pitchScore ?? 0,
+      pitchTopic: r.pitchTopic ?? undefined,
+      riskFlag: r.riskFlag ?? undefined,
+      isNoise: r.isNoise,
+      noiseReason: r.noiseReason ?? undefined,
+      priorityScore: r.priorityScore,
+    });
+  }
+  console.log(`[runner] 분석 재사용 ${reused.length}건 · 새로 분석 ${fresh.length}건`);
+  const analyzed = fresh.length > 0 ? await analyzeArticles(fresh, portfolioUniverse, trendingTopics) : [];
+  return [...reused, ...analyzed];
+}
+
 export async function runDailyDigest(opts: RunOptions = {}) {
   await cleanupStaleRunLogs();
   // 대시보드가 "실제로 수집이 돈 시각"만 보여줘야 하므로, 수집을 건너뛴 발송 전용
@@ -285,7 +326,7 @@ export async function runDailyDigest(opts: RunOptions = {}) {
           ...a,
           relatedCompanies: typeof a.relatedCompanies === 'string' ? JSON.parse(a.relatedCompanies) : (a.relatedCompanies ?? []),
         }))
-      : await analyzeArticles(raw, portfolioUniverse, trendingTopics);
+      : await analyzeWithReuse(raw, portfolioUniverse, trendingTopics);
     console.log(`[runner] analyzed ${analyzed.length} articles (skipCollect=${!!opts.skipCollect})`);
 
     // 4. DB 저장 (upsert by link) — skipCollect 모드는 생략 (이미 저장된 데이터)

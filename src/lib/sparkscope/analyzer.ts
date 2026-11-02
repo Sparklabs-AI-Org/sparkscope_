@@ -8,6 +8,8 @@
  * OpenAI API 호출 실패 시 휴리스틱 fallback으로 결과 보장.
  */
 import OpenAI from 'openai';
+import { createHash } from 'crypto';
+import { prisma } from '@/lib/prisma';
 import {
   HAIKU_CLASSIFIER_SYSTEM,
   buildHaikuClassifierUserMessage,
@@ -445,10 +447,17 @@ ${crises.map((c, i) => `${i + 1}. ${c.company} (부정 기사 ${c.negCount}건) 
 
 출력 스키마: {"overview": "..."}
 JSON 객체만 반환:`;
+    // 포트폴리오 탭을 열 때마다 불려 캐시가 없었다(2026-11-02) — 같은 위기 목록이면 저장한 요약을 그대로 쓴다.
+    const key = createHash('sha1').update(userContent).digest('hex');
+    const kind_key = { kind: 'crisis_overview', key };
+    const hit = await prisma.dashboardInsight.findUnique({ where: { kind_key }, select: { value: true } }).catch(() => null);
+    if (hit?.value) return hit.value;
     const text = await chatComplete(CLASSIFIER_MODEL, CRISIS_OVERVIEW_SYSTEM, userContent, 200);
     const parsed = JSON.parse(extractJson(text));
     const overview = typeof parsed?.overview === 'string' ? parsed.overview.trim() : '';
-    return overview.length > 0 ? overview : null;
+    if (!overview) return null;
+    await prisma.dashboardInsight.upsert({ where: { kind_key }, create: { ...kind_key, value: overview }, update: { value: overview, computedAt: new Date() } }).catch(() => {});
+    return overview;
   } catch (e) {
     console.error('[analyzer] crisis overview summary failed, using fallback:', e);
     return null;

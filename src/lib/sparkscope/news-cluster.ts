@@ -30,6 +30,8 @@
  * 중요도 상위 몇십 건 — 실제로 화면·메일에 들어갈 것들 — 에만 적용한다.
  */
 import OpenAI from 'openai';
+import { createHash } from 'crypto';
+import { prisma } from '@/lib/prisma';
 
 let _openai: OpenAI | null = null;
 const client = () => (_openai ??= new OpenAI({ apiKey: process.env.OPENAI_API_KEY! }));
@@ -139,6 +141,33 @@ export async function groupSameStory(
     const hint = cleanHint(it.hint);
     return hint ? `${i}. ${it.title}\n   (발췌: ${hint})` : `${i}. ${it.title}`;
   }).join('\n');
+  // 입력(제목·발췌 목록)이 같으면 지난 결과를 그대로 쓴다 — 매시간 사전계산이 같은 후보로 묶기(1회)+확인(묶음마다)을
+  // 다시 부르고 있었다(2026-11-02). 목록이 조금이라도 바뀌면 키가 달라져 새로 묻는다.
+  const cacheKey = createHash('sha1').update(listing).digest('hex');
+  const cached = await prisma.dashboardInsight.findUnique({ where: { kind_key: { kind: CACHE_KIND, key: cacheKey } }, select: { value: true } }).catch(() => null);
+  if (cached) {
+    try {
+      const groups = JSON.parse(cached.value) as number[][];
+      if (Array.isArray(groups) && groups.flat().length === items.length) return groups;
+    } catch { /* 깨진 캐시는 새로 묻는다 */ }
+  }
+  const result = await askGroups(items, listing);
+  if (!result) return alone();  // 실패는 캐시하지 않는다 — 다음 실행에서 다시 묻는다
+  await prisma.dashboardInsight.upsert({
+    where: { kind_key: { kind: CACHE_KIND, key: cacheKey } },
+    create: { kind: CACHE_KIND, key: cacheKey, value: JSON.stringify(result) },
+    update: { value: JSON.stringify(result), computedAt: new Date() },
+  }).catch(() => { /* 캐시 저장 실패는 무시 */ });
+  // 후보가 바뀌면 옛 키는 다시 안 쓰인다 — 7일 지난 것은 지운다.
+  await prisma.dashboardInsight.deleteMany({ where: { kind: CACHE_KIND, computedAt: { lt: new Date(Date.now() - 7 * 864e5) } } }).catch(() => {});
+  return result;
+}
+
+/** 같은 사건 묶기 결과 캐시(DashboardInsight kind) — 키는 입력 목록의 해시. */
+const CACHE_KIND = 'news_cluster';
+
+/** LLM에 묶기를 묻는다. 실패하면 null(호출부가 병합 없이 진행). */
+async function askGroups(items: { title: string; hint?: string | null }[], listing: string): Promise<number[][] | null> {
   try {
     const res = await client().chat.completions.create({
       model: MODEL,
@@ -148,7 +177,7 @@ export async function groupSameStory(
     });
     const parsed = JSON.parse(res.choices[0]?.message?.content ?? '{}') as { groups?: number[][] };
     const groups = parsed.groups;
-    if (!Array.isArray(groups)) return alone();
+    if (!Array.isArray(groups)) return null;
 
     // 응답을 그대로 믿지 않는다 — 번호가 빠지거나 중복되면 기사가 사라지거나 두 번 나온다.
     const seen = new Set<number>();
@@ -164,7 +193,7 @@ export async function groupSameStory(
     return verifyGroups(out, items);
   } catch (e) {
     console.error('[news-cluster] 사건 묶기 실패 — 병합 없이 진행합니다:', e);
-    return alone();
+    return null;
   }
 }
 

@@ -2,8 +2,10 @@
 // 시간: 자동 발송(월~금 08:10부터 5~15분 간격으로 12시까지, 영상이 나오면 발송 — 08:30 도착 목표) 또는 수동 트리거
 // 특징: 수집/분석 생략 → 초고속(5초), 타임아웃 불가
 import { NextResponse } from 'next/server';
-import { runDailyDigest } from '@/lib/sparkscope/runner';
+import { runDailyDigest, VIDEO_WAIT_UNTIL_MIN } from '@/lib/sparkscope/runner';
 import { prisma } from '@/lib/prisma';
+import { kstDateKey, loadBriefingSnapshot, isBriefingPaused, isDigestPaused } from '@/lib/sparkscope/briefing';
+import { loadBriefingVideo } from '@/lib/briefing-video/publish';
 
 export const runtime = 'nodejs';
 // 발송만 하므로 원래 60초였는데, AI 시그널 섹션이 사전계산을 못 찾으면 그 자리에서
@@ -34,6 +36,20 @@ export async function GET(req: Request) {
     const sent = await prisma.digest.findUnique({ where: { date: today }, select: { sentAt: true } });
     if (sent?.sentAt) {
       return NextResponse.json({ ok: true, status: 'already-sent' });
+    }
+    // 첫 실행(08:10)이 오늘 헤드라인을 확정한 뒤로는, 영상을 기다리는 동안 메일을 처음부터 다시 만들 필요가 없다 — 그 자리에서 끝낸다(2026-11-02).
+    // 예전엔 5~15분마다 TOP3 검증 AI·링크 풀기·트렌드 섹션·브리핑 추천을 매번 다시 돌린 뒤 '영상 대기'로 멈췄다(평일 하루 8회 이상).
+    // 08:45가 지나면(영상 없이 '준비 중'으로 보내는 시각) 평소대로 끝까지 돈다.
+    if (sent && minutes < VIDEO_WAIT_UNTIL_MIN) {
+      const dateKey = kstDateKey();
+      const [snapshot, video, briefingPaused] = await Promise.all([loadBriefingSnapshot(dateKey), loadBriefingVideo(dateKey), isBriefingPaused()]);
+      if (snapshot && !video && !briefingPaused) {
+        return NextResponse.json({ ok: true, status: 'waiting-for-video' });
+      }
+    }
+    // 메일 발송 일시 중지 중이면 첫 실행이 기록을 남긴 뒤로는 다시 만들지 않는다.
+    if (sent && (await isDigestPaused())) {
+      return NextResponse.json({ ok: true, status: 'digest-paused' });
     }
   }
 

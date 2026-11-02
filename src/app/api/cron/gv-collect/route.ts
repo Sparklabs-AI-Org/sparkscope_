@@ -24,7 +24,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { collectGvArticles, GV_SELF_NAME, GV_CATEGORY } from '@/lib/sparkscope/gv-collect';
 import { analyzeArticles } from '@/lib/sparkscope/analyzer';
-import { fillMissingBodies } from '@/lib/sparkscope/collector';
+import { fillMissingBodies, splitStored, saveMissingBodies } from '@/lib/sparkscope/collector';
 import { ensureArticleKo, ensureArticleEn } from '@/lib/sparkscope/translate-content';
 import { prisma } from '@/lib/prisma';
 
@@ -56,9 +56,12 @@ export async function GET(request: NextRequest) {
       select: { name: true },
     });
     // 본문을 읽어 둔다 — 분석 재료이자 영상 대본 재료(Article.bodyText). 예전엔 해외 수집은 본문을 저장하지 않았다(2026-10-22).
-    const filledBodies = await fillMissingBodies(raw);
-    console.log(`[cron:gv-collect] 본문 채움 ${filledBodies}/${raw.length}건`);
-    const analyzed = await analyzeArticles(raw, universe.map(u => u.name), []);
+    // 이미 저장된 기사는 다시 분석하지 않는다 — 10일 창을 매일 다시 가져와 같은 기사를 최대 10번 분석하고 버리던 것(2026-11-02).
+    const { fresh, needBody } = await splitStored(raw);
+    const filledBodies = await fillMissingBodies([...fresh, ...needBody]);
+    const refilled = await saveMissingBodies(needBody);
+    console.log(`[cron:gv-collect] 새 기사 ${fresh.length}/${raw.length}건 · 본문 채움 ${filledBodies}건(기존 행 ${refilled}건)`);
+    const analyzed = await analyzeArticles(fresh, universe.map(u => u.name), []);
 
     let saved = 0;
     for (const a of analyzed) {

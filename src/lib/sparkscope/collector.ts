@@ -287,7 +287,13 @@ export async function collectAllArticles(opts: CollectOptions = {}): Promise<Raw
   console.log(`[collector] after dedupe: ${filtered.length}`);
 
   // AC·VC 기사는 AI로 한 번 더 본다 — 투자·스타트업 업무에 쓸 기사만(증권 시황·대기업 실적·동음이의 기사 제외).
-  const comp = filtered.filter(x => x.category === 'competitor');
+  // 이미 저장된 기사(최근 14일, 매체+제목 기준 — 구글 링크는 수집 때마다 바뀐다)는 다시 판정하지 않는다.
+  // 3일 창이라 같은 기사를 매일 최대 3번 gpt-4.1로 판정하고 있었다(2026-11-02). 저장된 행의 노이즈 표시는 저장 단계가 그대로 둔다.
+  const storedKeys = new Set((await prisma.article.findMany({
+    where: { category: 'competitor', pubDate: { gte: new Date(Date.now() - 14 * 864e5) } },
+    select: { source: true, title: true },
+  })).map(r => `${normalizeSource(r.source)}::${normalizeTitleKey(r.title)}`));
+  const comp = filtered.filter(x => x.category === 'competitor' && !storedKeys.has(`${normalizeSource(x.source)}::${normalizeTitleKey(x.title)}`));
   if (comp.length > 0) {
     const keep = await competitorRelevant(comp.map(x => ({ title: x.title, matchedKeyword: x.matchedKeyword, body: x.body })));
     const drop = new Set(comp.filter((_, i) => !keep[i]));
@@ -313,6 +319,35 @@ export async function collectAllArticles(opts: CollectOptions = {}): Promise<Raw
   const filled = await fillMissingBodies(filtered);
   console.log(`[collector] 본문 채움 ${filled}건 (본문 없는 기사 ${filtered.filter(a => !a.body).length}건 남음)`);
   return filtered;
+}
+
+/**
+ * 이미 저장된 기사를 분석 전에 뺀다(2026-11-02). 수집기는 며칠치 창(국내 3일·해외 10일·깡프로 3일)을 매일 다시 가져오는데,
+ * 저장할 때 기존 행은 본문만 고치고 분석 결과는 버린다 — 같은 기사를 최대 10번 분석(gpt-4o-mini + gpt-4.1)하고 9번은 버리고 있었다.
+ * fresh: 처음 보는 기사(분석·저장 대상). needBody: 이미 있는데 본문이 비어 있는 기사(본문만 채운다).
+ */
+export async function splitStored<T extends { link: string }>(items: T[]): Promise<{ fresh: T[]; needBody: T[] }> {
+  if (items.length === 0) return { fresh: [], needBody: [] };
+  const stored = await prisma.article.findMany({
+    where: { link: { in: items.map(a => a.link) } },
+    select: { link: true, bodyText: true },
+  });
+  const byLink = new Map(stored.map(r => [r.link, r]));
+  return {
+    fresh: items.filter(a => !byLink.has(a.link)),
+    needBody: items.filter(a => byLink.has(a.link) && !byLink.get(a.link)!.bodyText),
+  };
+}
+
+/** 이미 있는 행의 빈 본문만 채운다 — 다른 칸(사람이 단 스크랩·노이즈 표시 포함)은 건드리지 않는다. */
+export async function saveMissingBodies(items: RawArticle[]): Promise<number> {
+  let n = 0;
+  for (const a of items) {
+    if (!a.body) continue;
+    const r = await prisma.article.updateMany({ where: { link: a.link, bodyText: null }, data: { bodyText: a.body.slice(0, 3000) } });
+    n += r.count;
+  }
+  return n;
 }
 
 /** 한 번의 수집에서 본문을 새로 읽을 최대 건수 — 평소 하루 저장량(약 500건)보다 넉넉하게. */

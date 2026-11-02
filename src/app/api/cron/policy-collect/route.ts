@@ -25,7 +25,7 @@ import {
   POLICY_CURATOR,
   DEMODAY_SOURCE,
 } from '@/lib/sparkscope/policy-collect';
-import { fillMissingBodies } from '@/lib/sparkscope/collector';
+import { fillMissingBodies, splitStored, saveMissingBodies } from '@/lib/sparkscope/collector';
 import { classifyPolicyItems } from '@/lib/sparkscope/policy-classify';
 import { prisma } from '@/lib/prisma';
 
@@ -65,15 +65,19 @@ export async function GET(request: NextRequest) {
 
     // 본문을 읽어 둔다 — 데일리 브리핑 정책 칸의 대본 재료(Article.bodyText). 예전엔 제목만 저장해서
     // 영상이 제목만 보고 문장을 지어야 했다(2026-10-28).
-    const filledBodies = await fillMissingBodies(raw);
-    console.log(`[cron:policy-collect] 본문 채움 ${filledBodies}/${raw.length}건`);
+    // 이미 저장된 기사는 다시 나누지 않는다 — 깡프로 3일치를 매일 다시 가져와 gpt-4.1로 또 나누고 결과를 버리던 것(2026-11-02).
+    // 저장된 행은 빈 본문만 채운다.
+    const { fresh, needBody } = await splitStored(raw);
+    const filledBodies = await fillMissingBodies([...fresh, ...needBody]);
+    const refilled = await saveMissingBodies(needBody);
+    console.log(`[cron:policy-collect] 새 기사 ${fresh.length}/${raw.length}건 · 본문 채움 ${filledBodies}건(기존 행 ${refilled}건)`);
 
     // 칸 나누기 — 정책·지원사업 / 투자·펀드 / AC·VC 업계 / 스파크랩 / 포트폴리오사, 관계없는 기사는 노이즈(2026-10-28 소윤).
-    const buckets = await classifyPolicyItems(raw.map(a => ({ title: a.title, body: a.body })));
+    const buckets = await classifyPolicyItems(fresh.map(a => ({ title: a.title, body: a.body })));
 
     let saved = 0;
-    let skipped = 0;
-    for (const [i, a] of raw.entries()) {
+    let skipped = raw.length - fresh.length;
+    for (const [i, a] of fresh.entries()) {
       const b = buckets[i] ?? { category: 'policy_support' as const };
       try {
         const res = await prisma.article.upsert({
