@@ -59,11 +59,14 @@ export function longDate(dateKey: string): string {
  * 섹션 전환 멘트 — "첫 번째 소식입니다" 순번 대신, 섹션이 바뀌는 첫 기사에만 붙인다(2026-10-07 소윤, 3분 개편안).
  * 섹션은 헤드라인 라벨로 정한다: 스파크랩 · 국내 포트폴리오 · 해외 포트폴리오(대만·글로벌) · AI · 스타트업계.
  */
-type Section = 'S' | 'P' | 'O' | 'A' | 'T';
+// 2026-10-28 칸 개편으로 정책·지원사업(Y)·투자·펀드(F)가 생겼다 — 예전엔 둘 다 '스타트업계 소식'으로 소개됐다.
+type Section = 'S' | 'P' | 'O' | 'A' | 'Y' | 'F' | 'T';
 function sectionOf(h: BriefingHeadline): Section {
   if (/스파크랩/.test(h.label)) return 'S';
   if (/포트폴리오사 · (대만|글로벌)/.test(h.label)) return 'O';
   if (/포트폴리오/.test(h.label)) return 'P';
+  if (/정책|지원사업/.test(h.label)) return 'Y';
+  if (/투자·펀드/.test(h.label)) return 'F';
   if (/AI|트렌드|해외/.test(h.label) || h.kind === 'trend' || h.kind === 'inter') return 'A';
   return 'T';
 }
@@ -73,8 +76,32 @@ const SECTION_LEAD: Record<Section, [string, string]> = {
   P: ['먼저 포트폴리오 소식입니다.', '포트폴리오 소식입니다.'],
   O: ['먼저 해외 포트폴리오 소식입니다.', '해외 포트폴리오 소식도 있습니다.'],
   A: ['먼저 AI 쪽 소식입니다.', 'AI 쪽 소식입니다.'],
+  Y: ['먼저 정책·지원사업 소식입니다.', '정책·지원사업 소식입니다.'],
+  F: ['먼저 투자·펀드 소식입니다.', '투자·펀드 소식입니다.'],
   T: ['먼저 스타트업계 소식입니다.', '스타트업계 소식입니다.'],
 };
+/** "~부터 전해드리겠습니다"에 쓰는 이름 */
+const SECTION_NAME: Record<Section, string> = {
+  S: '스파크랩 소식', P: '포트폴리오 소식', O: '해외 포트폴리오 소식', A: '해외 AI 트렌드',
+  Y: '정책·지원사업 소식', F: '투자·펀드 소식', T: '스타트업계 소식',
+};
+
+/**
+ * 오늘 소식 안내 — 스파크랩·포트폴리오사 소식이 없는 날이 잦아, 인사 바로 뒤에 무엇이 없고 무엇부터 하는지 한 문장으로 밝힌다
+ * (2026-11-02 소윤). 둘 다 있으면 안내하지 않는다(평소처럼 "먼저 스파크랩 소식입니다"로 시작).
+ * 해외 포트폴리오(대만·GV)도 포트폴리오사 소식으로 친다.
+ */
+export function lineupNote(heads: BriefingHeadline[]): string {
+  const secs = heads.map(sectionOf);
+  const hasS = secs.includes('S');
+  const hasP = secs.includes('P') || secs.includes('O');
+  if (hasS && hasP) return '';
+  const first = secs[0];
+  if (!first) return '';
+  if (!hasS && !hasP) return `오늘은 스파크랩과 포트폴리오사 소식이 없는 관계로, ${SECTION_NAME[first]}부터 전해드리겠습니다.`;
+  if (!hasS) return `오늘은 스파크랩 소식이 없는 관계로, 바로 ${SECTION_NAME[first]} 전해드리겠습니다.`;
+  return '오늘은 포트폴리오사 소식이 없어, 스파크랩 소식부터 전해드리겠습니다.';
+}
 // 스파크랩과 국내 포트폴리오는 이어서 한 덩어리로 듣기 좋아서, 스파크랩 다음 국내 포폴은 "이어서 포트폴리오 소식입니다".
 
 /**
@@ -355,11 +382,13 @@ export async function writeBriefingScript(snapshot: BriefingSnapshot, frame?: Sc
   const byIndex = new Map(texts.map((t, i) => [i, t] as [number, string]).filter(([, t]) => t));
   if (!frame?.withHeadline) await rewriteCliches(byIndex, heads); // 데일리는 해석 없이 사실만 — 상투구를 "누구에게" 해석으로 고쳐 쓰지 않는다
 
+  const note = lineupNote(heads);
   const segments: ScriptSegment[] = [{
     kind: 'intro',
-    text: frame?.intro ?? `좋은 아침입니다. ${spokenDate(snapshot.dateKey)}, 스파크스코프 데일리 브리핑입니다.`,
+    text: [frame?.intro ?? `좋은 아침입니다. ${spokenDate(snapshot.dateKey)}, 스파크스코프 데일리 브리핑입니다.`, note].filter(Boolean).join(' '),
   }];
-  let prev: Section | null = null;
+  // 안내 문장이 이미 "○○부터 전해드리겠습니다"라고 했으면 첫 섹션의 "먼저 ○○ 소식입니다"는 붙이지 않는다.
+  let prev: Section | null = note && heads[0] ? sectionOf(heads[0]) : null;
   const usedStarts = new Set<string>();
   heads.forEach((h, i) => {
     // AI가 빠뜨린 항목은 요약으로라도 채운다 — 화면엔 있는데 말이 없는 슬라이드가 생기지 않게.
