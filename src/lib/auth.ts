@@ -4,6 +4,7 @@ import EmailProvider from 'next-auth/providers/email';
 import GoogleProvider from 'next-auth/providers/google';
 import { PrismaAdapter } from '@auth/prisma-adapter';
 import { prisma } from '@/lib/prisma';
+import { countLogin } from '@/lib/sparkscope/usage-stats';
 import { isStaffEmail, primaryStaffDomain } from '@/lib/roles';
 
 // 도메인 판정은 roles.ts 한 곳에 있다. 예전 import 경로를 쓰는 곳이 있어 다시 내보낸다.
@@ -136,6 +137,12 @@ export const authOptions: NextAuthOptions = {
     async session({ session, user }) {
       if (session.user) (session.user as any).id = user.id;
       return session;
+    },
+  },
+  events: {
+    // 로그인 횟수만 하루 단위로 센다(누가 들어왔는지는 남기지 않는다 — 2026-11-03 회의).
+    async signIn() {
+      await countLogin().catch(() => {});
     },
   },
   pages: {

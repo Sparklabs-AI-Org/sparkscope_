@@ -2,6 +2,7 @@
 
 // 브리핑 영상 시청 이벤트 전송. 페이지 안의 첫 <video>에 붙는다.
 // 이벤트는 페이지 한 번 열 때 이벤트마다 한 번씩만 보낸다(open · play · half · complete).
+// 누가 봤는지는 남기지 않는다 — 횟수만 센다(2026-11-03 회의).
 import { useEffect } from 'react';
 
 const VISITOR_KEY = 'sparkscope-briefing-visitor';
@@ -19,7 +20,7 @@ function visitorId(): string {
   }
 }
 
-export default function BriefingTracker({ dateKey, token, title }: { dateKey: string; token?: string; title?: string }) {
+export default function BriefingTracker({ dateKey, title }: { dateKey: string; title?: string }) {
   useEffect(() => {
     const vid = visitorId();
     const sent = new Set<string>();
@@ -27,7 +28,7 @@ export default function BriefingTracker({ dateKey, token, title }: { dateKey: st
     const send = (event: string) => {
       if (sent.has(event)) return;
       sent.add(event);
-      const body = JSON.stringify({ dateKey, event, token: token ?? '', visitorId: vid });
+      const body = JSON.stringify({ dateKey, event, visitorId: vid });
       fetch('/api/briefing/view', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body, keepalive: true }).catch(() => {});
     };
 
@@ -57,7 +58,7 @@ export default function BriefingTracker({ dateKey, token, title }: { dateKey: st
       };
     });
     return () => cleanups.forEach(f => f());
-  }, [dateKey, token, title]);
+  }, [dateKey, title]);
 
   return null;
 }

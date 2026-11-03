@@ -9,7 +9,6 @@ import { loadBriefingSnapshot } from '@/lib/sparkscope/briefing';
 import { spokenDate, longDate } from '@/lib/briefing-video/script';
 import BriefingTracker from '@/components/BriefingTracker';
 import { getSessionUser } from '@/lib/authz';
-import { viewerSubscriberId, watchedDates } from '@/lib/briefing-video/viewer';
 
 export const dynamic = 'force-dynamic';
 
@@ -46,11 +45,10 @@ export default async function BriefingPage({
     );
   }
   const past = (await listBriefingVideos(8)).filter(v => v.dateKey !== video.dateKey).slice(0, 7);
-  const watched = await watchedDates(await viewerSubscriberId(searchParams.s), past.map(v => v.dateKey));
 
   return (
     <main className="mx-auto max-w-2xl px-4 py-6">
-      <BriefingTracker dateKey={video.dateKey} token={searchParams.s} title={video.program === 'weekly' ? `위클리 브리핑 · ${spokenDate(video.dateKey)}` : `데일리 브리핑 · ${spokenDate(video.dateKey)}`} />
+      <BriefingTracker dateKey={video.dateKey} title={video.program === 'weekly' ? `위클리 브리핑 · ${spokenDate(video.dateKey)}` : `데일리 브리핑 · ${spokenDate(video.dateKey)}`} />
       <div className="text-sm font-semibold text-spark-purple">SparkScope {video.program === 'weekly' ? '위클리' : '데일리'} 브리핑</div>
       <h1 className="mt-1 text-2xl font-bold text-spark-ink">
         {video.program === 'weekly' ? spokenDate(video.dateKey) : `[데일리 브리핑] ${longDate(video.dateKey)} 스파크스코프 주요 뉴스`}
@@ -101,9 +99,7 @@ export default async function BriefingPage({
             {past.map(v => (
               <li key={v.dateKey}>
                 <Link href={`/briefing/${v.dateKey}${tokenQ}`} className="flex items-center justify-between px-4 py-3 text-sm hover:bg-spark-subtle">
-                  <span className="font-semibold text-spark-ink">{spokenDate(v.dateKey)}{watched && (watched.has(v.dateKey)
-                    ? <span className="ml-2 rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-emerald-700">시청함</span>
-                    : <span className="ml-2 rounded-full bg-gray-100 px-2 py-0.5 text-[11px] font-semibold text-gray-500">시청 전</span>)}</span>
+                  <span className="font-semibold text-spark-ink">{spokenDate(v.dateKey)}</span>
                   <span className="text-xs text-spark-muted">{v.program === 'weekly' ? '위클리' : '데일리'} · {Math.floor(v.seconds / 60)}분 {v.seconds % 60}초</span>
                 </Link>
               </li>
