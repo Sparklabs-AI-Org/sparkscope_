@@ -5,6 +5,7 @@ import { prisma } from '@/lib/prisma';
 import { listBriefingVideos } from '@/lib/briefing-video/publish';
 import { spokenDate } from '@/lib/briefing-video/script';
 import { getSessionUser } from '@/lib/authz';
+import { viewerSubscriberId, watchedDates } from '@/lib/briefing-video/viewer';
 
 export const dynamic = 'force-dynamic';
 
@@ -16,6 +17,7 @@ export default async function BriefingArchivePage({ searchParams }: { searchPara
   if (!me && !tokenOwner) redirect(`/login?callbackUrl=${encodeURIComponent('/briefing')}`);
   const tokenQ = searchParams.s ? `?s=${encodeURIComponent(searchParams.s)}` : '';
   const videos = await listBriefingVideos(60);
+  const watched = await watchedDates(await viewerSubscriberId(searchParams.s), videos.map(v => v.dateKey));
 
   return (
     <main className="mx-auto max-w-2xl px-4 py-6">
@@ -29,7 +31,9 @@ export default async function BriefingArchivePage({ searchParams }: { searchPara
           {videos.map(v => (
             <li key={v.dateKey}>
               <Link href={`/briefing/${v.dateKey}${tokenQ}`} className="flex items-center justify-between px-4 py-3.5 hover:bg-spark-subtle">
-                <span className="font-semibold text-spark-ink">{spokenDate(v.dateKey)}</span>
+                <span className="font-semibold text-spark-ink">{spokenDate(v.dateKey)}{watched && (watched.has(v.dateKey)
+                    ? <span className="ml-2 rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-emerald-700">시청함</span>
+                    : <span className="ml-2 rounded-full bg-gray-100 px-2 py-0.5 text-[11px] font-semibold text-gray-500">시청 전</span>)}</span>
                 <span className="text-xs text-spark-muted">
                   {v.program === 'weekly' ? '위클리' : '데일리'} · 기사 {v.count}건 · {Math.floor(v.seconds / 60)}분 {v.seconds % 60}초
                 </span>
