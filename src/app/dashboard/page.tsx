@@ -5,7 +5,7 @@ import { ensureArticleEnDeep, ensureArticleKoDeep } from '@/lib/sparkscope/trans
 import { articleTitle } from '@/lib/sparkscope/article-title';
 import { CuratedFeed, IndustryCuratedList } from '@/components/CuratedFeed';
 import { cleanSnippet } from '@/lib/sparkscope/snippet';
-import { MARKET_KEYWORD } from '@/lib/sparkscope/policy-classify';
+import { FUND_SOURCE_KEYWORDS, MARKET_KEYWORD } from '@/lib/sparkscope/policy-classify';
 import { prisma } from '@/lib/prisma';
 import { ArticleListView } from '@/components/ArticleListView';
 import { SignalBanner } from '@/components/SignalBanner';
@@ -467,7 +467,8 @@ async function loadDashboardData(
     // 표시 단계 관련성 가드용: 포트폴리오 감시대상 키워드맵 (primaryKeyword → [이름·영문·보조])
     prisma.monitoringTarget.findMany({ where: { category: pfCategory, status: 'ACTIVE' }, select: { primaryKeyword: true, name: true, englishName: true, helperKeywords: true, portfolioStatus: true } }),
     // 경쟁사 모니터링 섹션용: 기간 내 competitor 기사 전체(matchedKeyword=실제 경쟁사명별 집계)
-    needCompetitor ? prisma.article.findMany({ where: { pubDate: { gte: since, lte: until }, isNoise: false, category: 'competitor' }, orderBy: { pubDate: 'desc' }, select: { id: true, title: true, titleEn: true, titleKo: true, source: true, pubDate: true, link: true, tone: true, matchedKeyword: true }, take: 3000 }) : EMPTY,
+    // 펀드 결성 기사(투자·펀드 칸, matchedKeyword = 결성한 운용사)도 하우스별로 같이 센다 — 누가 펀드를 만들었는지 보려고(2026-11-03 회의).
+    needCompetitor ? prisma.article.findMany({ where: { pubDate: { gte: since, lte: until }, isNoise: false, OR: [{ category: 'competitor' }, { category: 'fund_invest', curationTopic: 'fund', matchedKeyword: { notIn: FUND_SOURCE_KEYWORDS }, isOverseas: { not: true } }] }, orderBy: { pubDate: 'desc' }, select: { id: true, title: true, titleEn: true, titleKo: true, source: true, pubDate: true, link: true, tone: true, matchedKeyword: true }, take: 3000 }) : EMPTY,
     // 경쟁사 비교 기준선: 기간 내 '스파크랩' 언급 기사 수 (엔티티 자체 + 제목 언급)
     needCompetitor ? prisma.article.count({ where: { pubDate: { gte: since, lte: until }, isNoise: false, OR: [{ category: 'sparklabs_self' }, { title: { contains: '스파크랩' } }, { relatedCompanies: { contains: '스파크랩' } }] } }) : 0,
     // 가장 많이 언급된 포트폴리오사 TOP 15 (기간 내 노출 건수) — 업계 키워드 제외

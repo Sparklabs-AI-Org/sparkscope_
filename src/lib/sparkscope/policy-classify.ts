@@ -10,6 +10,9 @@
  *   competitor        AC·VC·CVC가 주체인 소식(matchedKeyword = 그 하우스 이름) — AI
  *   policy_support    정부·지자체 지원사업 공고, 창업·벤처 정책·제도 — AI
  *   fund_invest       스타트업 투자 유치, 펀드 결성·출자(모태펀드 등) — AI
+ *                     펀드 결성(curationTopic 'fund')은 matchedKeyword에 결성한 운용사(GP)를 적는다 — 업계 동향 탭에서
+ *                     하우스별로 같이 보인다. 누가 펀드를 만들었는지 알아야 포트폴리오사를 소개할 수 있다(2026-11-03 회의).
+ *                     사모펀드(PE)의 바이아웃·경영권 거래는 관심 밖이라 노이즈로 둔다.
  *   (노이즈)          스타트업·투자와 관계없는 기사 — AI, isNoise로 저장
  *
  * 실패하면 policy_support로 둔다(예전 동작) — 수집을 막지 않는다.
@@ -23,6 +26,9 @@ const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 /** 투자 시장 동향 기사의 matchedKeyword — 업계 동향 탭으로 보내되 하우스 이름이 아니라는 표시. */
 export const MARKET_KEYWORD = '업계 전반';
+
+/** 깡프로·데모데이 기사가 처음 갖는 matchedKeyword(출처 이름) — 운용사를 못 적은 펀드 기사를 가려낼 때 쓴다. */
+export const FUND_SOURCE_KEYWORDS = ['깡프로 스타트업 뉴스', '데모데이'];
 
 export type PolicyBucket = 'sparklabs_self' | 'portfolio_company' | 'competitor' | 'policy_support' | 'fund_invest' | 'noise';
 
@@ -45,6 +51,8 @@ const SYSTEM = `스파크랩(한국의 액셀러레이터·VC) 대시보드에 �
   지원사업 순위·공고 정리 글
 - "fund": 스타트업이 투자를 유치한 소식(금액·라운드·투자사가 제목의 주제), 벤처펀드 결성·조성·출자(모태펀드·성장펀드 LP 출자,
   GP 선정 포함), 벤처투자 시장 통계
+  사모펀드(PEF)의 바이아웃·경영권 인수·기업 매각·인수금융, 블라인드 PEF 결성은 fund가 아닙니다 → none
+  (스파크랩은 벤처투자만 봅니다 — "MBK, ○○ 경영권 인수", "○○PE 1조 블라인드펀드 결성").
   창업자·대표 인터뷰, 창업 스토리, 인물 기사는 본문에 투자 이야기가 나와도 fund가 아닙니다 → none
   (예: "두 번의 창업, 두 번의 신기록, 송기영 홀리데이로보틱스 대표").
 - "acvc": 액셀러레이터·VC·CVC·창업기획자가 주체인 소식(투자사 전략·인사·대표 인터뷰·프로그램·데모데이·투자 집행).
@@ -72,8 +80,11 @@ const SYSTEM = `스파크랩(한국의 액셀러레이터·VC) 대시보드에 �
     (예: "공모 앞둔 '창업도시' 지자체 유치전", "아산 옛 청수장, 창업·문화공간으로 탈바꿈", "한국 비즈니스 브리핑 — 10월 17일")
   fund면 "round"(개별 스타트업 투자 유치) / "fund"(펀드 결성·출자·GP 선정) /
   "market"(투자 시장 동향·통계·분석). acvc·none은 생략
+- "gp": sub가 "fund"면 그 펀드를 결성·운용하는 투자사(GP) 이름을 한국어로(예: "유안타인베스트먼트", "하나벤처스").
+  출자 기관이 GP를 뽑는 기사면 출자 기관 이름(예: "한국벤처투자", "농협금융"). 정부·지자체가 직접 조성하면 그 기관 이름.
+  반드시 한 곳만 — 여러 운용사가 나오면 그들을 뽑은 출자 기관, 그것도 없으면 제목 맨 앞의 한 곳.
 
-JSON으로만: {"items":[{"i":0,"c":"policy","imp":4,"kr":true,"sub":"grant"},{"i":1,"c":"acvc","house":"해시드","imp":2,"kr":true},...]} — 모든 번호를 빠짐없이.`;
+JSON으로만: {"items":[{"i":0,"c":"policy","imp":4,"kr":true,"sub":"grant"},{"i":2,"c":"fund","imp":4,"kr":true,"sub":"fund","gp":"하나벤처스"},{"i":1,"c":"acvc","house":"해시드","imp":2,"kr":true},...]} — 모든 번호를 빠짐없이.`;
 
 async function classifyWithAI(items: ClassifyItem[]): Promise<ClassifyResult[]> {
   const out: ClassifyResult[] = [];
@@ -90,7 +101,7 @@ async function classifyWithAI(items: ClassifyItem[]): Promise<ClassifyResult[]> 
           { role: 'user', content: chunk.map((a, n) => `${n}. ${a.title}${a.body ? ` — ${a.body.replace(/\s+/g, ' ').slice(0, 300)}` : ''}`).join('\n') },
         ],
       });
-      const rows = (JSON.parse(resp.choices[0]?.message?.content ?? '{}').items ?? []) as { i: number; c: string; house?: string; imp?: number; kr?: boolean; sub?: string }[];
+      const rows = (JSON.parse(resp.choices[0]?.message?.content ?? '{}').items ?? []) as { i: number; c: string; house?: string; imp?: number; kr?: boolean; sub?: string; gp?: string }[];
       for (const r of rows) {
         if (!Number.isInteger(r.i) || r.i < 0 || r.i >= chunk.length) continue;
         const meta = {
@@ -100,6 +111,7 @@ async function classifyWithAI(items: ClassifyItem[]): Promise<ClassifyResult[]> 
         const sub = (r.c === 'fund' ? ['round', 'fund', 'market'] : ['grant', 'policy', 'ecosystem']).includes(r.sub ?? '') ? r.sub : undefined;
         // 투자 시장 동향·통계는 투자·펀드 탭이 아니라 업계 동향(competitor)으로 — 대시보드에서 시장 동향 칸을 뺐다(2026-10-28 소윤).
         if (r.c === 'fund' && sub === 'market') fallback[r.i] = { category: 'competitor', matchedKeyword: MARKET_KEYWORD, ...meta, curationTopic: 'market' };
+        else if (r.c === 'fund' && sub === 'fund') fallback[r.i] = { category: 'fund_invest', ...(r.gp?.trim() ? { matchedKeyword: r.gp.trim() } : {}), ...meta, curationTopic: 'fund' };
         else if (r.c === 'fund') fallback[r.i] = { category: 'fund_invest', ...meta, curationTopic: sub ?? 'round' };
         else if (r.c === 'none') fallback[r.i] = { category: 'noise' };
         else if (r.c === 'acvc' && r.house?.trim()) fallback[r.i] = { category: 'competitor', matchedKeyword: r.house.trim(), ...meta };
