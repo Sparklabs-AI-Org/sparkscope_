@@ -68,17 +68,18 @@ const CATEGORY_LABEL: Record<string, string> = {
   industry_trend: '🌐 스타트업계 뉴스',
 };
 
-// ── 방송 일정과 기사 기간 (2026-10-01 소윤 결정) ─────────────────────
+// ── 방송 일정과 기사 기간 (2026-11-04 은빛 결정 — 위클리 폐지) ─────────────────────
 //
-//   월    08:30 메일·잔디 — 위클리(Claw-e 뉴스데스크). 지난주 화 00:00 ~ 일 24:00 기사에서 8개
-//   화~금 08:30 메일·잔디 — 데일리. 전날 08:10(지난 메일 확정) 이후 기사에서 10개   (2026-10-07 소윤 결정, 10-22 시각·개수 변경)
+//   월~금 08:30 메일·잔디 — 데일리. 지난 메일 확정(08:10) 이후 기사에서 12개.
+//   월요일은 지난 금요일 08:10부터 — 주말(특히 해외) 뉴스를 함께 싣는다(review.ts sendWindowStart와 같은 기준).
 //   지난 7일 브리핑에 나간 기사는 데일리에 다시 넣지 않는다(briefing-reco recentlyBriefed).
+//   'weekly'는 2026-10-26까지 월요일에 나간 지난 영상 기록용으로만 남긴다.
 //
 // 검수 화면·추천·영상·메일 크론이 모두 이 함수 하나로 "다음 방송"을 정한다.
 
 export type BriefingProgram = 'daily' | 'weekly';
-/** 방송별 기사 수 — 데일리·위클리 모두 10건, 기사당 약 18~20초(3분 10~20초). 2026-10-22 데일리, 10-23 위클리도 같게(소윤). */
-export const BRIEFING_COUNT: Record<BriefingProgram, number> = { daily: 10, weekly: 10 };
+/** 방송별 기사 수 — 데일리 12건(2026-11-04, 기사당 한 문장으로 줄여 칸을 늘렸다). 위클리는 지난 기록용. */
+export const BRIEFING_COUNT: Record<BriefingProgram, number> = { daily: 12, weekly: 10 };
 // 메일 크론이 헤드라인·기사 창을 확정하는 시각(첫 실행). 도착은 영상이 나온 뒤 08:20~08:30(2026-10-22, 이전 09:30).
 export const SEND_KST = { h: 8, m: 10 };
 
@@ -100,8 +101,8 @@ function kstAt(dateKey: string, h: number, m: number, addDays = 0): Date {
 }
 
 /**
- * 지금 기준 다음 방송(또는 오늘 오전 방송). 월·수·금 정오 전이면 오늘 방송, 아니면 다음 월·수·금.
- * 정오를 기준으로 삼는 이유: 09:30 발송·09:45 잔디 뒤 재실행·확인이 오전에 몰리기 때문.
+ * 지금 기준 다음 방송(또는 오늘 오전 방송). 평일 정오 전이면 오늘 방송, 아니면 다음 평일.
+ * 정오를 기준으로 삼는 이유: 08:30 발송·잔디 뒤 재실행·확인이 오전에 몰리기 때문.
  */
 export function broadcastFor(now: Date = new Date()): BroadcastWindow {
   const k = new Date(now.getTime() + KST_OFFSET_MS);
@@ -113,13 +114,8 @@ export function broadcastFor(now: Date = new Date()): BroadcastWindow {
   const dateKey = kstDateKey(new Date(now.getTime() + offset * 864e5));
   const dow = (k.getUTCDay() + offset) % 7;
   const md = (t: Date) => { const x = new Date(t.getTime() + KST_OFFSET_MS); return `${x.getUTCMonth() + 1}월 ${x.getUTCDate()}일`; };
-  if (dow === 1) {
-    const since = kstAt(dateKey, 0, 0, -6);   // 지난 화요일 0시
-    const until = kstAt(dateKey, 0, 0);       // 월요일 0시(= 일요일 끝)
-    return { program: 'weekly', dateKey, since, until, label: `${md(since)}부터 ${md(new Date(until.getTime() - 1))}까지` };
-  }
-  const since = kstAt(dateKey, SEND_KST.h, SEND_KST.m, -1); // 전날 09:30(화→월, 수→화 …)
-  return { program: 'daily', dateKey, since, label: `${md(since)} 오후부터` };
+  const since = kstAt(dateKey, SEND_KST.h, SEND_KST.m, dow === 1 ? -3 : -1); // 전날 08:10(월 → 지난 금)
+  return { program: 'daily', dateKey, since, label: `${md(since)} 오전부터` };
 }
 
 /** d는 실제 타임스탬프 — KST 기준 날짜 문자열(YYYY-MM-DD). */

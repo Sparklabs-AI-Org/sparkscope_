@@ -1,0 +1,56 @@
+name: Briefing Preview
+
+# 오늘 브리핑 시험 제작 — 발행하지 않는다(scripts/preview-briefing.ts). 결과는 이 실행의 Artifacts(briefing-preview)와 로그에 남는다.
+# 개선 작업 브랜치에 푸시하면 돈다. 메일·잔디·스냅샷을 건드리지 않아 일시 중지 스위치와 무관하다.
+on:
+  push:
+    branches: [eunbit/briefing-daily-v2]
+  workflow_dispatch:
+
+concurrency:
+  group: briefing-preview
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      POSTGRES_PRISMA_URL: ${{ secrets.POSTGRES_PRISMA_URL }}
+      POSTGRES_URL_NON_POOLING: ${{ secrets.POSTGRES_URL_NON_POOLING }}
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      GOOGLE_APPLICATION_CREDENTIALS: ${{ github.workspace }}/../gcp-sa.json
+      PROGRAM_NEWS_LIVE: '1'
+      TZ: Asia/Seoul
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - run: npm ci
+
+      - run: npx prisma generate
+
+      - name: Write GCP credentials
+        env:
+          GCP_SA: ${{ secrets.GCP_SERVICE_ACCOUNT_JSON }}
+        run: printf '%s' "$GCP_SA" > "$GOOGLE_APPLICATION_CREDENTIALS"
+
+      - name: Build preview (no publish)
+        run: npx tsx scripts/preview-briefing.ts --out out/preview
+
+      - name: Upload preview
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: briefing-preview
+          path: |
+            out/preview/*.mp4
+            out/preview/preview.md
+          retention-days: 7
+          if-no-files-found: ignore

@@ -22,6 +22,7 @@ import type { AnalyzedArticle, DigestData } from './types';
 import { buildSignalFeed } from './signal-feed';
 import { ensureArticleKo } from './translate-content';
 import { isBlockedNoise } from './relevance';
+import { loadProgramNews } from './program-news';
 import { BRIEFING_COUNT, broadcastFor, kstDateKey, type BriefingHeadline, type BroadcastWindow, type BriefingProgram } from './briefing';
 
 const KIND_RECO = 'briefing_reco';
@@ -41,6 +42,11 @@ const CATEGORY_LABEL: Record<string, string> = {
 };
 const IMPORTANCE_RANK: Record<string, number> = { CRITICAL: 4, HIGH: 3, MEDIUM: 2, LOW: 1 };
 const TREND_LABEL = '📈 이번 주 AI 트렌드';
+const ALUMNI_LABEL = '🎓 알럼나이';
+const PROGRAM_LABEL = '🤝 운영 사업·참여기업';
+const INDUSTRY_LABEL = '🌐 스타트업 업계 동향';
+/** 다른 AC·VC 기사 중 브리핑에 실을 만한 공개 사건(2026-11-02 대표님 — 운영사 선정·탈락 같은 경쟁 소식을 추적). 칸 이름은 「업계 동향」. */
+const COMPETITOR_EVENT = /선정|최종|운영사|주관기관|탈락|데모데이|펀드|출자|협약|MOU/i;
 /**
  * 주가 시황 기사 — 추천에서만 뺀다(교체 후보에는 남긴다). 분석이 이런 기사에도 HIGH를 줘서,
  * 같은 사건 묶음의 대표로 "스카이랩스 주가 2.51% 하락"이 "타임 헬스테크 500 선정" 대신 뽑혔다
@@ -154,7 +160,7 @@ async function loadTrends(): Promise<BriefingCandidate[]> {
 }
 
 /** 화면·저장용 헤드라인만 남긴다(보조 정보 제거). */
-function toHeadline(c: BriefingCandidate & Partial<IntraCandidate>): BriefingHeadline {
+export function toHeadline(c: BriefingCandidate & Partial<IntraCandidate>): BriefingHeadline {
   const { pubDate: _p, importance: _i, matchCount: _m, category: _c, company: _k, ...h } = c;
   return h;
 }
@@ -271,38 +277,29 @@ const AI_TOPIC = /AI|인공지능|생성형|LLM|GPT|에이전트|챗봇|딥러�
 
 /** 추천 칸 종류 — 화면의 "추천①~⑤"가 이 순서다. */
 export const SLOT_LABEL: Record<number, string> = {
-  1: '스파크랩', 2: '국내 포트폴리오', 3: '해외 포트폴리오', 4: 'AI 트렌드', 5: '정책·지원사업', 6: '투자·펀드',
+  1: '스파크랩', 2: '국내 포트폴리오', 3: '알럼나이', 4: '해외 포트폴리오', 5: '운영 사업', 6: '업계 동향', 7: '정책·지원사업', 8: 'AI·글로벌',
 };
 
-type Group = 'S' | 'P' | 'D' | 'G' | 'Y' | 'T';
-const GROUP_TIER: Record<Group, number> = { S: 1, P: 2, D: 3, G: 4, Y: 5, T: 6 };
+type Group = 'S' | 'P' | 'E' | 'D' | 'R' | 'T' | 'Y' | 'G';
+const GROUP_TIER: Record<Group, number> = { S: 1, P: 2, E: 3, D: 4, R: 5, T: 6, Y: 7, G: 8 };
 const GROUP_NAME: Record<Group, string> = {
-  S: '스파크랩 자사 소식', P: '국내 포트폴리오사 소식', D: '해외 포트폴리오사 소식(대만·글로벌벤처스)', G: '글로벌 AI 기업·업계 소식', Y: '정부·지자체 지원사업 공고·정책', T: '투자 유치·펀드 결성 소식',
+  S: '스파크랩 자사 소식', P: '국내 포트폴리오사 소식', E: '알럼나이(엑싯한 포트폴리오사) 소식', D: '해외 포트폴리오사 소식(대만·글로벌벤처스)',
+  R: '스파크랩이 운영하는 사업과 참여기업 소식', T: '스타트업 업계 동향(투자·펀드, AC·VC 소식)', Y: '정부·지자체 지원사업 공고·정책', G: '글로벌 AI 기업·업계 소식',
 };
 
 /**
- * 칸 수 — 데일리 10개·위클리 8개(2026-10-07 소윤 결정 8개, 10-22 데일리 10개). 아래는 8개 기준 설명이고 10개는 포폴 칸이 2개 늘어난다:
- *   AI 트렌드 3칸 고정(G — 해외 우선, 국내 AI는 [국내] 표시로 섞여 해외 매체급일 때만)
- *   나머지 5칸: 스파크랩(최대 1, 한국·대만·글로벌벤처스) → 포트폴리오
- *     스파크랩 있으면 국내 포폴 2 · 해외 포폴 2, 없으면 국내 3 · 해외 2 (D = 해외 포트폴리오: 대만·GV)
- *     한쪽 포폴이 모자라면 다른 쪽으로, 그래도 비면 AI 트렌드를 더 → 마지막으로 스타트업계
+ * 칸 수 — 데일리 12개(2026-11-04 은빛 결정: 0 스파크랩 → 1 국내 포폴 → 2 알럼나이 → 3 해외 포폴 → 4 운영 사업 →
+ * 5 스타트업 업계 동향(T·Y) → 6 AI·글로벌). 위쪽 칸부터 채우고, 맨 아래 AI·글로벌은 소식이 있으면 2칸을 남긴다.
+ * 위 칸이 비면 그 자리는 AI·글로벌이 받고, 그래도 남으면 위 칸부터 더 받는다.
  */
+const SLOT_CAPS: [Group, number][] = [['S', 2], ['P', 3], ['E', 2], ['D', 2], ['R', 2], ['T', 2], ['Y', 1]];
 function quotas(avail: Record<Group, number>, total: number): Record<Group, number> {
-  // 2026-10-28 소윤: 정책·지원사업 2칸 · 투자·펀드 2칸 보장, 나머지는 해외 AI 트렌드.
-  // 데일리·위클리 10개 = 스파크랩 1 · 정책 2 · 투자 2 · 포폴 최대 2 · 해외 AI 나머지(3 이상).
-  // 위클리 정책 2칸은 데모데이 주간 공고 정리 고정(pickByTiers의 Y 풀). 한쪽이 모자라면 해외 AI가 채운다.
-  const q: Record<Group, number> = { S: 0, P: 0, D: 0, G: 0, Y: 0, T: 0 };
-  q.S = Math.min(1, avail.S);
-  q.Y = Math.min(2, avail.Y);
-  q.T = Math.min(2, avail.T);
-  let room = total - q.S - q.Y - q.T;
-  const pf = Math.min(2, Math.max(0, room - 3));   // 해외 AI 3칸은 남긴다
-  q.P = Math.min(pf, avail.P);
-  q.D = Math.min(pf - q.P, avail.D);
-  room -= q.P + q.D;
-  q.G = Math.min(room, avail.G); room -= q.G;
-  // AI가 모자라면 포폴 → 정책 → 투자 순으로 더 받는다.
-  for (const g of ['P', 'D', 'Y', 'T'] as Group[]) { const more = Math.min(room, avail[g] - q[g]); q[g] += more; room -= more; }
+  const q: Record<Group, number> = { S: 0, P: 0, E: 0, D: 0, R: 0, T: 0, Y: 0, G: 0 };
+  q.G = Math.min(2, avail.G);
+  let room = total - q.G;
+  for (const [g, cap] of SLOT_CAPS) { q[g] = Math.min(cap, avail[g], room); room -= q[g]; }
+  const moreG = Math.min(room, avail.G - q.G); q.G += moreG; room -= moreG;
+  for (const [g] of SLOT_CAPS) { const more = Math.min(room, avail[g] - q[g]); q[g] += more; room -= more; }
   return q;
 }
 
@@ -327,7 +324,15 @@ const RANK_SYSTEM = `당신은 스파크랩(한국의 스타트업 액셀러레�
 
 - "해외 포트폴리오사" 그룹은 대만·글로벌벤처스 포트폴리오사 소식입니다. 주가·매출 조회 페이지, 회사명만 우연히 겹친 기사(날씨·일반 명사 등)는 고르지 마세요.
 
-JSON으로만 답하세요: {"picks": {"S": ["S0"], "P": ["P2","P0"], "D": ["D1"], "G": ["G0"], "Y": ["Y1"], "T": ["T3"]}}
+- "알럼나이" 그룹은 엑싯한 포트폴리오사 소식입니다. 주가 기사와 회사명만 겹친 기사는 고르지 마세요.
+
+- "스파크랩이 운영하는 사업과 참여기업" 그룹은 [회사: …]에 적힌 사업이나 참여기업이 기사의 실제 주인공일 때만 고르세요. 이름만 겹친 기사,
+  같은 이름의 다른 회사 기사는 고르지 마세요. 맞는 기사가 없으면 빈 배열로 두어도 됩니다.
+
+- "스타트업 업계 동향" 그룹에는 다른 AC·VC 소식도 있습니다. 어느 AC·VC가 정부 사업 운영사·주관기관에 선정됐는지, 펀드를 만들었는지처럼
+  공개 기사로 확인되는 사건을 고르세요.
+
+JSON으로만 답하세요: {"picks": {"S": ["S0"], "P": ["P2","P0"], "E": ["E0"], "D": ["D1"], "R": ["R0"], "T": ["T3"], "Y": ["Y1"], "G": ["G0"]}}
 그룹마다 요청한 개수를 정확히 지키고, 요청하지 않은 그룹은 빈 배열로 두세요.`;
 
 async function rankWithAI(
@@ -337,7 +342,7 @@ async function rankWithAI(
   (Object.keys(pools) as Group[]).forEach(g => {
     if (q[g] === 0) return;
     lines.push(`\n## ${GROUP_NAME[g]} — ${aiEither && (g === 'D' || g === 'G') ? '국내·글로벌 AI 합쳐 1개' : `${q[g]}개`}`);
-    pools[g].forEach((c, i) => lines.push(`${g}${i}. ${c.label.includes('국내') ? '[국내] ' : ''}${g === 'D' && (c as Partial<IntraCandidate>).company ? `[회사: ${(c as Partial<IntraCandidate>).company}] ` : ''}${c.title} — ${c.summary}${c.importance ? ` [${c.importance}]` : ''}`));
+    pools[g].forEach((c, i) => lines.push(`${g}${i}. ${c.label.includes('국내') ? '[국내] ' : ''}${(g === 'D' || g === 'R') && (c as Partial<IntraCandidate>).company ? `[회사: ${(c as Partial<IntraCandidate>).company}] ` : ''}${c.title} — ${c.summary}${c.importance ? ` [${c.importance}]` : ''}`));
   });
   const resp = await openai.chat.completions.create({
     model: RANK_MODEL,
@@ -347,7 +352,7 @@ async function rankWithAI(
   });
   const parsed = JSON.parse(resp.choices[0]?.message?.content ?? '{}') as { picks?: Partial<Record<Group, string[]>> };
   if (!parsed.picks) return null;
-  const out = { S: [], P: [], D: [], G: [], Y: [], T: [] } as Record<Group, BriefingCandidate[]>;
+  const out = { S: [], P: [], E: [], D: [], R: [], T: [], Y: [], G: [] } as Record<Group, BriefingCandidate[]>;
   (Object.keys(out) as Group[]).forEach(g => {
     for (const id of parsed.picks?.[g] ?? []) {
       const c = pools[g][Number(String(id).replace(/^\D+/, ''))];
@@ -541,9 +546,12 @@ export async function pickByTiers(w: BroadcastWindow): Promise<{ picked: Briefin
   const idByLink = new Map(candidates.map(a => [a.link, a.id]));
   // 엑싯(Exit·Written-off)한 포트폴리오사 — 기사가 많이 나오지만 우선순위를 낮춘다(대표님 피드백 2026-10).
   // 국내·해외 포폴 칸에서 빼고(성과 기사는 예외), 빈 자리는 아래 칸 규칙대로 AI·스타트업계가 채운다.
-  const exitNames = new Set((await prisma.monitoringTarget.findMany({
-    where: { portfolioStatus: { in: ['Exit', 'Written-off'] } }, select: { name: true },
-  })).map(t => t.name));
+  const exitTargets = await prisma.monitoringTarget.findMany({
+    where: { portfolioStatus: { in: ['Exit', 'Written-off'] } }, select: { name: true, portfolioStatus: true },
+  });
+  const exitNames = new Set(exitTargets.map(t => t.name));
+  // 알럼나이는 엑싯까지(2026-11-04 은빛) — 사업을 접은 회사(Written-off)는 넣지 않는다.
+  const alumniNames = new Set(exitTargets.filter(t => t.portfolioStatus === 'Exit').map(t => t.name));
   const notExit = (c: { company?: string; title: string }) => !c.company || !exitNames.has(c.company) || isAchievement(c.title);
   const rankOf = (a: { importance?: string | null }) => IMPORTANCE_RANK[a.importance ?? ''] ?? 0;
   const weekly = w.program === 'weekly';
@@ -576,9 +584,27 @@ export async function pickByTiers(w: BroadcastWindow): Promise<{ picked: Briefin
     .map(a => (STOCK_TICKER.test(a.title) || !isKorean(a.title) ? byCompany(a.matchedKeyword) : a))
     .filter((a): a is NonNullable<typeof a> => !!a)
     .map(a => fromArticle(a, idByLink))
-    .filter(a => !briefedCompanies.has(a.company) && fresh(a) && notExit(a))
+    .filter(a => !briefedCompanies.has(a.company) && fresh(a) && notExit(a) && !alumniNames.has(a.company))
     .sort((x, y) => rankOf(y) - rankOf(x))
     .slice(0, 8);
+
+  // 알럼나이 — 엑싯한 국내 포트폴리오사. 회사당 1건, 중요도 순.
+  const seenAlumni = new Set<string>();
+  const E = candidates
+    .filter(a => a.category === 'portfolio_company' && alumniNames.has(a.matchedKeyword) && !STOCK_TICKER.test(a.title) && isKorean(a.title))
+    .sort((x, y) => rankOf(y) - rankOf(x) || y.priorityScore - x.priorityScore)
+    .filter(a => (seenAlumni.has(a.matchedKeyword) ? false : (seenAlumni.add(a.matchedKeyword), true)))
+    .map(a => ({ ...fromArticle(a, idByLink), label: ALUMNI_LABEL }))
+    .filter(a => !briefedCompanies.has(a.company) && fresh(a))
+    .slice(0, 8);
+
+  // 운영 사업·참여기업(program-news.ts). 제목에 스파크랩이 있으면 맨 앞 스파크랩 칸으로 올린다.
+  const programNews = (await loadProgramNews(w.since, w.until)).map(h => ({
+    kind: 'intra' as const, ref: h.ref, title: h.title, summary: h.summary, source: h.source, url: h.url,
+    label: PROGRAM_LABEL, pubDate: h.pubDate.toISOString(), category: 'program', company: h.about,
+  })).filter(fresh);
+  S.push(...programNews.filter(c => selfInTitle(c.title)).map(c => ({ ...c, label: CATEGORY_LABEL.sparklabs_self })));
+  const R = programNews.filter(c => !selfInTitle(c.title)).slice(0, 20);
 
   // 해외 포트폴리오(대만·글로벌벤처스) — 후보 중 회사당 1건, 중요도 순. 제목은 한국어 번역(titleKo)으로 보여 준다.
   // 주가·매출 조회·투자자 목록 같은 페이지는 뺀다(2026-10-07 실측: "稜研科技(7812)營收查詢", "OpenSea - Funding Rounds & List of Investors").
@@ -667,6 +693,10 @@ export async function pickByTiers(w: BroadcastWindow): Promise<{ picked: Briefin
     (a.category === 'industry_trend' || a.category === 'competitor')
     && isKorean(a.title) && DEAL.test(a.title) && !NOT_STARTUP_DEAL.test(a.title) && !STOCK_TICKER.test(a.title) && !weakForBriefing(a)))
     .map(a => ({ ...fromArticle(a, idByLink), label: '💰 투자·펀드' }))
+    .sort((x, y) => rankOf(y) - rankOf(x)),
+  ...buildClusteredPool(candidates.filter(a =>
+    a.category === 'competitor' && isKorean(a.title) && COMPETITOR_EVENT.test(a.title) && !STOCK_TICKER.test(a.title) && !weakForBriefing(a)))
+    .map(a => ({ ...fromArticle(a, idByLink), label: INDUSTRY_LABEL }))
     .sort((x, y) => rankOf(y) - rankOf(x))]
     .filter(fresh)
     .filter((c, i, arr) => arr.findIndex(x => x.url === c.url) === i)
@@ -703,8 +733,8 @@ export async function pickByTiers(w: BroadcastWindow): Promise<{ picked: Briefin
   // 국내 AI도 같은 기준 — 금융·투자 쪽 사람에게 쓸모 있는 것만(10/29 '애딧 렌즈 모두의 창업 선정'이 AI 칸에 들어감).
   const keepDomestic = await financeRelevant(DA);
   const GA = [...GE, ...DA.filter((_, i) => keepDomestic.has(i))];
-  const pools: Record<Group, BriefingCandidate[]> = { S, P, D, G: GA, Y, T };
-  const counts = { S: S.length, P: P.length, D: D.length, G: GA.length, Y: Y.length, T: T.length };
+  const pools: Record<Group, BriefingCandidate[]> = { S, P, E, D, R, T, Y, G: GA };
+  const counts = { S: S.length, P: P.length, E: E.length, D: D.length, R: R.length, T: T.length, Y: Y.length, G: GA.length };
   const total = BRIEFING_COUNT[w.program];
   const q = quotas(counts, total);
   const aiEither = false; // 국내·글로벌 AI "둘 중 하나" 칸은 없어졌다(10-06부터 한 그룹)
@@ -738,17 +768,17 @@ export async function pickByTiers(w: BroadcastWindow): Promise<{ picked: Briefin
     tiers.push(GROUP_TIER[g]);
     return true;
   };
-  (['S', 'P', 'D', 'G', 'Y', 'T'] as Group[]).forEach(g => {
-    // 해외 포폴은 AI가 고른 것만 쓴다 — 동명 기사("Rain Timecast" 날씨)가 남은 칸 채우기로 끼어들지 않게.
-    const order = g === 'D' && chosen ? [...chosen.D] : [...(chosen?.[g] ?? []), ...pools[g]];
+  (['S', 'P', 'E', 'D', 'R', 'T', 'Y', 'G'] as Group[]).forEach(g => {
+    // 해외 포폴·운영 사업은 AI가 고른 것만 쓴다 — 동명 기사("Rain Timecast" 날씨)가 남은 칸 채우기로 끼어들지 않게.
+    const order = (g === 'D' || g === 'R') && chosen ? [...chosen[g]] : [...(chosen?.[g] ?? []), ...pools[g]];
     let n = 0;
     for (const c of order) {
       if (n >= want[g]) break;
       if (take(g, c)) n++;
     }
   });
-  // 빈칸이 남으면(해외 포폴을 AI가 덜 골랐을 때 등) 국내 포폴 → AI 트렌드 → 스타트업계 순으로 채운다.
-  for (const g of ['P', 'G', 'Y', 'T'] as Group[]) {
+  // 빈칸이 남으면(해외 포폴·운영 사업을 AI가 덜 골랐을 때 등) 위 칸부터 채운다.
+  for (const g of ['P', 'E', 'T', 'Y', 'G'] as Group[]) {
     for (const c of [...(chosen?.[g] ?? []), ...pools[g]]) {
       if (picked.length >= total) break;
       take(g, c);
@@ -773,7 +803,7 @@ export async function pickByTiers(w: BroadcastWindow): Promise<{ picked: Briefin
     }
     // 빠진 칸은 한 칸씩 같은 그룹에서 채운다 — 예전처럼 그룹째로 채우면 먼저 도는 그룹이 빈자리를 다 가져갔다
     // (2026-10-28 정책 칸이 6개, AI가 2개). 같은 그룹에 없으면 국내 포폴 → AI·정책 중 적은 쪽 → 투자 순.
-    const fillOne = (g: Group) => [...(chosen?.[g] ?? []), ...pools[g]].some(c => take(g, c));
+    const fillOne = (g: Group) => [...(chosen?.[g] ?? []), ...(g === 'R' ? [] : pools[g])].some(c => take(g, c));
     const count = (g: Group) => tiers.filter(t => t === GROUP_TIER[g]).length;
     for (const g of removedGroups) {
       if (picked.length >= total) break;
@@ -798,8 +828,8 @@ export async function pickByTiers(w: BroadcastWindow): Promise<{ picked: Briefin
       if (ok && take('G', ok)) break;
     }
   }
-  // 해외 AI가 모자라 칸이 비면 국내 포폴 → 투자·펀드 → 정책 순으로 채운다(해외 AI 기준을 좁힌 뒤 10개가 안 차는 날이 생겼다).
-  for (const g of ['P', 'T', 'Y'] as Group[]) {
+  // 해외 AI가 모자라 칸이 비면 국내 포폴 → 알럼나이 → 투자·펀드 → 정책 순으로 채운다(해외 AI 기준을 좁힌 뒤 칸이 안 차는 날이 생겼다).
+  for (const g of ['P', 'E', 'T', 'Y'] as Group[]) {
     for (const c of [...(chosen?.[g] ?? []), ...pools[g]]) {
       if (picked.length >= total) break;
       take(g, c);

@@ -32,12 +32,8 @@
       "schedule": "50 20 * * *"
     },
     {
-      "path": "/api/cron/dispatch?workflow=daily-briefing.yml&slot=weekly",
-      "schedule": "30 22 * * 0"
-    },
-    {
       "path": "/api/cron/dispatch?workflow=daily-briefing.yml",
-      "schedule": "12 23 * * 1-4"
+      "schedule": "12 23 * * 0-4"
     },
     {
       "path": "/api/cron/dispatch?workflow=daily-briefing.yml&slot=retry",

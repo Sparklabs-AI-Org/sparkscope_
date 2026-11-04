@@ -9,10 +9,12 @@
 import { GoogleAuth } from 'google-auth-library';
 
 const PROJECT = 'communication-504101';
+/** speed 1.2 — 2026-11-02 대표님 미팅 "너무 느리다"(1.2~1.3배 시험 후 확정 예정). */
 export const VOICE = {
   model: 'gemini-2.5-flash-tts',
   name: 'Charon',
   style: '아침 뉴스 앵커처럼 또렷하고 밝게, 약간 빠른 속도로 읽어 주세요.',
+  speed: 1.2,
 } as const;
 const SAMPLE_RATE = 24000;
 
@@ -126,7 +128,11 @@ export async function synthesizeAll(texts: string[], v: VoiceSpec = VOICE): Prom
   } catch (e) {
     console.error(`[tts] Gemini 음성 실패 — 전체를 ${FALLBACK_VOICE}로 다시 만듭니다:`, e);
     const speeches: Speech[] = [];
-    for (const t of texts) speeches.push(await withRetry(t, false));
+    // 대체 음성도 같은 속도로 — 빠뜨리면 Gemini가 실패한 날만 영상이 느려진다.
+    for (const t of texts) {
+      const sp = await withRetry(t, false);
+      speeches.push(v.speed && v.speed !== 1 ? await speedUp(sp, v.speed) : sp);
+    }
     return { speeches, voice: FALLBACK_VOICE };
   }
 }

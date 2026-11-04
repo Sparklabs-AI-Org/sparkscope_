@@ -1,13 +1,13 @@
 name: Daily Briefing Video
 
-# 월·수·금 브리핑 영상 — 월요일은 위클리(Claw-e 뉴스데스크), 수·금은 데일리(그날 09:30 메일을 영상으로).
-# 헤드라인 스냅샷 → 대본 → 음성 → 슬라이드 → MP4 → Supabase Storage. 어느 쪽인지는 briefing.ts broadcastFor()가 정한다.
+# 월~금 데일리 브리핑 영상(그날 08:10 확정 헤드라인을 영상으로). 위클리는 2026-11-04 폐지 — 월요일은 주말 기사까지 담는다.
+# 헤드라인 스냅샷 → 대본 → 음성 → 슬라이드 → MP4 → Supabase Storage. 기사 기간은 briefing.ts broadcastFor()가 정한다.
 # 영상 렌더링(ffmpeg)은 Vercel 함수로 돌리기 무거워 여기서 한다.
 #
 # 시작 경로(오늘 영상이 이미 있으면 wait-for-briefing이 건너뛰어 두 번 만들지 않는다):
-#  - Vercel 크론(vercel.json) 월 07:30 · 화~금 08:12 KST → /api/cron/dispatch (GITHUB_DISPATCH_TOKEN 필요)
+#  - Vercel 크론(vercel.json) 월~금 08:12 KST → /api/cron/dispatch (GITHUB_DISPATCH_TOKEN 필요)
 #  - 예비: daily-collect.yml 수집이 끝난 뒤 이어서 호출(workflow_call) — 토큰이 없어도 돈다
-# 재료를 기다린다(월: 오늘 수집 · 마감 08:05 / 화~금: 08:10 헤드라인 확정 · 마감 08:55). 게시되면 메일이 나가고 08:30 잔디가 보낸다.
+# 재료를 기다린다(08:10 헤드라인 확정 · 마감 08:55). 게시되면 메일이 나가고 08:30 잔디가 보낸다.
 on:
   workflow_dispatch:
     inputs:
@@ -51,7 +51,7 @@ jobs:
           GCP_SA: ${{ secrets.GCP_SERVICE_ACCOUNT_JSON }}
         run: printf '%s' "$GCP_SA" > "$GOOGLE_APPLICATION_CREDENTIALS"
 
-      - name: Wait for today's material (Mon collect, Wed/Fri mail)
+      - name: Wait for today's material (08:10 headline snapshot)
         id: wait
         env:
           FORCE: ${{ inputs.force && '1' || '0' }}

@@ -1,0 +1,1591 @@
+{
+ "source": "SparkScope_운영사업_키워드_확인요청_2026-11-04.xlsx (담당자 확인 전 초안)",
+ "programs": [
+  {
+   "name": "ICT 이노베이션스퀘어(동남권)",
+   "keywords": [
+    "ICT 이노베이션스퀘어",
+    "부산정보산업진흥원"
+   ],
+   "mustAny": [
+    "부산",
+    "동남권",
+    "부산정보산업진흥원"
+   ],
+   "exclude": []
+  },
+  {
+   "name": "HL 신사업·Closed Innovation",
+   "keywords": [
+    "HL클레무브",
+    "에이치엘클레무브",
+    "HL Klemove",
+    "HL홀딩스",
+    "HL그룹",
+    "HL만도"
+   ],
+   "mustAny": [
+    "스타트업",
+    "오픈이노베이션",
+    "신사업",
+    "클로즈드 이노베이션",
+    "Closed Innovation",
+    "협업"
+   ],
+   "exclude": [
+    "테크업 플러스"
+   ]
+  },
+  {
+   "name": "글로벌 청년창업사관학교 G-라운드",
+   "keywords": [
+    "글로벌창업사관학교",
+    "글로벌 창업사관학교",
+    "글로벌청년창업사관학교",
+    "글로벌 청년창업사관학교",
+    "G-라운드"
+   ],
+   "mustAny": [],
+   "exclude": []
+  },
+  {
+   "name": "K-테크 파이오니어즈",
+   "keywords": [
+    "K-테크 파이오니어즈",
+    "K테크 파이오니어즈",
+    "K-테크 파이오니어",
+    "K-Tech Pioneers"
+   ],
+   "mustAny": [],
+   "exclude": [
+    "K-테크패스"
+   ]
+  },
+  {
+   "name": "모두의 창업",
+   "keywords": [
+    "모두의 창업"
+   ],
+   "mustAny": [],
+   "exclude": [
+    "선정",
+    "합격",
+    "진출"
+   ]
+  },
+  {
+   "name": "서울창업허브 공덕",
+   "keywords": [
+    "서울창업허브 공덕"
+   ],
+   "mustAny": [],
+   "exclude": [
+    "창동",
+    "성수"
+   ]
+  },
+  {
+   "name": "부산 글로벌아카데미 패키지",
+   "keywords": [
+    "글로벌아카데미 패키지",
+    "글로벌 아카데미 패키지",
+    "부산기술창업투자원",
+    "부산창업투자원"
+   ],
+   "mustAny": [
+    "글로벌",
+    "해외 진출"
+   ],
+   "exclude": [
+    "글로벌창업이민센터"
+   ]
+  },
+  {
+   "name": "강남구 글로벌 스타트업 IR",
+   "keywords": [
+    "강남구 글로벌 스타트업 IR",
+    "강남구 해외 IR"
+   ],
+   "mustAny": [],
+   "exclude": []
+  },
+  {
+   "name": "강남구 해외 테스트베드",
+   "keywords": [
+    "강남구 해외 테스트베드",
+    "스타트업 해외 테스트베드",
+    "해외 테스트베드 챌린지",
+    "123팩토리"
+   ],
+   "mustAny": [],
+   "exclude": [
+    "코엑스"
+   ]
+  },
+  {
+   "name": "한양대 RISE 글로벌 액셀러레이팅",
+   "keywords": [
+    "한양대 RISE",
+    "한양대학교 RISE",
+    "한양 RISE"
+   ],
+   "mustAny": [
+    "글로벌",
+    "액셀러레이팅",
+    "창업",
+    "비바테크",
+    "VivaTech",
+    "IVS"
+   ],
+   "exclude": []
+  },
+  {
+   "name": "동국대 스케일업 D.코리아",
+   "keywords": [
+    "스케일업 D.코리아",
+    "동국대 캠퍼스타운"
+   ],
+   "mustAny": [],
+   "exclude": []
+  },
+  {
+   "name": "GRAVITY 2026",
+   "keywords": [
+    "GRAVITY 2026",
+    "그래비티 2026",
+    "4대 과기원 창업리그",
+    "과기원 학생 창업리그"
+   ],
+   "mustAny": [],
+   "exclude": []
+  }
+ ],
+ "companies": [
+  {
+   "name": "SECA",
+   "services": [],
+   "ceo": "김준형",
+   "programs": [
+    "2026 K-테크 파이오니어즈"
+   ],
+   "strict": true
+  },
+  {
+   "name": "SurreySpace Solar",
+   "services": [],
+   "ceo": "오기택",
+   "programs": [
+    "2026 K-테크 파이오니어즈"
+   ],
+   "strict": false
+  },
+  {
+   "name": "aix",
+   "services": [],
+   "ceo": "이민기",
+   "programs": [
+    "2026 K-테크 파이오니어즈"
+   ],
+   "strict": true
+  },
+  {
+   "name": "SERiD AI",
+   "services": [],
+   "ceo": "박선화",
+   "programs": [
+    "2026 K-테크 파이오니어즈"
+   ],
+   "strict": true
+  },
+  {
+   "name": "Wayfinder Space",
+   "services": [],
+   "ceo": "김홍석",
+   "programs": [
+    "2026 K-테크 파이오니어즈"
+   ],
+   "strict": false
+  },
+  {
+   "name": "Contoro Robotics",
+   "services": [],
+   "ceo": "윤영목",
+   "programs": [
+    "2026 K-테크 파이오니어즈"
+   ],
+   "strict": false
+  },
+  {
+   "name": "DocentPro",
+   "services": [],
+   "ceo": "정상일",
+   "programs": [
+    "2026 K-테크 파이오니어즈"
+   ],
+   "strict": false
+  },
+  {
+   "name": "Storika",
+   "services": [],
+   "ceo": "박종현",
+   "programs": [
+    "2026 K-테크 파이오니어즈"
+   ],
+   "strict": true
+  },
+  {
+   "name": "OpenGraph Labs",
+   "services": [],
+   "ceo": "김주호",
+   "programs": [
+    "2026 K-테크 파이오니어즈"
+   ],
+   "strict": false
+  },
+  {
+   "name": "CyrenCare",
+   "services": [],
+   "ceo": "백광영",
+   "programs": [
+    "2026 K-테크 파이오니어즈"
+   ],
+   "strict": false
+  },
+  {
+   "name": "K-ATR (Active Therapy Robot)",
+   "services": [],
+   "ceo": "구익모",
+   "programs": [
+    "2026 K-테크 파이오니어즈"
+   ],
+   "strict": false
+  },
+  {
+   "name": "Pinta AI",
+   "services": [],
+   "ceo": "김도현",
+   "programs": [
+    "2026 K-테크 파이오니어즈"
+   ],
+   "strict": true
+  },
+  {
+   "name": "KINZ",
+   "services": [],
+   "ceo": "박세나",
+   "programs": [
+    "2026 K-테크 파이오니어즈"
+   ],
+   "strict": true
+  },
+  {
+   "name": "iQ Surgical",
+   "services": [],
+   "ceo": "박세하",
+   "programs": [
+    "2026 K-테크 파이오니어즈"
+   ],
+   "strict": false
+  },
+  {
+   "name": "LinqAlpha",
+   "services": [],
+   "ceo": "최찬열",
+   "programs": [
+    "2026 K-테크 파이오니어즈"
+   ],
+   "strict": false
+  },
+  {
+   "name": "Celuragen Therapeutics",
+   "services": [],
+   "ceo": "조장환",
+   "programs": [
+    "2026 K-테크 파이오니어즈"
+   ],
+   "strict": false
+  },
+  {
+   "name": "BizCrush",
+   "services": [],
+   "ceo": "오예슬",
+   "programs": [
+    "2026 K-테크 파이오니어즈"
+   ],
+   "strict": false
+  },
+  {
+   "name": "Pen-AI",
+   "services": [],
+   "ceo": "조성진",
+   "programs": [
+    "2026 K-테크 파이오니어즈"
+   ],
+   "strict": true
+  },
+  {
+   "name": "SkinSeoul Lab",
+   "services": [],
+   "ceo": "박근영",
+   "programs": [
+    "2026 K-테크 파이오니어즈"
+   ],
+   "strict": false
+  },
+  {
+   "name": "Trxbx",
+   "services": [],
+   "ceo": "조황",
+   "programs": [
+    "2026 K-테크 파이오니어즈"
+   ],
+   "strict": true
+  },
+  {
+   "name": "니어브레인",
+   "services": [],
+   "ceo": "이태린",
+   "programs": [
+    "2026 강남구 글로벌 스타트업 IR활성화 지원사업"
+   ],
+   "strict": false
+  },
+  {
+   "name": "리마크",
+   "services": [],
+   "ceo": "조정래",
+   "programs": [
+    "2026 강남구 글로벌 스타트업 IR활성화 지원사업"
+   ],
+   "strict": true
+  },
+  {
+   "name": "오션윅",
+   "services": [
+    "DIVERSE"
+   ],
+   "ceo": "김정일",
+   "programs": [
+    "2026 강남구 글로벌 스타트업 IR활성화 지원사업"
+   ],
+   "strict": true
+  },
+  {
+   "name": "주드라",
+   "services": [],
+   "ceo": "조현호",
+   "programs": [
+    "2026 강남구 글로벌 스타트업 IR활성화 지원사업",
+    "2026 글로벌 청년창업사관학교 G-라운드"
+   ],
+   "strict": true
+  },
+  {
+   "name": "더바통",
+   "services": [
+    "파자마잼"
+   ],
+   "ceo": "송영일",
+   "programs": [
+    "2026 강남구 글로벌 스타트업 IR활성화 지원사업"
+   ],
+   "strict": true
+  },
+  {
+   "name": "콜로세움코퍼레이션",
+   "services": [],
+   "ceo": "박진수",
+   "programs": [
+    "2026 강남구 글로벌 스타트업 IR활성화 지원사업"
+   ],
+   "strict": false
+  },
+  {
+   "name": "에이비스",
+   "services": [],
+   "ceo": "이대홍",
+   "programs": [
+    "2026 강남구 글로벌 스타트업 IR활성화 지원사업"
+   ],
+   "strict": false
+  },
+  {
+   "name": "매니패스트",
+   "services": [
+    "Manyfast"
+   ],
+   "ceo": "장용석",
+   "programs": [
+    "2026 강남구 글로벌 스타트업 IR활성화 지원사업",
+    "2026 글로벌 청년창업사관학교 G-라운드"
+   ],
+   "strict": false
+  },
+  {
+   "name": "임팩트에이아이",
+   "services": [],
+   "ceo": "이민형",
+   "programs": [
+    "2026 강남구 글로벌 스타트업 IR활성화 지원사업"
+   ],
+   "strict": false
+  },
+  {
+   "name": "라이웨이",
+   "services": [],
+   "ceo": "김지수",
+   "programs": [
+    "2026 강남구 글로벌 스타트업 IR활성화 지원사업"
+   ],
+   "strict": false
+  },
+  {
+   "name": "비즈크러시",
+   "services": [],
+   "ceo": "곽태민",
+   "programs": [
+    "2026 강남구 글로벌 스타트업 IR활성화 지원사업"
+   ],
+   "strict": false
+  },
+  {
+   "name": "플리스",
+   "services": [],
+   "ceo": "지수희",
+   "programs": [
+    "2026 강남구 글로벌 스타트업 IR활성화 지원사업"
+   ],
+   "strict": true
+  },
+  {
+   "name": "컴포랩스",
+   "services": [],
+   "ceo": "이원섭",
+   "programs": [
+    "2026 강남구 글로벌 스타트업 IR활성화 지원사업"
+   ],
+   "strict": false
+  },
+  {
+   "name": "",
+   "services": [
+    "Villion"
+   ],
+   "ceo": "박기범",
+   "programs": [
+    "2026년 ICT 이노베이션스퀘어 확산(동남권)"
+   ],
+   "strict": true
+  },
+  {
+   "name": "스튜디오 포레",
+   "services": [
+    "딸깍"
+   ],
+   "ceo": "최민석",
+   "programs": [
+    "2026년 ICT 이노베이션스퀘어 확산(동남권)"
+   ],
+   "strict": false
+  },
+  {
+   "name": "마젠트",
+   "services": [],
+   "ceo": "안상욱",
+   "programs": [
+    "2026년 ICT 이노베이션스퀘어 확산(동남권)"
+   ],
+   "strict": true
+  },
+  {
+   "name": "굿딜파트너",
+   "services": [
+    "애드킥",
+    "ADKICK"
+   ],
+   "ceo": "최진",
+   "programs": [
+    "2026년 ICT 이노베이션스퀘어 확산(동남권)"
+   ],
+   "strict": false
+  },
+  {
+   "name": "시그널크래프트",
+   "services": [],
+   "ceo": "김선범",
+   "programs": [
+    "2026년 ICT 이노베이션스퀘어 확산(동남권)"
+   ],
+   "strict": false
+  },
+  {
+   "name": "하이브마인드",
+   "services": [],
+   "ceo": "김동욱",
+   "programs": [
+    "2026년 ICT 이노베이션스퀘어 확산(동남권)"
+   ],
+   "strict": false
+  },
+  {
+   "name": "빛가람시스템",
+   "services": [],
+   "ceo": "최재영",
+   "programs": [
+    "글로벌 아카데미 패키지 프로그램"
+   ],
+   "strict": false
+  },
+  {
+   "name": "셀라스타",
+   "services": [],
+   "ceo": "전성하",
+   "programs": [
+    "글로벌 아카데미 패키지 프로그램"
+   ],
+   "strict": false
+  },
+  {
+   "name": "티큐어",
+   "services": [],
+   "ceo": "강현욱",
+   "programs": [
+    "글로벌 아카데미 패키지 프로그램"
+   ],
+   "strict": true
+  },
+  {
+   "name": "피시오",
+   "services": [],
+   "ceo": "곽서준",
+   "programs": [
+    "글로벌 아카데미 패키지 프로그램"
+   ],
+   "strict": true
+  },
+  {
+   "name": "블루라이언스",
+   "services": [],
+   "ceo": "지환국",
+   "programs": [
+    "글로벌 아카데미 패키지 프로그램"
+   ],
+   "strict": false
+  },
+  {
+   "name": "세라",
+   "services": [],
+   "ceo": "김도연",
+   "programs": [
+    "글로벌 아카데미 패키지 프로그램"
+   ],
+   "strict": true
+  },
+  {
+   "name": "그리니쉬",
+   "services": [
+    "I Wish Gel"
+   ],
+   "ceo": "성인성",
+   "programs": [
+    "글로벌 아카데미 패키지 프로그램"
+   ],
+   "strict": false
+  },
+  {
+   "name": "현성",
+   "services": [],
+   "ceo": "박병강",
+   "programs": [
+    "글로벌 아카데미 패키지 프로그램"
+   ],
+   "strict": true
+  },
+  {
+   "name": "씨아이티",
+   "services": [],
+   "ceo": "정승",
+   "programs": [
+    "글로벌 아카데미 패키지 프로그램"
+   ],
+   "strict": false
+  },
+  {
+   "name": "덴큐임플란트",
+   "services": [],
+   "ceo": "이태훈",
+   "programs": [
+    "글로벌 아카데미 패키지 프로그램"
+   ],
+   "strict": false
+  },
+  {
+   "name": "지디코퍼레이션",
+   "services": [],
+   "ceo": "김정성",
+   "programs": [
+    "2026 서울창업허브 공덕 입주기업 액셀러레이팅 운영"
+   ],
+   "strict": false
+  },
+  {
+   "name": "비비티에이아이코리아",
+   "services": [],
+   "ceo": "장유성",
+   "programs": [
+    "2026 서울창업허브 공덕 입주기업 액셀러레이팅 운영"
+   ],
+   "strict": false
+  },
+  {
+   "name": "이노케어플러스",
+   "services": [
+    "닥플 플러스"
+   ],
+   "ceo": "진현준",
+   "programs": [
+    "2026 서울창업허브 공덕 입주기업 액셀러레이팅 운영"
+   ],
+   "strict": false
+  },
+  {
+   "name": "네오코리아",
+   "services": [
+    "택시얼마"
+   ],
+   "ceo": "김도익",
+   "programs": [
+    "2026 서울창업허브 공덕 입주기업 액셀러레이팅 운영"
+   ],
+   "strict": false
+  },
+  {
+   "name": "저스트핀",
+   "services": [
+    "블루미"
+   ],
+   "ceo": "장호원",
+   "programs": [
+    "2026 서울창업허브 공덕 입주기업 액셀러레이팅 운영"
+   ],
+   "strict": false
+  },
+  {
+   "name": "매일새옷",
+   "services": [],
+   "ceo": "서동광",
+   "programs": [
+    "2026 서울창업허브 공덕 입주기업 액셀러레이팅 운영"
+   ],
+   "strict": false
+  },
+  {
+   "name": "리피드",
+   "services": [],
+   "ceo": "이충호",
+   "programs": [
+    "2026 서울창업허브 공덕 입주기업 액셀러레이팅 운영"
+   ],
+   "strict": true
+  },
+  {
+   "name": "앤빅스랩",
+   "services": [],
+   "ceo": "정훈의",
+   "programs": [
+    "2026 서울창업허브 공덕 입주기업 액셀러레이팅 운영"
+   ],
+   "strict": false
+  },
+  {
+   "name": "타날리시스",
+   "services": [],
+   "ceo": "최인경",
+   "programs": [
+    "2026 서울창업허브 공덕 입주기업 액셀러레이팅 운영"
+   ],
+   "strict": false
+  },
+  {
+   "name": "코드크레용",
+   "services": [
+    "Shortime"
+   ],
+   "ceo": "박지복",
+   "programs": [
+    "2026 서울창업허브 공덕 입주기업 액셀러레이팅 운영"
+   ],
+   "strict": false
+  },
+  {
+   "name": "모핑아이",
+   "services": [],
+   "ceo": "김기영",
+   "programs": [
+    "2026 서울창업허브 공덕 입주기업 액셀러레이팅 운영"
+   ],
+   "strict": false
+  },
+  {
+   "name": "업템포글로벌",
+   "services": [],
+   "ceo": "오종훈",
+   "programs": [
+    "2026 서울창업허브 공덕 입주기업 액셀러레이팅 운영"
+   ],
+   "strict": false
+  },
+  {
+   "name": "트레비앙",
+   "services": [
+    "메디코치"
+   ],
+   "ceo": "문형철",
+   "programs": [
+    "2026 서울창업허브 공덕 입주기업 액셀러레이팅 운영"
+   ],
+   "strict": false
+  },
+  {
+   "name": "엘케이로보틱스",
+   "services": [],
+   "ceo": "김승훈",
+   "programs": [
+    "2026 서울창업허브 공덕 입주기업 액셀러레이팅 운영"
+   ],
+   "strict": false
+  },
+  {
+   "name": "더데이지",
+   "services": [],
+   "ceo": "박의수",
+   "programs": [
+    "2026 서울창업허브 공덕 입주기업 액셀러레이팅 운영"
+   ],
+   "strict": false
+  },
+  {
+   "name": "리터놀",
+   "services": [],
+   "ceo": "윤대건",
+   "programs": [
+    "2026 서울창업허브 공덕 입주기업 액셀러레이팅 운영"
+   ],
+   "strict": true
+  },
+  {
+   "name": "지오하임",
+   "services": [],
+   "ceo": "김인선",
+   "programs": [
+    "2026 서울창업허브 공덕 입주기업 액셀러레이팅 운영"
+   ],
+   "strict": false
+  },
+  {
+   "name": "더블유쓰리컴퍼니",
+   "services": [],
+   "ceo": "최웅석",
+   "programs": [
+    "2026 서울창업허브 공덕 입주기업 액셀러레이팅 운영"
+   ],
+   "strict": false
+  },
+  {
+   "name": "스마투스코리아",
+   "services": [],
+   "ceo": "손호정",
+   "programs": [
+    "2026 서울창업허브 공덕 입주기업 액셀러레이팅 운영"
+   ],
+   "strict": false
+  },
+  {
+   "name": "슬레이트미디어",
+   "services": [],
+   "ceo": "강윤석",
+   "programs": [
+    "2026 서울창업허브 공덕 입주기업 액셀러레이팅 운영"
+   ],
+   "strict": false
+  },
+  {
+   "name": "",
+   "services": [
+    "KoreaPeak"
+   ],
+   "ceo": "전하녕",
+   "programs": [
+    "2026 모두의 창업"
+   ],
+   "strict": true
+  },
+  {
+   "name": "",
+   "services": [
+    "보이저",
+    "Voyager"
+   ],
+   "ceo": "박종민",
+   "programs": [
+    "2026 모두의 창업"
+   ],
+   "strict": true
+  },
+  {
+   "name": "",
+   "services": [
+    "AIDEX"
+   ],
+   "ceo": "김찬규",
+   "programs": [
+    "2026 모두의 창업"
+   ],
+   "strict": true
+  },
+  {
+   "name": "",
+   "services": [
+    "빌지"
+   ],
+   "ceo": "김현호",
+   "programs": [
+    "2026 모두의 창업"
+   ],
+   "strict": true
+  },
+  {
+   "name": "",
+   "services": [
+    "두바꾸",
+    "Dubaggu"
+   ],
+   "ceo": "최현근",
+   "programs": [
+    "2026 모두의 창업"
+   ],
+   "strict": true
+  },
+  {
+   "name": "",
+   "services": [
+    "HaloX"
+   ],
+   "ceo": "이재철",
+   "programs": [
+    "2026 모두의 창업"
+   ],
+   "strict": true
+  },
+  {
+   "name": "",
+   "services": [
+    "Tripy"
+   ],
+   "ceo": "이지우",
+   "programs": [
+    "2026 모두의 창업"
+   ],
+   "strict": true
+  },
+  {
+   "name": "",
+   "services": [
+    "프리뷰스",
+    "Prevus"
+   ],
+   "ceo": "황선주",
+   "programs": [
+    "2026 모두의 창업"
+   ],
+   "strict": true
+  },
+  {
+   "name": "",
+   "services": [
+    "Vanguard"
+   ],
+   "ceo": "정민재",
+   "programs": [
+    "2026 모두의 창업"
+   ],
+   "strict": true
+  },
+  {
+   "name": "",
+   "services": [
+    "싱그로워",
+    "SINGROWER"
+   ],
+   "ceo": "이지민",
+   "programs": [
+    "2026 모두의 창업"
+   ],
+   "strict": true
+  },
+  {
+   "name": "",
+   "services": [
+    "도나카와"
+   ],
+   "ceo": "박희영",
+   "programs": [
+    "2026 모두의 창업"
+   ],
+   "strict": true
+  },
+  {
+   "name": "",
+   "services": [
+    "메디스캔",
+    "MediScan"
+   ],
+   "ceo": "김기민",
+   "programs": [
+    "2026 모두의 창업"
+   ],
+   "strict": true
+  },
+  {
+   "name": "",
+   "services": [
+    "데시",
+    "Dhesy"
+   ],
+   "ceo": "김민기",
+   "programs": [
+    "2026 모두의 창업"
+   ],
+   "strict": true
+  },
+  {
+   "name": "",
+   "services": [
+    "StaffingBridge"
+   ],
+   "ceo": "장재원",
+   "programs": [
+    "2026 모두의 창업"
+   ],
+   "strict": true
+  },
+  {
+   "name": "",
+   "services": [
+    "Zento"
+   ],
+   "ceo": "홍승현",
+   "programs": [
+    "2026 모두의 창업"
+   ],
+   "strict": true
+  },
+  {
+   "name": "",
+   "services": [
+    "마이오르빗"
+   ],
+   "ceo": "양엄지",
+   "programs": [
+    "2026 모두의 창업"
+   ],
+   "strict": true
+  },
+  {
+   "name": "",
+   "services": [
+    "atlie.ai"
+   ],
+   "ceo": "노유경",
+   "programs": [
+    "2026 모두의 창업"
+   ],
+   "strict": true
+  },
+  {
+   "name": "",
+   "services": [
+    "모두의 옷장"
+   ],
+   "ceo": "이용규",
+   "programs": [
+    "2026 모두의 창업"
+   ],
+   "strict": true
+  },
+  {
+   "name": "",
+   "services": [
+    "StaffChat"
+   ],
+   "ceo": "하진우",
+   "programs": [
+    "2026 모두의 창업"
+   ],
+   "strict": true
+  },
+  {
+   "name": "",
+   "services": [
+    "코지크루"
+   ],
+   "ceo": "박경원",
+   "programs": [
+    "2026 모두의 창업"
+   ],
+   "strict": true
+  },
+  {
+   "name": "",
+   "services": [
+    "ComPasser"
+   ],
+   "ceo": "한선규",
+   "programs": [
+    "2026 모두의 창업"
+   ],
+   "strict": true
+  },
+  {
+   "name": "",
+   "services": [
+    "메디텍션",
+    "medetection"
+   ],
+   "ceo": "송상훈",
+   "programs": [
+    "2026 모두의 창업"
+   ],
+   "strict": true
+  },
+  {
+   "name": "가우스랩",
+   "services": [],
+   "ceo": "이정근",
+   "programs": [
+    "2026 글로벌 청년창업사관학교 G-라운드"
+   ],
+   "strict": false
+  },
+  {
+   "name": "그룹짓다",
+   "services": [],
+   "ceo": "김주현",
+   "programs": [
+    "2026 글로벌 청년창업사관학교 G-라운드"
+   ],
+   "strict": false
+  },
+  {
+   "name": "네오메틱",
+   "services": [],
+   "ceo": "최미리",
+   "programs": [
+    "2026 글로벌 청년창업사관학교 G-라운드"
+   ],
+   "strict": false
+  },
+  {
+   "name": "네이처트레이스",
+   "services": [],
+   "ceo": "장수진",
+   "programs": [
+    "2026 글로벌 청년창업사관학교 G-라운드"
+   ],
+   "strict": false
+  },
+  {
+   "name": "노바락토",
+   "services": [],
+   "ceo": "황용진",
+   "programs": [
+    "2026 글로벌 청년창업사관학교 G-라운드"
+   ],
+   "strict": false
+  },
+  {
+   "name": "레드슬리퍼스",
+   "services": [
+    "스타글로우"
+   ],
+   "ceo": "이성환",
+   "programs": [
+    "2026 글로벌 청년창업사관학교 G-라운드"
+   ],
+   "strict": false
+  },
+  {
+   "name": "메타디엑스",
+   "services": [
+    "VitalVET"
+   ],
+   "ceo": "김진욱",
+   "programs": [
+    "2026 글로벌 청년창업사관학교 G-라운드"
+   ],
+   "strict": false
+  },
+  {
+   "name": "메타팩토리코퍼레이션",
+   "services": [],
+   "ceo": "한원희",
+   "programs": [
+    "2026 글로벌 청년창업사관학교 G-라운드"
+   ],
+   "strict": false
+  },
+  {
+   "name": "미트앤퓨처",
+   "services": [],
+   "ceo": "이승훈",
+   "programs": [
+    "2026 글로벌 청년창업사관학교 G-라운드"
+   ],
+   "strict": false
+  },
+  {
+   "name": "밸러링비즈",
+   "services": [
+    "그릿비디허브"
+   ],
+   "ceo": "홍석원",
+   "programs": [
+    "2026 글로벌 청년창업사관학교 G-라운드"
+   ],
+   "strict": false
+  },
+  {
+   "name": "벌스워크",
+   "services": [],
+   "ceo": "윤영근",
+   "programs": [
+    "2026 글로벌 청년창업사관학교 G-라운드"
+   ],
+   "strict": false
+  },
+  {
+   "name": "비욘드메디슨",
+   "services": [],
+   "ceo": "김대현",
+   "programs": [
+    "2026 글로벌 청년창업사관학교 G-라운드"
+   ],
+   "strict": false
+  },
+  {
+   "name": "비전스페이스",
+   "services": [],
+   "ceo": "최원석",
+   "programs": [
+    "2026 글로벌 청년창업사관학교 G-라운드"
+   ],
+   "strict": false
+  },
+  {
+   "name": "서프라이스",
+   "services": [],
+   "ceo": "송지훈",
+   "programs": [
+    "2026 글로벌 청년창업사관학교 G-라운드"
+   ],
+   "strict": false
+  },
+  {
+   "name": "솔리브벤처스",
+   "services": [],
+   "ceo": "서주호",
+   "programs": [
+    "2026 글로벌 청년창업사관학교 G-라운드"
+   ],
+   "strict": false
+  },
+  {
+   "name": "슈퍼포우",
+   "services": [],
+   "ceo": "홍성균",
+   "programs": [
+    "2026 글로벌 청년창업사관학교 G-라운드"
+   ],
+   "strict": false
+  },
+  {
+   "name": "스텔업",
+   "services": [
+    "한글링",
+    "Hangling"
+   ],
+   "ceo": "오민지",
+   "programs": [
+    "2026 글로벌 청년창업사관학교 G-라운드"
+   ],
+   "strict": true
+  },
+  {
+   "name": "스포노베이션",
+   "services": [
+    "myPB"
+   ],
+   "ceo": "차준영",
+   "programs": [
+    "2026 글로벌 청년창업사관학교 G-라운드"
+   ],
+   "strict": false
+  },
+  {
+   "name": "원에이티",
+   "services": [],
+   "ceo": "서영훈",
+   "programs": [
+    "2026 글로벌 청년창업사관학교 G-라운드"
+   ],
+   "strict": false
+  },
+  {
+   "name": "이빗",
+   "services": [],
+   "ceo": "박용한",
+   "programs": [
+    "2026 글로벌 청년창업사관학교 G-라운드"
+   ],
+   "strict": true
+  },
+  {
+   "name": "지노랩",
+   "services": [],
+   "ceo": "윤진호",
+   "programs": [
+    "2026 글로벌 청년창업사관학교 G-라운드"
+   ],
+   "strict": true
+  },
+  {
+   "name": "컬러풀솔루션",
+   "services": [],
+   "ceo": "김준식",
+   "programs": [
+    "2026 글로벌 청년창업사관학교 G-라운드"
+   ],
+   "strict": false
+  },
+  {
+   "name": "코라운드",
+   "services": [],
+   "ceo": "김정훈",
+   "programs": [
+    "2026 글로벌 청년창업사관학교 G-라운드"
+   ],
+   "strict": false
+  },
+  {
+   "name": "택티컬리스트",
+   "services": [],
+   "ceo": "이창훈",
+   "programs": [
+    "2026 글로벌 청년창업사관학교 G-라운드"
+   ],
+   "strict": false
+  },
+  {
+   "name": "팀제로코드",
+   "services": [],
+   "ceo": "정주헌",
+   "programs": [
+    "2026 글로벌 청년창업사관학교 G-라운드"
+   ],
+   "strict": false
+  },
+  {
+   "name": "팜킷",
+   "services": [],
+   "ceo": "양선흥",
+   "programs": [
+    "2026 글로벌 청년창업사관학교 G-라운드"
+   ],
+   "strict": true
+  },
+  {
+   "name": "프로보이스",
+   "services": [
+    "보보툰"
+   ],
+   "ceo": "김의연",
+   "programs": [
+    "2026 글로벌 청년창업사관학교 G-라운드"
+   ],
+   "strict": false
+  },
+  {
+   "name": "해봄",
+   "services": [
+    "8mirrors"
+   ],
+   "ceo": "문수민",
+   "programs": [
+    "2026 글로벌 청년창업사관학교 G-라운드"
+   ],
+   "strict": true
+  },
+  {
+   "name": "뉴헤리티지",
+   "services": [],
+   "ceo": "김남현",
+   "programs": [
+    "2026 글로벌 청년창업사관학교 G-라운드"
+   ],
+   "strict": false
+  },
+  {
+   "name": "로보터블",
+   "services": [],
+   "ceo": "최인현",
+   "programs": [
+    "2026 글로벌 청년창업사관학교 G-라운드"
+   ],
+   "strict": false
+  },
+  {
+   "name": "마커스",
+   "services": [],
+   "ceo": "홍복용",
+   "programs": [
+    "2026 글로벌 청년창업사관학교 G-라운드"
+   ],
+   "strict": true
+  },
+  {
+   "name": "무아행",
+   "services": [
+    "논업블렌드",
+    "NON-UP BLEND"
+   ],
+   "ceo": "김수민",
+   "programs": [
+    "2026 글로벌 청년창업사관학교 G-라운드"
+   ],
+   "strict": true
+  },
+  {
+   "name": "시그널케어",
+   "services": [],
+   "ceo": "양동섭",
+   "programs": [
+    "2026 글로벌 청년창업사관학교 G-라운드"
+   ],
+   "strict": false
+  },
+  {
+   "name": "영각유전",
+   "services": [],
+   "ceo": "오상흔",
+   "programs": [
+    "2026 글로벌 청년창업사관학교 G-라운드"
+   ],
+   "strict": false
+  },
+  {
+   "name": "이노셉",
+   "services": [],
+   "ceo": "장경훈",
+   "programs": [
+    "2026 글로벌 청년창업사관학교 G-라운드"
+   ],
+   "strict": true
+  },
+  {
+   "name": "이노파마",
+   "services": [],
+   "ceo": "김성환",
+   "programs": [
+    "2026 글로벌 청년창업사관학교 G-라운드"
+   ],
+   "strict": false
+  },
+  {
+   "name": "이스트투웨스트",
+   "services": [
+    "더멀리"
+   ],
+   "ceo": "구본무",
+   "programs": [
+    "2026 글로벌 청년창업사관학교 G-라운드"
+   ],
+   "strict": false
+  },
+  {
+   "name": "잼잼테라퓨틱스",
+   "services": [],
+   "ceo": "김정은",
+   "programs": [
+    "2026 글로벌 청년창업사관학교 G-라운드"
+   ],
+   "strict": false
+  },
+  {
+   "name": "지알티",
+   "services": [
+    "EcoMetix",
+    "에코메틱스"
+   ],
+   "ceo": "남민경",
+   "programs": [
+    "2026 글로벌 청년창업사관학교 G-라운드"
+   ],
+   "strict": true
+  },
+  {
+   "name": "티엠에스인더스트리",
+   "services": [],
+   "ceo": "조윤호",
+   "programs": [
+    "2026 글로벌 청년창업사관학교 G-라운드"
+   ],
+   "strict": false
+  },
+  {
+   "name": "파로스마린",
+   "services": [],
+   "ceo": "이슬기",
+   "programs": [
+    "2026 글로벌 청년창업사관학교 G-라운드"
+   ],
+   "strict": false
+  },
+  {
+   "name": "휘란",
+   "services": [],
+   "ceo": "정다혜",
+   "programs": [
+    "2026 글로벌 청년창업사관학교 G-라운드"
+   ],
+   "strict": true
+  },
+  {
+   "name": "그린에이아이",
+   "services": [],
+   "ceo": "하순태",
+   "programs": [
+    "2026 글로벌 청년창업사관학교 G-라운드"
+   ],
+   "strict": false
+  },
+  {
+   "name": "더빈즈",
+   "services": [],
+   "ceo": "김애린",
+   "programs": [
+    "2026 글로벌 청년창업사관학교 G-라운드"
+   ],
+   "strict": true
+  },
+  {
+   "name": "비응도등대가",
+   "services": [],
+   "ceo": "김삼성",
+   "programs": [
+    "2026 글로벌 청년창업사관학교 G-라운드"
+   ],
+   "strict": false
+  },
+  {
+   "name": "시크한",
+   "services": [],
+   "ceo": "신학수",
+   "programs": [
+    "2026 글로벌 청년창업사관학교 G-라운드"
+   ],
+   "strict": true
+  },
+  {
+   "name": "에코잇",
+   "services": [],
+   "ceo": "조인성",
+   "programs": [
+    "2026 글로벌 청년창업사관학교 G-라운드"
+   ],
+   "strict": true
+  },
+  {
+   "name": "영앤",
+   "services": [],
+   "ceo": "박영욱",
+   "programs": [
+    "2026 글로벌 청년창업사관학교 G-라운드"
+   ],
+   "strict": true
+  },
+  {
+   "name": "오들리컴바인",
+   "services": [],
+   "ceo": "백소연",
+   "programs": [
+    "2026 글로벌 청년창업사관학교 G-라운드"
+   ],
+   "strict": false
+  },
+  {
+   "name": "원인터내셔널",
+   "services": [
+    "MUːN"
+   ],
+   "ceo": "변철원",
+   "programs": [
+    "2026 글로벌 청년창업사관학교 G-라운드"
+   ],
+   "strict": false
+  },
+  {
+   "name": "이엠에스",
+   "services": [],
+   "ceo": "이한찬",
+   "programs": [
+    "2026 글로벌 청년창업사관학교 G-라운드"
+   ],
+   "strict": false
+  },
+  {
+   "name": "인톡",
+   "services": [],
+   "ceo": "유인창",
+   "programs": [
+    "2026 글로벌 청년창업사관학교 G-라운드"
+   ],
+   "strict": true
+  },
+  {
+   "name": "일주얼리",
+   "services": [],
+   "ceo": "송은경",
+   "programs": [
+    "2026 글로벌 청년창업사관학교 G-라운드"
+   ],
+   "strict": false
+  },
+  {
+   "name": "청류",
+   "services": [],
+   "ceo": "박성일",
+   "programs": [
+    "2026 글로벌 청년창업사관학교 G-라운드"
+   ],
+   "strict": true
+  },
+  {
+   "name": "핑크패커",
+   "services": [],
+   "ceo": "정진",
+   "programs": [
+    "2026 글로벌 청년창업사관학교 G-라운드"
+   ],
+   "strict": false
+  },
+  {
+   "name": "하나쿠아",
+   "services": [],
+   "ceo": "서종현",
+   "programs": [
+    "2026 글로벌 청년창업사관학교 G-라운드"
+   ],
+   "strict": false
+  }
+ ]
+}

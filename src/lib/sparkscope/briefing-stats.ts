@@ -33,8 +33,8 @@ export function divisionOf(department: string | null | undefined): string {
 /**
  * 방송 구분 — 브리핑 날짜의 요일로 정한다(briefing.ts broadcastFor 와 같은 규칙).
  *   all    전체
- *   weekly 위클리 = 월요일 날짜
- *   daily  데일리 = 화~금 날짜
+ *   weekly 위클리 = 위클리 폐지(2026-11-04) 전 월요일 날짜
+ *   daily  데일리 = 그 밖의 평일 날짜
  */
 export type Program = 'all' | 'daily' | 'weekly';
 
@@ -42,10 +42,12 @@ export function programOf(program: string | null | undefined): Program {
   return program === 'daily' || program === 'weekly' ? program : 'all';
 }
 
-// Postgres DOW: 일=0, 월=1, … 토=6
+// Postgres DOW: 일=0, 월=1, … 토=6. 마지막 위클리는 2026-10-26(월).
+const WEEKLY_UNTIL = '2026-11-04';
 function programClause(program: Program): Prisma.Sql {
-  if (program === 'weekly') return Prisma.sql`AND EXTRACT(DOW FROM v."dateKey"::date) = 1`;
-  if (program === 'daily') return Prisma.sql`AND EXTRACT(DOW FROM v."dateKey"::date) BETWEEN 2 AND 5`;
+  const weekly = Prisma.sql`EXTRACT(DOW FROM v."dateKey"::date) = 1 AND v."dateKey" < ${WEEKLY_UNTIL}`;
+  if (program === 'weekly') return Prisma.sql`AND ${weekly}`;
+  if (program === 'daily') return Prisma.sql`AND EXTRACT(DOW FROM v."dateKey"::date) BETWEEN 1 AND 5 AND NOT (${weekly})`;
   return Prisma.empty;
 }
 

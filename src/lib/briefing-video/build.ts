@@ -16,8 +16,8 @@ import { renderVideo, probeSeconds, silentWav, GAP_SECONDS, type Clip } from './
 /** 오프닝 배경음악 — scripts/make-news-bgm.py로 만든 자체 제작 음원(저작권 걱정 없음). 다른 음원을 쓰려면 이 파일만 바꾸면 된다. */
 export const NEWS_BGM = path.join(process.cwd(), 'assets/briefing/news-bgm.wav');
 export const OPENING_SECONDS = 3.2;
-/** 영상 전체 상한 — 목표 3분 30초 내외, 4분(240초)을 넘으면 우선순위가 낮은(뒤 칸) 기사부터 뺀다(2026-10-22). */
-export const MAX_VIDEO_SECONDS = 240;
+/** 영상 전체 상한 — 5분(300초)을 넘으면 우선순위가 낮은(뒤 칸) 기사부터 뺀다(2026-11-04 은빛 결정, 이전 4분). */
+export const MAX_VIDEO_SECONDS = 300;
 const MIN_ITEMS = 6;
 
 /**
