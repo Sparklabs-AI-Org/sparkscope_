@@ -378,10 +378,9 @@ export async function writeBriefingScript(snapshot: BriefingSnapshot, frame?: Sc
   if (!frame?.withHeadline) await rewriteCliches(byIndex, heads); // 데일리는 해석 없이 사실만 — 상투구를 "누구에게" 해석으로 고쳐 쓰지 않는다
 
   const note = lineupNote(heads);
-  const segments: ScriptSegment[] = [{
-    kind: 'intro',
-    text: [frame?.intro ?? `좋은 아침입니다. ${spokenDate(snapshot.dateKey)}, 스파크스코프 데일리 브리핑입니다.`, note].filter(Boolean).join(' '),
-  }];
+  // 인사 없이 바로 본론(2026-11-05 은빛) — 소식 없음 안내가 있을 때만 맨 앞에 말한다.
+  const intro = [frame?.intro, note].filter(Boolean).join(' ');
+  const segments: ScriptSegment[] = intro ? [{ kind: 'intro', text: intro }] : [];
   // 안내 문장이 이미 "○○부터 전해드리겠습니다"라고 했으면 첫 섹션의 "먼저 ○○ 소식입니다"는 붙이지 않는다.
   let prev: Section | null = note && heads[0] ? sectionOf(heads[0]) : null;
   const usedStarts = new Set<string>();

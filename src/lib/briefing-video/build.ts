@@ -162,7 +162,8 @@ export async function buildBriefingVideo(opts: { outDir: string; prepare?: boole
         : boardSlide(dateLabel, trimmed.headlines, s.index!),
       wav: speeches[i].wav,
       seconds: speeches[i].seconds,
-      ...(s.kind === 'intro' ? { bgm: { file: NEWS_BGM, start: OPENING_SECONDS + GAP_SECONDS, volume: 0.15, fadeOut: true } } : {}),
+      // 첫 말소리 동안 음악을 낮게 깔고 끝에서 줄인다(안내가 없는 날은 첫 기사).
+      ...(i === 0 ? { bgm: { file: NEWS_BGM, start: OPENING_SECONDS + GAP_SECONDS, volume: 0.15, fadeOut: true } } : {}),
     })),
   ];
 

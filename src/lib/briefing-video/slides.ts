@@ -220,65 +220,57 @@ export function itemSlide(dateLabel: string, h: BriefingHeadline, index: number,
   return canvas.toBuffer('image/png');
 }
 
+/** 보드 한 화면의 헤드라인 수 */
+const BOARD_PAGE = 5;
+
 /**
- * 헤드라인 보드 — 데일리 영상의 기사 화면(더벨 형식 벤치마킹, 2026-10-21).
- * 오늘 다룰 헤드라인 전체를 깔아 두고 지금 읽는 기사만 강조해, 전체 흐름과 남은 분량이 한눈에 보이게 한다.
- * active가 -1이면 전부 같은 톤(오프닝 직후 인사 화면). 지난 기사는 흐리게, 앞으로 나올 기사는 보통 톤.
+ * 헤드라인 보드 — 데일리 영상의 기사 화면(2026-11-05 은빛: 더벨 데일리 브리핑처럼).
+ * 어두운 바탕에 흰 띠 5개를 가운데 정렬로 깔고, 지금 읽는 기사만 색 띠로 키운다. 5개를 넘으면 다음 화면으로 넘어간다.
+ * active가 -1이면 첫 화면을 강조 없이 보여 준다(소식 없음 안내가 나오는 동안).
  */
-export function boardSlide(dateLabel: string, headlines: BriefingHeadline[], active: number, program?: string): Buffer {
-  const { canvas, ctx } = base(dateLabel, program);
-  const n = headlines.length;
-  const top = 118;
-  const bottom = H - 34;
-  const step = Math.min(66, Math.floor((bottom - top) / Math.max(1, n)));
-  const rowH = step - 6;
-  const size = n > 10 ? 25 : n > 7 ? 29 : 34;
-  const textLeft = 132;
-  const labelW = 190;
-  const textW = W - textLeft - 64 - labelW - 24;
-  headlines.forEach((h, i) => {
-    const y = top + i * step;
-    const isNow = i === active;
-    const isPast = active >= 0 && i < active;
-    if (isNow) {
-      ctx.fillStyle = C.purple;
-      ctx.beginPath();
-      ctx.roundRect(48, y, W - 96, rowH, 14);
-      ctx.fill();
-    }
-    const cy = y + rowH / 2;
-    // 순번 원
-    ctx.fillStyle = isNow ? C.white : isPast ? '#D9D5DE' : C.purple;
-    ctx.beginPath();
-    ctx.arc(84, cy, Math.min(17, rowH / 2 - 3), 0, Math.PI * 2);
-    ctx.fill();
+export function boardSlide(dateLabel: string, headlines: BriefingHeadline[], active: number, program = '데일리 브리핑'): Buffer {
+  ensureFonts();
+  const canvas = createCanvas(W, H);
+  const ctx = canvas.getContext('2d');
+  const g = ctx.createLinearGradient(0, 0, 0, H);
+  g.addColorStop(0, '#14123A');
+  g.addColorStop(1, '#2B2672');
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, W, H);
+
+  ctx.font = '24px "Pretendard Bold"';
+  ctx.fillStyle = C.white;
+  ctx.fillText(`SparkScope ${program}`, 72, 62);
+  ctx.textAlign = 'right';
+  ctx.font = '24px "Pretendard SemiBold"';
+  ctx.fillStyle = 'rgba(255,255,255,0.75)';
+  ctx.fillText(dateLabel, W - 72, 62);
+
+  const page = Math.floor(Math.max(active, 0) / BOARD_PAGE);
+  const rows = headlines.slice(page * BOARD_PAGE, (page + 1) * BOARD_PAGE);
+  const step = 112;
+  const barH = 84;
+  const top = Math.round((H + 40 - (rows.length * step - (step - barH))) / 2);
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  rows.forEach((h, r) => {
+    const isNow = page * BOARD_PAGE + r === active;
+    const x = isNow ? 56 : 104;
+    const w = W - x * 2;
+    const y = top + r * step;
     ctx.fillStyle = isNow ? C.purple : C.white;
-    ctx.font = `${Math.round(size * 0.68)}px "Pretendard Bold"`;
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(String(i + 1), 84, cy + 1);
-    // 헤드라인
-    ctx.textAlign = 'left';
-    const text = hangulize(h.headline ?? h.title);
-    const weight = isNow ? 'ExtraBold' : 'SemiBold';
-    const t = fitText(ctx, text, textW, 1, [size, size - 2, size - 4, size - 6, size - 8], weight, true);
-    ctx.font = `${t.size}px "Pretendard ${weight}"`;
-    ctx.fillStyle = isNow ? C.white : isPast ? '#B5B1BC' : C.ink;
-    ctx.fillText(t.lines.join(' '), textLeft, cy + 1);
-    // 오른쪽 분류
-    const label = hangulize(h.label.replace(/^[\p{Extended_Pictographic}\p{Regional_Indicator}\uFE0F\s]+/u, ''));
-    ctx.font = `${Math.round(size * 0.62)}px "Pretendard SemiBold"`;
-    ctx.fillStyle = isNow ? 'rgba(255,255,255,0.85)' : isPast ? '#C9C5CF' : C.muted;
-    ctx.textAlign = 'right';
-    ctx.fillText(label, W - 64, cy + 1);
-    ctx.textAlign = 'left';
+    ctx.fillRect(x, y, w, barH);
+    if (!isNow) {
+      ctx.fillStyle = C.purple;
+      ctx.fillRect(x, y + barH - 6, w, 6);
+    }
+    const t = fitText(ctx, hangulize(h.headline ?? h.title), w - 72, 1, [42, 40, 38, 36, 34, 32, 30, 28, 26], 'ExtraBold', true);
+    ctx.font = `${t.size}px "Pretendard ExtraBold"`;
+    ctx.fillStyle = isNow ? C.white : C.ink;
+    ctx.fillText(t.lines.join(' '), W / 2, y + (isNow ? barH : barH - 6) / 2 + 1);
   });
+  ctx.textAlign = 'left';
   ctx.textBaseline = 'alphabetic';
-  // 진행 막대
-  ctx.fillStyle = '#E7E3DB';
-  ctx.fillRect(0, H - 8, W, 8);
-  ctx.fillStyle = C.purple;
-  ctx.fillRect(0, H - 8, (W * (Math.max(active, -1) + 1)) / Math.max(1, n), 8);
   return canvas.toBuffer('image/png');
 }
 
