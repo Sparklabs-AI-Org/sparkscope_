@@ -23,7 +23,7 @@ import { buildSignalFeed } from './signal-feed';
 import { ensureArticleKo } from './translate-content';
 import { isBlockedNoise } from './relevance';
 import { loadProgramNews } from './program-news';
-import { loadAiTimes } from './aitimes-news';
+import { loadAiNews } from './ai-news';
 import { BRIEFING_COUNT, broadcastFor, kstDateKey, type BriefingHeadline, type BroadcastWindow, type BriefingProgram } from './briefing';
 
 const KIND_RECO = 'briefing_reco';
@@ -300,7 +300,7 @@ const AI_ONLY: Group[] = ['D', 'R', 'T', 'Y', 'G'];
 const SLOT_CAPS: [Group, number][] = [['S', 2], ['P', 3], ['E', 2], ['D', 3], ['R', 2], ['T', 2], ['Y', 2]];
 function quotas(avail: Record<Group, number>, total: number): Record<Group, number> {
   const q: Record<Group, number> = { S: 0, P: 0, E: 0, D: 0, R: 0, T: 0, Y: 0, G: 0 };
-  q.G = Math.min(3, avail.G);
+  q.G = Math.min(4, avail.G);
   let room = total - q.G;
   for (const [g, cap] of SLOT_CAPS) { q[g] = Math.min(cap, avail[g], room); room -= q[g]; }
   q.G += Math.min(room, 1, avail.G - q.G);
@@ -315,10 +315,12 @@ const RANK_SYSTEM = `당신은 스파크랩(한국의 스타트업 액셀러레�
 - 투자 유치·인수합병·상장·대형 계약·신제품 출시·규제 변화처럼 "사건"이 있는 기사를 우선합니다.
 - 주가 등락·행사 스케치·인터뷰·칼럼은 뒤로 미룹니다. 기자 체험기("~해 보았다")·해설 기획("~하는 이유")·후원 콘텐츠는 고르지 마세요.
 - 같은 사건을 다룬 기사는 그룹이 달라도 하나만 고릅니다(국내 기사와 해외 기사가 같은 사건일 수 있음).
-- "AI" 그룹은 두 가지를 고릅니다. ① 업계 판도 변화: 10억 달러급 라운드·M&A·IPO, 빅테크 AI 투자가 실적·주가에 준 영향, 정치·규제·지정학 변수, 인프라·공급망.
-  ② 임직원이 AI를 업무에 쓰는 데 도움이 되는 소식: 일하는 방식의 변화, AI 활용의 위험과 한계, AI 인력 시장, 많이 쓰는 도구의 의미 있는 변화.
-  예: "미 민주당 압승에 빅테크 주가 급등…데이터센터 규제 호재로 해석", "AI 현장 엔지니어 연봉 최대 19억원…기업들 FDE 확보 총력", "AI에 일 맡길수록 감독 능력도 퇴화".
-  단순 기능 업데이트, 개별 도입 사례, 빅테크의 작은 스타트업 인수, 잘 알려지지 않은 회사 소식, 국내 기업 제품·행사·협약 홍보는 고르지 마세요. AI타임스 기사를 우선합니다. 해외 AI 소식이 원칙입니다(OpenAI·Anthropic·구글·메타·엔비디아 등). [국내] 표시 기사는
+- "AI" 그룹은 네 가지를 고릅니다.
+  ① 판도 변화: 10억 달러급 라운드·M&A·IPO, 빅테크 AI 투자가 실적·주가에 준 영향, 인프라·전력·공급망의 병목.
+  ② 정치·규제: 선거·행정명령·규제가 AI 산업과 시장에 주는 영향. 이 때문에 증시·반도체가 크게 움직였다면 주가 기사여도 고릅니다.
+  ③ 조직의 AI 전환: 대기업·그룹이 임직원 교육, 해커톤, 사내 플랫폼으로 일하는 방식을 바꾸는 사례.
+  ④ 일의 변화: 직원이 AI로 직접 해내는 업무의 변화, AI 활용의 위험과 한계, AI 인력 시장, 에이전트 같은 새 업무 도구의 흐름.
+  단순 기능 업데이트, 소규모 기업의 도입 홍보, 빅테크의 작은 스타트업 인수, 잘 알려지지 않은 회사 소식, 평범한 시황은 고르지 마세요. AI타임스·IT조선 기사를 우선합니다. 해외 AI 소식이 원칙입니다(OpenAI·Anthropic·구글·메타·엔비디아 등). [국내] 표시 기사는
   "삼성이 Anthropic에 투자"처럼 해외 주요 매체도 크게 다룰 사건일 때만, 그것도 최대 1건입니다. 국내 기업의 제품 출시·행사·
   협약·전시회 소식은 고르지 마세요.
 - "스타트업 업계 동향" 그룹은 업계 전반에 영향을 주는 소식만 고릅니다 — 중소벤처기업부·금융위 등 정부 정책과 예산, 모태펀드·대형 펀드 결성,
@@ -387,16 +389,17 @@ const FINANCE_RULES = `AI를 업무에 활발히 쓰는 VC·액셀러레이터 �
 4. 인프라·공급망: 칩·데이터센터·전력의 대규모 계약, 공급 부족, 가격 변동
 5. 규제·지정학: 미국·EU·중국 AI 규제, 반도체 수출 통제, 반독점 조사
 6. 글로벌 VC 움직임: 주요 투자사(a16z·세쿼이아·소프트뱅크 등)의 AI 펀드·투자 테제·대형 베팅
-7. 임직원의 AI 활용에 쓸모 있는 소식: 일하는 방식의 변화, AI 활용의 위험과 한계(판단력 약화·보안), AI 인력 시장, 많이 쓰는 도구의 의미 있는 변화
-8. 정치·선거·정책이 빅테크와 AI 투자에 주는 영향
+7. 일의 변화: 직원이 AI로 직접 해내는 업무, AI 활용의 위험과 한계(판단력 약화·보안), AI 인력 시장, 에이전트 같은 새 업무 도구의 흐름
+8. 정치·선거·행정명령이 AI 산업과 시장에 주는 영향(이 때문에 증시·반도체가 크게 움직인 기사 포함)
+9. 대기업·그룹의 AI 전환: 임직원 교육, 해커톤, 사내 플랫폼, 공정 자동화처럼 조직 전체가 일하는 방식을 바꾸는 사례
 - 모델 출시는 OpenAI·앤스로픽·구글·메타·xAI 등 선두 연구소의 대표 모델이거나, 가격·성능이 시장 구도를 바꿀 때만
   (오픈소스가 상용 모델을 따라잡음, 가격이 절반 이하 등)
 
 뺄 것
 - 보도자료성 제품·기능 출시, 일반 모델·특화 모델 공개, 연구 데모, 벤치마크 자랑
-- 개별 기업의 AI 도입 사례(수억 달러 이상 계약이 아니면)
+- 소규모 기업의 AI 도입 홍보(9번의 대기업·그룹 차원 전환은 남긴다)
 - 해설·기획("~하는 이유", "~할 때 일어나는 일"), 기자 체험기, 칼럼·의견, 인터뷰, 기업 후원·제휴 콘텐츠
-- 7·8번에 해당하지 않는, 금액·기업가치·점유율 같은 숫자가 없는 트렌드 기사
+- 7~9번에 해당하지 않는, 금액·기업가치·점유율 같은 숫자가 없는 트렌드 기사
 - 빅테크의 작은 스타트업 인수, 일반인이 모르는 회사 소식, 특정 회사가 낸 분석·리포트 소개(2026-11-05 은빛: "임직원이 알아서 뭐하나")`;
 
 async function financeRelevant(items: BriefingCandidate[]): Promise<Set<number>> {
@@ -680,10 +683,10 @@ export async function pickByTiers(w: BroadcastWindow): Promise<{ picked: Briefin
     .filter(c => !/^(주요 뉴스|The Download)\s*[:：]/i.test(c.title));
   // VC·금융 업계 사람에게 쓸모 있는 것만 남긴다(2026-10-29 소윤 규칙 — financeRelevant 머리말). 보도자료성 모델·기능 출시,
   // 개별 도입 사례, 체험기·기획·후원 콘텐츠, 숫자 없는 트렌드 기사는 뺀다.
-  const aiTimes = (await loadAiTimes(w.since, w.until).catch(e => { console.warn('[briefing-reco] AI타임스 읽기 실패:', e); return []; }))
-    .map(a => ({ kind: 'intra' as const, ref: a.url, title: a.title, summary: a.summary, source: 'AI타임스', url: a.url, label: AI_LABEL, pubDate: a.pubDate.toISOString() }))
+  const aiNews = (await loadAiNews(w.since, w.until))
+    .map(a => ({ kind: 'intra' as const, ref: a.url, title: a.title, summary: a.summary, source: a.source, url: a.url, label: AI_LABEL, pubDate: a.pubDate.toISOString() }))
     .filter(fresh);
-  const AI = [...aiTimes, ...G];
+  const AI = [...aiNews, ...G];
   const keepFinance = await financeRelevant(AI);
   const GE = AI.filter((_, i) => keepFinance.has(i));
 
