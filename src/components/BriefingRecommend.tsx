@@ -1,5 +1,5 @@
 'use client';
-// 「이런 기사 더 보고 싶어요」 — 임직원이 유용하거나 재미있게 본 기사의 링크를 추천한다(2026-11-05 은빛).
+// 「이런 기사도 보고 싶어요」 — 임직원이 유용하거나 재미있게 본 기사의 링크를 추천한다(2026-11-05 은빛).
 // 모은 링크는 관리자 통계 화면에서 보고 기사 선정 기준을 다듬는 데 쓴다.
 import { useState, type FormEvent } from 'react';
 
@@ -43,8 +43,8 @@ export default function BriefingRecommend({ dateKey, token, demo }: Props) {
 
   return (
     <form onSubmit={submit} className="mt-3 rounded-xl border border-spark-border bg-white p-3">
-      <h2 className="text-sm font-bold text-spark-ink">이런 기사 더 보고 싶어요</h2>
-      <p className="mt-0.5 text-xs text-spark-ink-soft">유용하거나 재미있게 본 기사가 있다면 링크를 남겨 주세요.</p>
+      <h2 className="text-sm font-bold text-spark-ink">이런 기사도 보고 싶어요</h2>
+      <p className="mt-0.5 text-xs text-spark-ink-soft">개인적으로 유용했던 기사가 있다면 링크를 공유해주세요.</p>
       <input
         type="url"
         inputMode="url"

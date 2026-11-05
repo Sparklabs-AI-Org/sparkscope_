@@ -242,7 +242,7 @@ export default async function BriefingStatsPage({
       </section>
 
       <section className="mt-8">
-        <h2 className="text-lg font-bold">이런 기사 더 보고 싶어요</h2>
+        <h2 className="text-lg font-bold">이런 기사도 보고 싶어요</h2>
         <p className="mt-1 text-xs text-spark-muted">임직원이 추천한 기사 · 최근 순 · 기사 선정 기준을 다듬는 재료입니다</p>
         <div className="mt-3 space-y-2">
           {recommendations.length === 0 && (

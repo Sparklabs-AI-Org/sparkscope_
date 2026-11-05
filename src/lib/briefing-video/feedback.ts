@@ -63,7 +63,7 @@ export async function clearFeedback(dateKey: string, url: string, email: string)
   await prisma.dashboardInsight.deleteMany({ where: { kind: KIND, key: feedbackKey(dateKey, url, email) } });
 }
 
-/** 「이런 기사 더 보고 싶어요」로 임직원이 남긴 기사 링크. 피드백과 같은 표에 kind만 달리해 둔다. */
+/** 「이런 기사도 보고 싶어요」로 임직원이 남긴 기사 링크. 피드백과 같은 표에 kind만 달리해 둔다. */
 const RECOMMEND_KIND = 'briefing_recommendation';
 export const RECOMMEND_DAILY_MAX = 10;
 
