@@ -7,9 +7,10 @@ import Link from 'next/link';
 import { loadBriefingVideo, listBriefingVideos } from '@/lib/briefing-video/publish';
 import { loadBriefingSnapshot } from '@/lib/sparkscope/briefing';
 import { spokenDate, longDate } from '@/lib/briefing-video/script';
-import BriefingTracker from '@/components/BriefingTracker';
+import BriefingView from '@/components/BriefingView';
 import { getSessionUser } from '@/lib/authz';
 import { viewerSubscriberId, watchedDates } from '@/lib/briefing-video/viewer';
+import { myFeedback, viewerIdentity } from '@/lib/briefing-video/feedback';
 
 export const dynamic = 'force-dynamic';
 
@@ -45,72 +46,10 @@ export default async function BriefingPage({
       </main>
     );
   }
-  const past = (await listBriefingVideos(8)).filter(v => v.dateKey !== video.dateKey).slice(0, 7);
+  const past = (await listBriefingVideos(5)).filter(v => v.dateKey !== video.dateKey).slice(0, 7);
   const watched = await watchedDates(await viewerSubscriberId(searchParams.s), past.map(v => v.dateKey));
+  const viewer = await viewerIdentity(searchParams.s);
+  const mine = viewer ? await myFeedback(video.dateKey, viewer.email) : null;
 
-  return (
-    <main className="mx-auto max-w-2xl px-4 py-6">
-      <BriefingTracker dateKey={video.dateKey} token={searchParams.s} title={video.program === 'weekly' ? `위클리 브리핑 · ${spokenDate(video.dateKey)}` : `데일리 브리핑 · ${spokenDate(video.dateKey)}`} />
-      <div className="text-sm font-semibold text-spark-purple">SparkScope {video.program === 'weekly' ? '위클리' : '데일리'} 브리핑</div>
-      <h1 className="mt-1 text-2xl font-bold text-spark-ink">
-        {video.program === 'weekly' ? spokenDate(video.dateKey) : `[데일리 브리핑] ${longDate(video.dateKey)} 스파크스코프 주요 뉴스`}
-      </h1>
-      <video src={video.url} controls playsInline preload="metadata" className="mt-4 w-full rounded-xl bg-black aspect-video" />
-      {video.audioUrl && (
-        <div className="mt-3 rounded-xl border border-spark-border bg-white p-3">
-          <div className="flex items-baseline justify-between gap-2">
-            <span className="text-sm font-bold text-spark-ink">🎧 소리로 듣기</span>
-            <span className="text-xs text-spark-muted">화면을 끄거나 다른 앱으로 넘어가도 계속 들려요</span>
-          </div>
-          <audio src={video.audioUrl} controls preload="none" className="mt-2 w-full" />
-        </div>
-      )}
-      {video.overview && <p className="mt-4 text-sm leading-relaxed text-spark-ink-soft">{video.overview}</p>}
-      <ol className="mt-6 space-y-3">
-        {video.headlines.map((h, i) => (
-          <li key={h.url} className="rounded-xl border border-spark-border bg-white p-4">
-            <div className="text-xs text-spark-muted">{i + 1}. {h.label} · {h.source}</div>
-            <a href={h.url} target="_blank" rel="noopener noreferrer" className="mt-1 block font-semibold text-spark-ink hover:text-spark-purple">
-              {h.headline ?? h.title}
-            </a>
-            {h.brief && <p className="mt-1 text-sm text-spark-ink-soft">{h.brief}</p>}
-            {h.points && h.points.length > 0 && (
-              <ul className="mt-2 space-y-1 text-sm text-spark-ink-soft">
-                {h.points.map(pt => (
-                  <li key={pt.label}><span className="font-semibold text-spark-ink">{pt.label}</span> · {pt.text}</li>
-                ))}
-              </ul>
-            )}
-            {h.headline && h.headline !== h.title && (
-              <div className="mt-1 text-xs text-spark-muted">원문 제목 · {h.title}</div>
-            )}
-          </li>
-        ))}
-      </ol>
-      <details className="mt-6 text-sm text-spark-ink-soft">
-        <summary className="cursor-pointer font-semibold">대본 보기</summary>
-        <div className="mt-2 space-y-2">{video.script.map((t, i) => <p key={i}>{t}</p>)}</div>
-      </details>
-      {past.length > 0 && (
-        <section className="mt-8">
-          <div className="flex items-baseline justify-between">
-            <h2 className="text-base font-bold text-spark-ink">지난 영상</h2>
-            <Link href={`/briefing${tokenQ}`} className="text-sm font-semibold text-spark-purple">전체 보기</Link>
-          </div>
-          <ul className="mt-2 divide-y divide-spark-border rounded-xl border border-spark-border bg-white">
-            {past.map(v => (
-              <li key={v.dateKey}>
-                <Link href={`/briefing/${v.dateKey}${tokenQ}`} className="flex items-center justify-between px-4 py-3 text-sm hover:bg-spark-subtle">
-                  <span className="font-semibold text-spark-ink">{spokenDate(v.dateKey)}{watched && (watched.has(v.dateKey)
-                    ? <span className="ml-2 rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-emerald-700">시청함</span>
-                    : <span className="ml-2 rounded-full bg-gray-100 px-2 py-0.5 text-[11px] font-semibold text-gray-500">시청 전</span>)}</span>
-                  <span className="text-xs text-spark-muted">{v.program === 'weekly' ? '위클리' : '데일리'} · {Math.floor(v.seconds / 60)}분 {v.seconds % 60}초</span>
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
-    </main>
-  );
+  return <BriefingView video={video} past={past} watched={watched} token={searchParams.s} mine={mine} />;
 }

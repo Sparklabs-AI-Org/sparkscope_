@@ -12,6 +12,7 @@ import {
   type Program,
   type Range,
 } from '@/lib/sparkscope/briefing-stats';
+import { feedbackStats } from '@/lib/briefing-video/feedback';
 
 export const dynamic = 'force-dynamic';
 
@@ -51,7 +52,7 @@ export default async function BriefingStatsPage({
   // 시작일이 종료일보다 뒤면 기간을 뒤집어 보여준다(잘못 고른 경우를 막는다).
   const range: Range = from <= to ? { from, to } : { from: to, to: from };
 
-  const [divisions, people] = await Promise.all([divisionStats(range, program), personStats(range, program)]);
+  const [divisions, people, feedback] = await Promise.all([divisionStats(range, program), personStats(range, program), feedbackStats(range.from, range.to)]);
 
   const linkFor = (r: Range, p: Program) => `/dashboard/briefing-stats?from=${r.from}&to=${r.to}&program=${p}`;
   const yesterday = addDays(today, -1);
@@ -174,6 +175,64 @@ export default async function BriefingStatsPage({
               ))}
             </tbody>
           </table>
+        </div>
+      </section>
+
+      <section className="mt-8">
+        <h2 className="text-lg font-bold">☕ 피드백 참여자</h2>
+        <p className="mt-1 text-xs text-spark-muted">의견 → 👎 사유 → 참여 기사 수 순 · 주간 기프티콘 후보는 「최근 7일」로 보세요 · 방송 구분과 무관합니다</p>
+        <div className="mt-3 overflow-x-auto rounded-xl border border-spark-border bg-white">
+          <table className="w-full text-sm">
+            <thead className="bg-spark-light-purple text-left text-spark-ink-soft">
+              <tr>
+                <th className="px-3 py-2">이름</th>
+                <th className="px-3 py-2">부서</th>
+                <th className="px-3 py-2 text-right">의견</th>
+                <th className="px-3 py-2 text-right">사유</th>
+                <th className="px-3 py-2 text-right">참여 기사</th>
+                <th className="px-3 py-2 text-right">👍</th>
+                <th className="px-3 py-2 text-right">👎</th>
+              </tr>
+            </thead>
+            <tbody>
+              {feedback.people.length === 0 && (
+                <tr><td colSpan={7} className="px-3 py-6 text-center text-spark-muted">이 기간에 피드백이 없습니다.</td></tr>
+              )}
+              {feedback.people.map(p => (
+                <tr key={p.email} className="border-t border-spark-border">
+                  <td className="px-3 py-2 font-semibold">{p.name ?? p.email}</td>
+                  <td className="px-3 py-2">{p.department ?? '-'}</td>
+                  <td className="px-3 py-2 text-right">{p.comments}</td>
+                  <td className="px-3 py-2 text-right">{p.reasons}</td>
+                  <td className="px-3 py-2 text-right">{p.articles}</td>
+                  <td className="px-3 py-2 text-right">{p.ups}</td>
+                  <td className="px-3 py-2 text-right">{p.downs}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section className="mt-8">
+        <h2 className="text-lg font-bold">기사별 피드백</h2>
+        <p className="mt-1 text-xs text-spark-muted">👎가 많은 순 · 기사 선정 기준을 다듬는 재료입니다</p>
+        <div className="mt-3 space-y-2">
+          {feedback.articles.length === 0 && (
+            <div className="rounded-xl border border-spark-border bg-white px-3 py-6 text-center text-sm text-spark-muted">이 기간에 피드백이 없습니다.</div>
+          )}
+          {feedback.articles.map(a => (
+            <div key={`${a.dateKey}|${a.url}`} className="rounded-xl border border-spark-border bg-white p-3 text-sm">
+              <div className="flex items-baseline justify-between gap-3">
+                <a href={a.url} target="_blank" rel="noopener noreferrer" className="font-semibold hover:text-spark-purple">{a.title}</a>
+                <span className="whitespace-nowrap text-xs text-spark-muted">{a.dateKey} · 👍 {a.ups} · 👎 {a.downs}</span>
+              </div>
+              {a.reasons.length > 0 && (
+                <div className="mt-1 text-xs text-spark-ink-soft">{a.reasons.map(r => `${r.reason} ${r.count}`).join(' · ')}</div>
+              )}
+              {a.comments.map((c, i) => <p key={i} className="mt-1 text-xs text-spark-ink-soft">“{c}”</p>)}
+            </div>
+          ))}
         </div>
       </section>
     </main>
