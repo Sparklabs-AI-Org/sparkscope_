@@ -320,6 +320,31 @@ export function boardSlide(dateLabel: string, headlines: BriefingHeadline[], act
   return canvas.toBuffer('image/png');
 }
 
+/** 사내 공지 화면 — 배경 영상 위에 얹는 투명 PNG. 첫 줄은 내용, 나머지 줄은 기한처럼 눈에 띄어야 하는 말. */
+export function noticeOverVideo(lines: string[]): Buffer {
+  ensureFonts();
+  const canvas = createCanvas(W, H);
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = VIDEO_VEIL;
+  ctx.fillRect(0, 0, W, H);
+  drawLogo(ctx, 64, 56, 60, true);
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillStyle = C.accent;
+  ctx.fillRect(W / 2 - 110, 200, 220, 64);
+  ctx.font = '34px "Pretendard ExtraBold"';
+  ctx.fillStyle = C.white;
+  ctx.fillText('사내 공지', W / 2, 233);
+  lines.forEach((line, i) => {
+    ctx.font = `${i === 0 ? 58 : 52}px "Pretendard ExtraBold"`;
+    ctx.fillStyle = C.white;
+    ctx.fillText(hangulize(line), W / 2, 340 + i * 84);
+  });
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'alphabetic';
+  return canvas.toBuffer('image/png');
+}
+
 /** 데일리 마무리 화면 — 배경 영상 위에 얹는 투명 PNG */
 export function outroOverVideo(): Buffer {
   ensureFonts();

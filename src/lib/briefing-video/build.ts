@@ -10,7 +10,7 @@ import type { AnalyzedArticle } from '../sparkscope/types';
 import { writeBriefingScript, checkAlignment, spokenDate, longDate, DAILY_LENGTH, type ScriptSegment } from './script';
 import type { BriefingHeadline } from '../sparkscope/briefing';
 import { synthesizeAll } from './tts';
-import { boardSlide, outroOverVideo } from './slides';
+import { boardSlide, noticeOverVideo, outroOverVideo } from './slides';
 import { renderVideo, probeSeconds, GAP_SECONDS, type Clip } from './render';
 
 /** 오프닝 배경음악 — scripts/make-news-bgm.py로 만든 자체 제작 음원(저작권 걱정 없음). 다른 음원을 쓰려면 이 파일만 바꾸면 된다. */
@@ -153,7 +153,8 @@ export async function buildBriefingVideo(opts: { outDir: string; prepare?: boole
   snapshot.headlines = trimmed.headlines;
   const clips: Clip[] = [
     ...segments.map((s, i): Clip => ({
-      png: s.kind === 'intro' ? boardSlide(dateLabel, trimmed.headlines, -1, undefined, true)
+      png: s.notice ? noticeOverVideo(s.notice)
+        : s.kind === 'intro' ? boardSlide(dateLabel, trimmed.headlines, -1, undefined, true)
         : s.kind === 'outro' ? outroOverVideo()
         : boardSlide(dateLabel, trimmed.headlines, s.index!, undefined, true),
       backgroundVideo: BOARD_BACKGROUND,

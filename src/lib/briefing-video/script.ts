@@ -8,6 +8,7 @@
  * 글보다 더 오래 남는다.
  */
 import { sectionOf, type Section } from './sections';
+import notices from '../../../data/briefing-notices.json';
 import OpenAI from 'openai';
 import type { BriefingHeadline, BriefingSnapshot } from '../sparkscope/briefing';
 import { articleExcerpt, cjkTitleMatch } from './article-text';
@@ -33,6 +34,8 @@ const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 export interface ScriptSegment {
   kind: 'intro' | 'item' | 'outro';
   text: string;
+  /** 사내 공지 화면에 띄울 줄들. 있으면 기사 보드 대신 공지 화면을 쓴다. */
+  notice?: string[];
   /** item일 때 스냅샷 헤드라인 순번(0부터) */
   index?: number;
   /** item일 때 화면용 브리핑 헤드라인·글용 한 줄 요약(데일리만 — frame.withHeadline) */
@@ -385,6 +388,9 @@ export async function writeBriefingScript(snapshot: BriefingSnapshot, frame?: Sc
   // 인사 없이 바로 본론(2026-11-05 은빛) — 소식 없음 안내가 있을 때만 맨 앞에 말한다.
   const intro = [frame?.intro, note].filter(Boolean).join(' ');
   const segments: ScriptSegment[] = intro ? [{ kind: 'intro', text: intro }] : [];
+  // 사내 공지는 맨 앞에(2026-11-05 은빛, 학교 방송반처럼). 내용은 data/briefing-notices.json에 기간과 함께 적는다.
+  segments.unshift(...notices.filter(n => n.from <= snapshot.dateKey && snapshot.dateKey <= n.to)
+    .map(n => ({ kind: 'intro' as const, text: n.speech, notice: n.screen })));
   // 안내 문장이 이미 "○○부터 전해드리겠습니다"라고 했으면 첫 섹션의 "먼저 ○○ 소식입니다"는 붙이지 않는다.
   let prev: Section | null = note && heads[0] ? sectionOf(heads[0]) : null;
   const usedStarts = new Set<string>();
