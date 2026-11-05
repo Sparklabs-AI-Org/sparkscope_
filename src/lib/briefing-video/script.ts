@@ -342,6 +342,7 @@ export async function writeBriefingScript(snapshot: BriefingSnapshot, frame?: Sc
     return clean((first.text ?? '').trim().replace(/^\s*\d+\s*[.)]\s*/, ''));
   };
   const texts = await Promise.all(heads.map(async (h, i) => {
+    if (h.fixedScript) return h.fixedScript;
     let feedback = '';
     const range = frame?.chars ?? DAILY_CHARS;
     // 길이만 어긋난 첫 대본 — 다시 쓴 것이 실패하면 이걸 쓴다.

@@ -9,6 +9,7 @@ import path from 'path';
 import { buildBriefingVideo } from '../src/lib/briefing-video/build';
 import { broadcastFor, kstDateKey, type BriefingSnapshot } from '../src/lib/sparkscope/briefing';
 import { pickByTiers, SLOT_LABEL, toHeadline } from '../src/lib/sparkscope/briefing-reco';
+import allEdits from '../data/briefing-preview-edits.json';
 
 function argOf(name: string): string | undefined {
   const i = process.argv.indexOf(name);
@@ -22,14 +23,19 @@ function argOf(name: string): string | undefined {
   const dateKey = kstDateKey();
   const w = broadcastFor(new Date(`${dateKey}T08:30:00+09:00`));
   console.log(`[preview] ${w.dateKey} 기사 기간 ${w.since.toISOString()} 이후`);
-  const { picked, tiers } = await pickByTiers(w);
+  // 사람이 고른 기사·고친 대본(발행 전 승인 화면이 생기기 전까지 이 파일로 넣는다).
+  const edits = (allEdits as Record<string, { drop?: string[]; must?: string[]; script?: Record<string, string> }>)[w.dateKey] ?? {};
+  const { picked, tiers } = await pickByTiers(w, edits);
 
   const lines = [`# ${w.dateKey} 브리핑 시험 제작(발행 안 됨)`, '', '## 헤드라인', ''];
   picked.forEach((c, i) => lines.push(`${i + 1}. [${SLOT_LABEL[tiers[i]] ?? ''}] ${c.title} — ${c.source}`, `   ${c.url}`));
   console.log(lines.join('\n'));
 
   const snapshot: BriefingSnapshot = {
-    dateKey: w.dateKey, program: 'daily', dateLabel: w.dateKey, headlines: picked.map(toHeadline), source: 'auto', computedAt: new Date().toISOString(),
+    dateKey: w.dateKey, program: 'daily', dateLabel: w.dateKey, headlines: picked.map(toHeadline).map(h => {
+      const key = Object.keys(edits.script ?? {}).find(k => h.title.includes(k));
+      return key ? { ...h, fixedScript: edits.script![key] } : h;
+    }), source: 'auto', computedAt: new Date().toISOString(),
   };
   const built = await buildBriefingVideo({ outDir, snapshot });
 

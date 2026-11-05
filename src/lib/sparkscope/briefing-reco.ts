@@ -554,7 +554,10 @@ async function alreadyBriefedEvents(items: BriefingCandidate[], history: string[
  * 칸 수에 맞춰 5칸을 채운다 — 재료는 방송 기간(broadcastFor)의 다이제스트 섹션과 AI 트렌드·해외 트렌드.
  * 위클리도 "최근 7일 브리핑에 나간 기사·회사·사건 제외"를 한다(2026-10-26부터).
  */
-export async function pickByTiers(w: BroadcastWindow): Promise<{ picked: BriefingCandidate[]; tiers: number[] }> {
+/** 사람의 편집 — drop은 빼고, must는 업계 동향 칸에 그대로 넣는다(제목 일부로 찾는다). */
+export interface BriefingEdits { drop?: string[]; must?: string[] }
+
+export async function pickByTiers(w: BroadcastWindow, edits: BriefingEdits = {}): Promise<{ picked: BriefingCandidate[]; tiers: number[] }> {
   const [briefed, data, candidates] = await Promise.all([
     recentlyBriefed(),
     buildDigestForBriefing(w),
@@ -768,12 +771,16 @@ export async function pickByTiers(w: BroadcastWindow): Promise<{ picked: Briefin
   // 국내 AI도 같은 기준 — 금융·투자 쪽 사람에게 쓸모 있는 것만(10/29 '애딧 렌즈 모두의 창업 선정'이 AI 칸에 들어감).
   const keepDomestic = await financeRelevant(DA);
   const GA = [...GE, ...DA.filter((_, i) => keepDomestic.has(i))];
+  const titled = (c: BriefingCandidate, words: string[] = []) => words.some(k => c.title.includes(k));
   const pools: Record<Group, BriefingCandidate[]> = { S, P, E, D, R, T, Y, G: GA };
+  (Object.keys(pools) as Group[]).forEach(g => { pools[g] = pools[g].filter(c => !titled(c, edits.drop)); });
+  const must: BriefingCandidate[] = [...Y, ...T].filter(c => titled(c, edits.must)).filter((c, i, arr) => arr.findIndex(x => x.url === c.url) === i);
   const counts = { S: S.length, P: P.length, E: E.length, D: D.length, R: R.length, T: T.length, Y: Y.length, G: GA.length };
   console.log('[briefing-reco] 칸별 후보 수', JSON.stringify(counts));
   console.log('[briefing-reco] 업계·정책 후보\n' + [...Y, ...T].map(c => `  - ${c.title} (${c.source})`).join('\n'));
   const total = BRIEFING_COUNT[w.program];
   const q = quotas(counts, total);
+  if (must.length > 0) q.T = must.length;
   const aiEither = false; // 국내·글로벌 AI "둘 중 하나" 칸은 없어졌다(10-06부터 한 그룹)
 
   let chosen: Record<Group, BriefingCandidate[]> | null = null;
@@ -786,6 +793,10 @@ export async function pickByTiers(w: BroadcastWindow): Promise<{ picked: Briefin
     }));
     chosen = { S: [], P: [], E: [], D: [], R: [], T: [], Y: [], G: [] };
     groups.forEach((g, i) => { chosen![g] = results[i]?.[g] ?? []; });
+    if (must.length > 0) {
+      chosen.T = must;
+      chosen.Y = chosen.Y.filter(c => !must.includes(c));
+    }
   } catch (e) {
     console.error('[briefing-reco] AI 선정 실패 — 그룹별 중요도 순으로 대신합니다:', e);
   }
@@ -828,7 +839,7 @@ export async function pickByTiers(w: BroadcastWindow): Promise<{ picked: Briefin
   for (let round = 0; round < 2; round++) {
     const drop = new Set([...(await sameEventDuplicates(picked)), ...(await alreadyBriefedEvents(picked, briefed.titles))]
       // 위클리 공고 정리 2칸은 고정 — 지난주 회차와 제목이 비슷해 '같은 사건'으로 잡히지 않게.
-      .filter(i => !(weekly && tiers[i] === GROUP_TIER.Y)));
+      .filter(i => !(weekly && tiers[i] === GROUP_TIER.Y) && !titled(picked[i], edits.must)));
     if (drop.size === 0) break;
     const removedGroups: Group[] = [];
     for (let i = picked.length - 1; i >= 0; i--) {
