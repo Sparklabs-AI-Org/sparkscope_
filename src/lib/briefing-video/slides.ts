@@ -118,37 +118,32 @@ function fitText(ctx: SKRSContext2D, text: string, maxWidth: number, maxLines: n
 }
 
 /**
- * SparkScope 로고 — 스파크랩 로고의 불꽃 조각을 렌즈(스코프) 둘레로 퍼뜨린 표시 + 글자(2026-11-05 은빛).
+ * SparkScope 로고 — 스파크랩 로고처럼 아래에서 위로 부채꼴로 터지는 불꽃 + 글자(2026-11-05 은빛, A안).
  * x는 왼쪽 끝, cy는 세로 중심, size는 표시 높이. 그린 뒤 오른쪽 끝 x를 돌려준다.
  * 어두운 바탕에서는 로고 파랑(#0000BB)이 묻혀 밝은 파랑을 쓴다.
  */
 function drawLogo(ctx: SKRSContext2D, x: number, cy: number, size: number, dark: boolean): number {
   const ink = dark ? C.white : C.ink;
   const colors = ['#F80054', '#FF6A00', '#22BB00', dark ? '#4D6BFF' : '#0000BB'];
-  const cx = x + size / 2;
-  const lens = size * 0.17;
-  ctx.save();
-  ctx.lineWidth = size * 0.075;
-  ctx.strokeStyle = ink;
-  ctx.beginPath();
-  ctx.arc(cx, cy, lens, 0, Math.PI * 2);
-  ctx.stroke();
-  const n = 12;
+  const markW = size * 1.56;
+  const cx = x + markW / 2;
+  const oy = cy + size * 0.34;
+  const n = 11;
   for (let i = 0; i < n; i++) {
-    const a = (i / n) * Math.PI * 2 - Math.PI / 2 + 0.13;
-    const inner = lens + size * 0.1;
-    const outer = size * (i % 2 === 0 ? 0.52 : 0.41);
-    const spread = i % 2 === 0 ? 0.13 : 0.11;
+    const a = Math.PI + (Math.PI * (i + 0.5)) / n;
+    const far = i % 2 === 0;
+    const inner = size * (far ? 0.2 : 0.14);
+    const outer = size * (far ? 0.78 : 0.5);
+    const spread = far ? 0.1 : 0.085;
     ctx.fillStyle = colors[i % colors.length];
     ctx.beginPath();
-    ctx.moveTo(cx + Math.cos(a) * inner, cy + Math.sin(a) * inner);
-    ctx.lineTo(cx + Math.cos(a - spread) * outer, cy + Math.sin(a - spread) * outer);
-    ctx.lineTo(cx + Math.cos(a + spread) * outer, cy + Math.sin(a + spread) * outer);
+    ctx.moveTo(cx + Math.cos(a) * inner, oy + Math.sin(a) * inner);
+    ctx.lineTo(cx + Math.cos(a - spread) * outer, oy + Math.sin(a - spread) * outer);
+    ctx.lineTo(cx + Math.cos(a + spread) * outer, oy + Math.sin(a + spread) * outer);
     ctx.closePath();
     ctx.fill();
   }
-  ctx.restore();
-  const textX = x + size + size * 0.14;
+  const textX = x + markW + size * 0.14;
   const align = ctx.textAlign;
   const base = ctx.textBaseline;
   ctx.textAlign = 'left';

@@ -10,12 +10,15 @@ import type { AnalyzedArticle } from '../sparkscope/types';
 import { writeBriefingScript, checkAlignment, spokenDate, longDate, DAILY_LENGTH, type ScriptSegment } from './script';
 import type { BriefingHeadline } from '../sparkscope/briefing';
 import { synthesizeAll } from './tts';
-import { boardSlide, outroOverVideo, openingSlide } from './slides';
-import { renderVideo, probeSeconds, silentWav, GAP_SECONDS, type Clip } from './render';
+import { boardSlide, outroOverVideo } from './slides';
+import { renderVideo, probeSeconds, GAP_SECONDS, type Clip } from './render';
 
 /** 오프닝 배경음악 — scripts/make-news-bgm.py로 만든 자체 제작 음원(저작권 걱정 없음). 다른 음원을 쓰려면 이 파일만 바꾸면 된다. */
 export const NEWS_BGM = path.join(process.cwd(), 'assets/briefing/news-bgm.wav');
 export const OPENING_SECONDS = 3.2;
+/** 데일리 배경음악 — 힉스필드로 만든 뉴스 배경곡(60초, 반복). 목소리 아래에 낮게 전체에 깐다(2026-11-05 은빛). */
+const NEWS_BED = path.join(process.cwd(), 'assets/briefing/news-bed.m4a');
+const BED_VOLUME = 0.1;
 /** 기사 화면 배경 — 힉스필드로 만든 서울의 이른 아침(출근길에 듣는 브리핑). 10초 → 끝과 처음을 겹쳐 끊김 없이 반복(2026-11-05 은빛). */
 const BOARD_BACKGROUND = path.join(process.cwd(), 'assets/briefing/bg-city.mp4');
 /** 영상 전체 상한 — 5분(300초)을 넘으면 우선순위가 낮은(뒤 칸) 기사부터 뺀다(2026-11-04 은빛 결정, 이전 4분). */
@@ -65,13 +68,6 @@ export function dedupeHeadlines<T extends { url: string; title: string }>(hs: T[
   });
 }
 
-/** "2026년 10월 22일 (목)" — 오프닝 타이틀 날짜. */
-function openingDate(dateKey: string): string {
-  const [y, m, d] = dateKey.split('-').map(Number);
-  const wd = ['일', '월', '화', '수', '목', '금', '토'][new Date(Date.UTC(y, m - 1, d)).getUTCDay()];
-  return `${y}년 ${m}월 ${d}일 (${wd})`;
-}
-
 /** 더벨 형식 개요 — "○○ 주요 뉴스의 핵심 내용은? A, B, … 그리고 N." 제목을 그대로 나열하므로 새 사실이 들어가지 않는다. */
 export function buildOverview(dateKey: string, headlines: BriefingHeadline[], label = '스파크스코프 주요 뉴스'): string {
   const titles = headlines.map(h => h.headline ?? h.title);
@@ -81,7 +77,7 @@ export function buildOverview(dateKey: string, headlines: BriefingHeadline[], la
 
 /** 영상 총 길이 추정 — render.ts와 같은 규칙(장면마다 음성 + GAP). 오프닝 포함. */
 function estimateSeconds(speeches: { seconds: number }[]): number {
-  return OPENING_SECONDS + GAP_SECONDS + speeches.reduce((n, sp) => n + sp.seconds + GAP_SECONDS, 0);
+  return speeches.reduce((n, sp) => n + sp.seconds + GAP_SECONDS, 0);
 }
 
 /**
@@ -156,8 +152,6 @@ export async function buildBriefingVideo(opts: { outDir: string; prepare?: boole
   const overview = buildOverview(snapshot.dateKey, trimmed.headlines);
   snapshot.headlines = trimmed.headlines;
   const clips: Clip[] = [
-    // 오프닝 — 말 없이 뉴스 배경음악 + 타이틀 화면(OPENING_SECONDS), 이어지는 인사 동안 음악을 낮게 깔고 끝에서 줄인다.
-    { png: openingSlide(openingDate(snapshot.dateKey), '데일리 브리핑', 'image/png', '스파크스코프 주요 뉴스'), wav: silentWav(OPENING_SECONDS), seconds: OPENING_SECONDS, bgm: { file: NEWS_BGM, start: 0, volume: 0.9 } },
     ...segments.map((s, i): Clip => ({
       png: s.kind === 'intro' ? boardSlide(dateLabel, trimmed.headlines, -1, undefined, true)
         : s.kind === 'outro' ? outroOverVideo()
@@ -165,8 +159,8 @@ export async function buildBriefingVideo(opts: { outDir: string; prepare?: boole
       backgroundVideo: BOARD_BACKGROUND,
       wav: speeches[i].wav,
       seconds: speeches[i].seconds,
-      // 첫 말소리 동안 음악을 낮게 깔고 끝에서 줄인다(안내가 없는 날은 첫 기사).
-      ...(i === 0 ? { bgm: { file: NEWS_BGM, start: OPENING_SECONDS + GAP_SECONDS, volume: 0.15, fadeOut: true } } : {}),
+      // 음악은 장면이 바뀌어도 이어지게 그 장면 시작 시각부터 깔고, 마지막 장면 끝에서 줄인다.
+      bgm: { file: NEWS_BED, start: speeches.slice(0, i).reduce((n, sp) => n + sp.seconds + GAP_SECONDS, 0), volume: BED_VOLUME, fadeOut: i === segments.length - 1 },
     })),
   ];
 

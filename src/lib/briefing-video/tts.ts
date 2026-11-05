@@ -9,11 +9,11 @@
 import { GoogleAuth } from 'google-auth-library';
 
 const PROJECT = 'communication-504101';
-/** speed 1.2 — 2026-11-02 대표님 미팅 "너무 느리다"(1.2~1.3배 시험 후 확정 예정). */
+/** 여성 아나운서 목소리(2026-11-05 은빛, 이전 Charon). speed 1.2 — 2026-11-02 대표님 미팅 "너무 느리다"(1.2~1.3배 시험 후 확정 예정). */
 export const VOICE = {
   model: 'gemini-2.5-flash-tts',
-  name: 'Charon',
-  style: '아침 뉴스 앵커처럼 또렷하고 밝게, 약간 빠른 속도로 읽어 주세요.',
+  name: 'Kore',
+  style: '아침 뉴스 여성 아나운서처럼 또렷하고 안정된 톤으로, 약간 빠른 속도로 읽어 주세요.',
   speed: 1.2,
 } as const;
 const SAMPLE_RATE = 24000;
@@ -60,7 +60,7 @@ export interface Speech {
  * 그래도 안 되면 같은 이름의 정식 음성(Chirp 3 HD · Charon)으로 영상 전체를 만든다 — 문단마다
  * 목소리가 섞이지 않게 전부 바꾼다. 발송이 음성 때문에 막히면 안 된다.
  */
-export const FALLBACK_VOICE = 'ko-KR-Chirp3-HD-Charon';
+export const FALLBACK_VOICE = 'ko-KR-Chirp3-HD-Kore';
 
 /** speed — 1보다 크면 합성 뒤 ffmpeg(atempo)로 빠르게(음높이 유지). Gemini TTS엔 속도 옵션이 없다. */
 export type VoiceSpec = { model: string; name: string; style: string; speed?: number };

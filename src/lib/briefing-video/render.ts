@@ -90,7 +90,7 @@ export async function renderVideo(clips: Clip[], workDirIn: string, outFileIn: s
     let aOut = '[voice]';
     if (c.bgm) {
       const idx = c.overlayGif || c.backgroundVideo ? 3 : 2;
-      inputs.push('-i', path.resolve(c.bgm.file));
+      inputs.push('-stream_loop', '-1', '-i', path.resolve(c.bgm.file));
       const fade = c.bgm.fadeOut ? `,afade=t=out:st=${Math.max(0, dur - 1).toFixed(2)}:d=1` : '';
       graph.push(`[${idx}:a]aresample=44100,atrim=start=${c.bgm.start},asetpts=PTS-STARTPTS,volume=${c.bgm.volume}${fade}[m]`);
       graph.push(`[voice][m]amix=inputs=2:duration=first:normalize=0[a]`);
