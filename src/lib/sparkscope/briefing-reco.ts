@@ -162,7 +162,8 @@ async function loadTrends(): Promise<BriefingCandidate[]> {
 /** 화면·저장용 헤드라인만 남긴다(보조 정보 제거). */
 export function toHeadline(c: BriefingCandidate & Partial<IntraCandidate>): BriefingHeadline {
   const { pubDate: _p, importance: _i, matchCount: _m, category: _c, company: _k, ...h } = c;
-  return h;
+  // 포트폴리오·알럼나이 기사는 회사명을 넘긴다 — 대본이 그 회사를 주어로 쓴다(script.ts).
+  return _k && /포트폴리오|알럼나이/.test(c.label) ? { ...h, companies: [_k] } : h;
 }
 function toCandidate(c: IntraCandidate): BriefingCandidate {
   const { category: _c, company: _k, ...rest } = c;
@@ -292,7 +293,9 @@ const GROUP_NAME: Record<Group, string> = {
  * 5 스타트업 업계 동향(T·Y) → 6 AI·글로벌). 위쪽 칸부터 채우고, 맨 아래 AI·글로벌은 소식이 있으면 2칸을 남긴다.
  * 위 칸이 비면 그 자리는 AI·글로벌이 받고, 그래도 남으면 위 칸부터 더 받는다.
  */
-const SLOT_CAPS: [Group, number][] = [['S', 2], ['P', 3], ['E', 2], ['D', 3], ['R', 2], ['T', 2], ['Y', 1]];
+/** AI가 고른 기사만 싣는 칸 */
+const AI_ONLY: Group[] = ['D', 'R', 'T', 'Y', 'G'];
+const SLOT_CAPS: [Group, number][] = [['S', 2], ['P', 3], ['E', 2], ['D', 3], ['R', 2], ['T', 2], ['Y', 2]];
 function quotas(avail: Record<Group, number>, total: number): Record<Group, number> {
   const q: Record<Group, number> = { S: 0, P: 0, E: 0, D: 0, R: 0, T: 0, Y: 0, G: 0 };
   q.G = Math.min(2, avail.G);
@@ -311,13 +314,14 @@ const RANK_SYSTEM = `당신은 스파크랩(한국의 스타트업 액셀러레�
 - 투자 유치·인수합병·상장·대형 계약·신제품 출시·규제 변화처럼 "사건"이 있는 기사를 우선합니다.
 - 주가 등락·행사 스케치·인터뷰·칼럼은 뒤로 미룹니다. 기자 체험기("~해 보았다")·해설 기획("~하는 이유")·후원 콘텐츠는 고르지 마세요.
 - 같은 사건을 다룬 기사는 그룹이 달라도 하나만 고릅니다(국내 기사와 해외 기사가 같은 사건일 수 있음).
-- "글로벌 AI" 그룹은 VC·금융 업계 사람이 숫자와 함께 대화에 쓸 수 있는 해외 AI 소식을 고릅니다 — 돈의 흐름(대형 라운드·기업가치·M&A·IPO),
-  빅테크 AI 투자가 실적·주가에 준 영향, 경쟁 구도·가격 변화, 인프라·공급망, 규제·지정학, 글로벌 VC 움직임 순으로 우선합니다.
-  일반 모델·기능 출시와 개별 도입 사례는 고르지 마세요. 해외 AI 소식이 원칙입니다(OpenAI·Anthropic·구글·메타·엔비디아 등). [국내] 표시 기사는
+- "글로벌 AI" 그룹은 스파크랩 임직원이 꼭 알아야 할 AI 업계의 판도 변화만 고릅니다 — 10억 달러급 라운드·M&A·IPO, 빅테크 AI 투자가 실적·주가에 준 영향,
+  시장 구도를 바꾸는 경쟁·가격 변화, 인프라·공급망, 규제·지정학, 글로벌 VC 움직임 순으로 우선합니다.
+  일반 모델·기능 출시, 개별 도입 사례, 빅테크의 작은 스타트업 인수, 잘 알려지지 않은 회사 소식, 분석·리포트 기사는 고르지 마세요. 해외 AI 소식이 원칙입니다(OpenAI·Anthropic·구글·메타·엔비디아 등). [국내] 표시 기사는
   "삼성이 Anthropic에 투자"처럼 해외 주요 매체도 크게 다룰 사건일 때만, 그것도 최대 1건입니다. 국내 기업의 제품 출시·행사·
   협약·전시회 소식은 고르지 마세요.
-- "투자 유치·펀드 결성" 그룹은 누가 투자했는지·누가 투자받았는지(금액·라운드·투자사), 어떤 펀드가 결성·조성됐는지가
-  분명한 기사를 고르세요. 정책 설명·행사 소식은 고르지 마세요.
+- "스타트업 업계 동향" 그룹은 업계 전반에 영향을 주는 소식만 고릅니다 — 중소벤처기업부·금융위 등 정부 정책과 예산, 모태펀드·대형 펀드 결성,
+  벤처투자 시장 통계, 규제 변화, AC·VC가 정부 사업 운영사에 선정된 소식, 업계를 이끄는 큰 회사의 결정적 사건.
+  단일 스타트업의 투자 유치·창업·제품 소식, 유명인의 창업 소식은 고르지 마세요. 맞는 기사가 없으면 빈 배열로 두세요.
 
 - "정책·지원사업" 그룹은 스타트업이 지원할 수 있는 정부·지자체 지원사업 공고를 먼저 고르세요 — 데모데이의 주간 창업공고·
   인기 지원사업 정리 글이 1순위입니다. 그다음이 지원 정책 변화·모태펀드 출자 같은 소식입니다. 칼럼·인터뷰·행사 스케치는 고르지 마세요.
@@ -333,7 +337,7 @@ const RANK_SYSTEM = `당신은 스파크랩(한국의 스타트업 액셀러레�
   공개 기사로 확인되는 사건을 고르세요.
 
 JSON으로만 답하세요: {"picks": {"S": ["S0"], "P": ["P2","P0"], "E": ["E0"], "D": ["D1"], "R": ["R0"], "T": ["T3"], "Y": ["Y1"], "G": ["G0"]}}
-그룹마다 요청한 개수를 정확히 지키고, 요청하지 않은 그룹은 빈 배열로 두세요.`;
+요청한 개수는 최대치입니다. 기준에 맞는 기사만 고르고, 없으면 줄여도 됩니다. 요청하지 않은 그룹은 빈 배열로 두세요.`;
 
 async function rankWithAI(
   pools: Record<Group, BriefingCandidate[]>, q: Record<Group, number>, aiEither: boolean,
@@ -375,7 +379,7 @@ const FINANCE_RULES = `VC·금융 업계(벤처캐피털·액셀러레이터·�
 AI 뉴스만 고릅니다. 기준 질문: "그래서 누가 돈을 벌고 누가 잃나"로 이어지는가.
 
 남길 것
-1. AI 쪽 돈의 흐름: 1억 달러 이상 투자 라운드, 기업가치 변화, 인수합병, IPO·상장 준비, 대형 펀드 결성
+1. AI 쪽 돈의 흐름: 10억 달러급 투자 라운드, 업계 선두 회사의 기업가치 변화, 판도를 바꾸는 대형 인수합병, IPO·상장 준비, 대형 펀드 결성
 2. 빅테크 AI 투자가 실적·주가에 준 영향: 설비투자 규모, 현금 소진, 실적·가이던스, 주가 반응
 3. 경쟁 구도 변화: 가격 인하 경쟁, 수익 모델 변화, 수억 달러 이상 고객 계약, 판도를 바꾸는 제휴
 4. 인프라·공급망: 칩·데이터센터·전력의 대규모 계약, 공급 부족, 가격 변동
@@ -388,7 +392,8 @@ AI 뉴스만 고릅니다. 기준 질문: "그래서 누가 돈을 벌고 누가
 - 보도자료성 제품·기능 출시, 일반 모델·특화 모델 공개, 연구 데모, 벤치마크 자랑
 - 개별 기업의 AI 도입 사례(수억 달러 이상 계약이 아니면)
 - 해설·기획("~하는 이유", "~할 때 일어나는 일"), 기자 체험기, 칼럼·의견, 인터뷰, 기업 후원·제휴 콘텐츠
-- 금액·기업가치·점유율 같은 숫자가 없는 트렌드 기사`;
+- 금액·기업가치·점유율 같은 숫자가 없는 트렌드 기사
+- 빅테크의 작은 스타트업 인수, 일반인이 모르는 회사 소식, 특정 회사가 낸 분석·리포트 소개(2026-11-05 은빛: "임직원이 알아서 뭐하나")`;
 
 async function financeRelevant(items: BriefingCandidate[]): Promise<Set<number>> {
   const all = new Set(items.map((_, i) => i));
@@ -679,16 +684,17 @@ export async function pickByTiers(w: BroadcastWindow): Promise<{ picked: Briefin
   // 예전 '스타트업계' 칸은 일반 업계 소식이라 쓸데없는 기사가 많았다.
   // 엑시트·인수합병·M&A·IPO·상장은 뺐다 — 사모펀드·대기업 거래가 걸려 들어왔다(2026-10-29 10번 "IPO 약속 깼다" 골프존홀딩스 vs MBK 매각 분쟁).
   // 이 칸은 스타트업이 투자를 받거나 벤처펀드가 만들어지는 소식만이다.
-  const DEAL = /투자\s?(유치|받|했|집행|단행|확보|참여|결정)|시리즈\s?[A-F]|프리\s?[AB]|시드\s?(투자|라운드)|브릿지\s?투자|억\s?원?\s?(규모\s?)?(투자|조달)|펀드\s?(결성|조성|출범|출자|모집|클로징)|출자\s?(사업|선정)|모태펀드|벤처펀드/i;
+  // 단일 스타트업 투자 유치는 뺐다(2026-11-05 은빛: "무빈 100억 투자 유치는 사소하다"). 업계 전반의 사건만.
+  const DEAL = /펀드\s?(결성|조성|출범|출자|모집|클로징)|출자\s?(사업|선정)|모태펀드|벤처펀드|벤처투자\s?(시장|규모|실적|동향)|중소벤처기업부|중기부|금융위|스타트업\s?(정책|규제|지원)|유니콘/i;
   const NOT_STARTUP_DEAL = /MBK|사모펀드|PEF|경영권|매각|인수금융|바이아웃|먹튀/;
   // 깡프로·데모데이에서 나눈 투자·펀드 기사(policy-classify.ts → fund_invest)를 앞에 둔다 — 사람이 고른 큐레이션이다.
   const fundRows = (await prisma.article.findMany({
     // 수집 시각 기준 — 깡프로 글은 새벽(01시께)에 올라오고 정책 수집은 10:10이라, 발행 시각으로 거르면 늘 창 앞에 걸려 빠졌다(2026-10-29).
     where: { category: 'fund_invest', isNoise: false, collectedAt: { gte: w.since, ...(w.until ? { lt: w.until } : {}) } },
-    select: { id: true, title: true, link: true, source: true, pubDate: true, bodyText: true },
+    select: { id: true, title: true, link: true, source: true, pubDate: true, bodyText: true, curationTopic: true },
     orderBy: { pubDate: 'desc' },
     take: 20,
-  })).filter(a => !STOCK_TICKER.test(a.title)).map(a => ({
+  })).filter(a => !STOCK_TICKER.test(a.title) && a.curationTopic !== 'round').map(a => ({
     kind: 'intra' as const, ref: a.id, title: a.title, summary: a.bodyText ? a.bodyText.replace(/\s+/g, ' ').slice(0, 160) : a.title,
     source: a.source, url: a.link, label: '💰 투자·펀드', pubDate: a.pubDate.toISOString(), category: 'fund_invest',
   }));
@@ -773,8 +779,8 @@ export async function pickByTiers(w: BroadcastWindow): Promise<{ picked: Briefin
     return true;
   };
   (['S', 'P', 'E', 'D', 'R', 'T', 'Y', 'G'] as Group[]).forEach(g => {
-    // 해외 포폴·운영 사업은 AI가 고른 것만 쓴다 — 동명 기사("Rain Timecast" 날씨)가 남은 칸 채우기로 끼어들지 않게.
-    const order = (g === 'D' || g === 'R') && chosen ? [...chosen[g]] : [...(chosen?.[g] ?? []), ...pools[g]];
+    // 아래 칸은 AI가 고른 것만 쓴다 — 동명 기사나 사소한 기사가 남은 칸 채우기로 끼어들지 않게. 기준에 맞는 기사가 없으면 칸을 비운다.
+    const order = AI_ONLY.includes(g) && chosen ? [...chosen[g]] : [...(chosen?.[g] ?? []), ...pools[g]];
     let n = 0;
     for (const c of order) {
       if (n >= want[g]) break;
@@ -782,7 +788,7 @@ export async function pickByTiers(w: BroadcastWindow): Promise<{ picked: Briefin
     }
   });
   // 빈칸이 남으면(해외 포폴·운영 사업을 AI가 덜 골랐을 때 등) 위 칸부터 채운다.
-  for (const g of ['P', 'E', 'T', 'Y', 'G'] as Group[]) {
+  for (const g of ['P', 'E'] as Group[]) {
     for (const c of [...(chosen?.[g] ?? []), ...pools[g]]) {
       if (picked.length >= total) break;
       take(g, c);
@@ -807,7 +813,7 @@ export async function pickByTiers(w: BroadcastWindow): Promise<{ picked: Briefin
     }
     // 빠진 칸은 한 칸씩 같은 그룹에서 채운다 — 예전처럼 그룹째로 채우면 먼저 도는 그룹이 빈자리를 다 가져갔다
     // (2026-10-28 정책 칸이 6개, AI가 2개). 같은 그룹에 없으면 국내 포폴 → AI·정책 중 적은 쪽 → 투자 순.
-    const fillOne = (g: Group) => [...(chosen?.[g] ?? []), ...(g === 'R' ? [] : pools[g])].some(c => take(g, c));
+    const fillOne = (g: Group) => [...(chosen?.[g] ?? []), ...(AI_ONLY.includes(g) ? [] : pools[g])].some(c => take(g, c));
     const count = (g: Group) => tiers.filter(t => t === GROUP_TIER[g]).length;
     for (const g of removedGroups) {
       if (picked.length >= total) break;
@@ -825,15 +831,15 @@ export async function pickByTiers(w: BroadcastWindow): Promise<{ picked: Briefin
     if (swapped) { picked[i] = swapped; continue; }
     console.log(`[briefing-reco] 본문 없음·대체 기사 없음 — 제외: ${picked[i]!.title.slice(0, 40)}`);
     picked.splice(i, 1); tiers.splice(i, 1); i--;
-    for (const c of [...(chosen?.G ?? []), ...pools.G]) {
+    for (const c of chosen?.G ?? pools.G) {
       if (picked.length >= total) break;
       if (used.has(c.url)) continue;
       const ok = await readableVersion(c);
       if (ok && take('G', ok)) break;
     }
   }
-  // 해외 AI가 모자라 칸이 비면 국내 포폴 → 알럼나이 → 투자·펀드 → 정책 순으로 채운다(해외 AI 기준을 좁힌 뒤 칸이 안 차는 날이 생겼다).
-  for (const g of ['P', 'E', 'T', 'Y'] as Group[]) {
+  // 칸이 비면 우리 회사 소식으로만 채운다. 그래도 비면 12건을 안 채운다 — 사소한 기사로 채우지 않는다(2026-11-05 은빛).
+  for (const g of ['P', 'E'] as Group[]) {
     for (const c of [...(chosen?.[g] ?? []), ...pools[g]]) {
       if (picked.length >= total) break;
       take(g, c);

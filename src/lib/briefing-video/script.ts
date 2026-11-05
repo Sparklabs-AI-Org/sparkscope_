@@ -68,7 +68,7 @@ const SECTION_LEAD: Record<Section, [string, string]> = {
   P: ['먼저 포트폴리오 소식입니다.', '포트폴리오 소식입니다.'],
   E: ['먼저 알럼나이 소식입니다.', '알럼나이 소식입니다.'],
   O: ['먼저 글로벌 포트폴리오 소식입니다.', '글로벌 포트폴리오 소식입니다.'],
-  R: ['먼저 스파크랩 운영 사업 소식입니다.', '스파크랩 운영 사업 소식입니다.'],
+  R: ['먼저 운영 사업 관련 소식입니다.', '운영 사업 관련 소식입니다.'],
   A: ['먼저 AI 쪽 소식입니다.', 'AI 쪽 소식입니다.'],
   T: ['먼저 스타트업 업계 동향입니다.', '스타트업 업계 동향입니다.'],
 };
@@ -283,7 +283,10 @@ export const DAILY_LENGTH = `위의 구성·길이·해석 지시는 모두 무�
  * 우리 포트폴리오사 기사가 "에이티넘인베스트먼트 투자사 올거나이즈가…"처럼 다른 투자사 소속으로 시작하지 않게 한다(2026-11-05 은빛).
  * 지시로 막고, AI가 어겨도 앞머리를 지운다. 투자 유치 기사의 "○○벤처스가 투자했다"는 사실 설명이라 건드리지 않는다.
  */
-const OUR_COMPANY_RULE = '\n[표현] 이 회사는 스파크랩 포트폴리오사입니다. 대본·헤드라인·리드 어디에도 "○○인베스트먼트 투자사", "○○ 포트폴리오"처럼 다른 투자사 소속으로 소개하지 말고 회사 이름으로 바로 시작하세요.';
+const ourCompanyRule = (h: BriefingHeadline) => {
+  const name = h.companies?.[0] ?? '이 회사';
+  return `\n[표현] ${name}는 스파크랩 포트폴리오사입니다. 대본·헤드라인·리드 모두 ${name}를 주어로 시작하세요. 다른 회사가 주어인 기사여도 "보령이 스카이랩스와 개발"이 아니라 "스카이랩스가 보령과 개발"처럼 바꿉니다. "○○인베스트먼트 투자사", "○○ 포트폴리오"처럼 다른 투자사 소속으로 소개하지 마세요.`;
+};
 const OTHER_INVESTOR_PREFIX = /(?:^|(?<=\s))(?!스파크랩)\S*(?:인베스트먼트|인베|벤처스|벤처투자|벤처파트너스|파트너스|캐피탈|창업투자|자산운용)\S*\s+(?:투자사|투자기업|투자 기업|피투자사|피투자기업|포트폴리오사|포트폴리오)\s+/g;
 export const dropOtherInvestor = (text: string) => text.replace(OTHER_INVESTOR_PREFIX, '');
 const isOurCompany = (h: BriefingHeadline) => ['P', 'E', 'O'].includes(sectionOf(h));
@@ -316,7 +319,7 @@ export async function writeBriefingScript(snapshot: BriefingSnapshot, frame?: Sc
       response_format: { type: 'json_object' },
       messages: [
         { role: 'system', content: SYSTEM },
-        { role: 'user', content: `이 기사 하나만 씁니다. 다른 기사 내용을 섞지 마세요.${frame?.length ? `\n[길이] ${frame.length}` : ''}${frame?.withHeadline ? HEADLINE_ASK : ''}${isOurCompany(h) ? OUR_COMPANY_RULE : ''}${feedback}\n${describe(h, i, bodies[i])}` },
+        { role: 'user', content: `이 기사 하나만 씁니다. 다른 기사 내용을 섞지 마세요.${frame?.length ? `\n[길이] ${frame.length}` : ''}${frame?.withHeadline ? HEADLINE_ASK : ''}${isOurCompany(h) ? ourCompanyRule(h) : ''}${feedback}\n${describe(h, i, bodies[i])}` },
       ],
     });
     type Item = { text: string; headline?: string; lead?: string; brief?: string; points?: { label?: string; text?: string }[] };
