@@ -1,18 +1,19 @@
 /**
  * 브리핑 슬라이드 — 1280×720 PNG. 브라우저 없이 @napi-rs/canvas로 그린다(GitHub Actions에서도 같게 나오도록).
  * 폰트는 Pretendard(OFL) — node_modules/pretendard에서 읽는다.
- * 색은 대시보드와 같은 스파크 팔레트(tailwind.config: spark.*).
+ * 색은 스파크랩 로고 불꽃의 네 색(sections.ts). 2026-11-05 보라를 버렸다.
  */
 import { createCanvas, GlobalFonts, type Image, type SKRSContext2D } from '@napi-rs/canvas';
 import path from 'path';
 import type { BriefingHeadline } from '../sparkscope/briefing';
+import { SECTION_COLOR, sectionOf } from './sections';
 
 export const W = 1280;
 export const H = 720;
 
 const C = {
-  purple: '#5046E5',
-  lightPurple: '#EEEDFC',
+  accent: '#F80054',
+  lightAccent: '#FFE3EC',
   ink: '#1A1A1A',
   inkSoft: '#514E5C',
   muted: '#8B8894',
@@ -116,6 +117,51 @@ function fitText(ctx: SKRSContext2D, text: string, maxWidth: number, maxLines: n
   return { lines: wrap(ctx, text, maxWidth, maxLines), size };
 }
 
+/**
+ * SparkScope 로고 — 스파크랩 로고의 불꽃 조각을 렌즈(스코프) 둘레로 퍼뜨린 표시 + 글자(2026-11-05 은빛).
+ * x는 왼쪽 끝, cy는 세로 중심, size는 표시 높이. 그린 뒤 오른쪽 끝 x를 돌려준다.
+ * 어두운 바탕에서는 로고 파랑(#0000BB)이 묻혀 밝은 파랑을 쓴다.
+ */
+function drawLogo(ctx: SKRSContext2D, x: number, cy: number, size: number, dark: boolean): number {
+  const ink = dark ? C.white : C.ink;
+  const colors = ['#F80054', '#FF6A00', '#22BB00', dark ? '#4D6BFF' : '#0000BB'];
+  const cx = x + size / 2;
+  const lens = size * 0.17;
+  ctx.save();
+  ctx.lineWidth = size * 0.075;
+  ctx.strokeStyle = ink;
+  ctx.beginPath();
+  ctx.arc(cx, cy, lens, 0, Math.PI * 2);
+  ctx.stroke();
+  const n = 12;
+  for (let i = 0; i < n; i++) {
+    const a = (i / n) * Math.PI * 2 - Math.PI / 2 + 0.13;
+    const inner = lens + size * 0.1;
+    const outer = size * (i % 2 === 0 ? 0.52 : 0.41);
+    const spread = i % 2 === 0 ? 0.13 : 0.11;
+    ctx.fillStyle = colors[i % colors.length];
+    ctx.beginPath();
+    ctx.moveTo(cx + Math.cos(a) * inner, cy + Math.sin(a) * inner);
+    ctx.lineTo(cx + Math.cos(a - spread) * outer, cy + Math.sin(a - spread) * outer);
+    ctx.lineTo(cx + Math.cos(a + spread) * outer, cy + Math.sin(a + spread) * outer);
+    ctx.closePath();
+    ctx.fill();
+  }
+  ctx.restore();
+  const textX = x + size + size * 0.14;
+  const align = ctx.textAlign;
+  const base = ctx.textBaseline;
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'middle';
+  ctx.font = `${Math.round(size * 0.56)}px "Pretendard ExtraBold"`;
+  ctx.fillStyle = ink;
+  ctx.fillText('SparkScope', textX, cy + 1);
+  const right = textX + ctx.measureText('SparkScope').width;
+  ctx.textAlign = align;
+  ctx.textBaseline = base;
+  return right;
+}
+
 function base(dateLabel: string, program = '데일리 브리핑') {
   ensureFonts();
   const canvas = createCanvas(W, H);
@@ -123,14 +169,12 @@ function base(dateLabel: string, program = '데일리 브리핑') {
   ctx.fillStyle = C.cream;
   ctx.fillRect(0, 0, W, H);
   // 상단 띠
-  ctx.fillStyle = C.purple;
+  ctx.fillStyle = C.accent;
   ctx.fillRect(0, 0, W, 8);
-  ctx.font = '26px "Pretendard Bold"';
-  ctx.fillStyle = C.purple;
-  ctx.fillText('SparkScope', 64, 72);
+  const right = drawLogo(ctx, 56, 62, 56, false);
   ctx.font = '22px "Pretendard SemiBold"';
   ctx.fillStyle = C.muted;
-  ctx.fillText(program, 222, 72);
+  ctx.fillText(program, right + 16, 70);
   ctx.textAlign = 'right';
   ctx.fillText(dateLabel, W - 64, 72);
   ctx.textAlign = 'left';
@@ -150,7 +194,7 @@ export function introSlide(dateLabel: string, headlines: BriefingHeadline[], o: 
   let y = top;
   const r = n > 5 ? 16 : 20;
   headlines.forEach((h, i) => {
-    ctx.fillStyle = C.purple;
+    ctx.fillStyle = C.accent;
     ctx.beginPath();
     ctx.arc(84, y - 10, r, 0, Math.PI * 2);
     ctx.fill();
@@ -173,14 +217,14 @@ export function itemSlide(dateLabel: string, h: BriefingHeadline, index: number,
   const textW = W - 128 - (o.hostSpace ? HOST_W : 0);
   // 순번
   ctx.font = '120px "Pretendard ExtraBold"';
-  ctx.fillStyle = C.lightPurple;
+  ctx.fillStyle = C.lightAccent;
   ctx.fillText(String(index + 1).padStart(2, '0'), 56, 240);
   // 라벨 칩
   ctx.font = '26px "Pretendard Bold"';
   // 라벨 앞 이모지(📈 💼)는 Pretendard에 없어 네모로 깨진다 — 슬라이드에선 뗀다.
   const label = h.label.replace(/^[\p{Extended_Pictographic}\p{Regional_Indicator}\uFE0F\s]+/u, ''); // 🇰🇷 국기도
   const lw = ctx.measureText(label).width + 40;
-  ctx.fillStyle = C.purple;
+  ctx.fillStyle = C.accent;
   ctx.beginPath();
   ctx.roundRect(64, 270, lw, 50, 25);
   ctx.fill();
@@ -214,7 +258,7 @@ export function itemSlide(dateLabel: string, h: BriefingHeadline, index: number,
   // 진행 막대
   ctx.fillStyle = '#E7E3DB';
   ctx.fillRect(0, H - 8, W, 8);
-  ctx.fillStyle = C.purple;
+  ctx.fillStyle = C.accent;
   ctx.fillRect(0, H - 8, (W * (index + 1)) / total, 8);
   if (o.hostImage) drawHost(ctx, o.hostImage);
   return canvas.toBuffer('image/png');
@@ -225,7 +269,7 @@ const BOARD_PAGE = 5;
 
 /**
  * 헤드라인 보드 — 데일리 영상의 기사 화면(2026-11-05 은빛: 더벨 데일리 브리핑처럼).
- * 어두운 바탕에 흰 띠 5개를 가운데 정렬로 깔고, 지금 읽는 기사만 색 띠로 키운다. 5개를 넘으면 다음 화면으로 넘어간다.
+ * 어두운 바탕에 흰 띠 5개를 가운데 정렬로 깔고, 지금 읽는 기사만 섹션 색 띠로 키운다. 흰 띠의 밑줄도 섹션 색이다. 5개를 넘으면 다음 화면으로 넘어간다.
  * active가 -1이면 첫 화면을 강조 없이 보여 준다(소식 없음 안내가 나오는 동안).
  */
 export function boardSlide(dateLabel: string, headlines: BriefingHeadline[], active: number, program = '데일리 브리핑'): Buffer {
@@ -233,18 +277,17 @@ export function boardSlide(dateLabel: string, headlines: BriefingHeadline[], act
   const canvas = createCanvas(W, H);
   const ctx = canvas.getContext('2d');
   const g = ctx.createLinearGradient(0, 0, 0, H);
-  g.addColorStop(0, '#14123A');
-  g.addColorStop(1, '#2B2672');
+  g.addColorStop(0, '#141418');
+  g.addColorStop(1, '#2A2A32');
   ctx.fillStyle = g;
   ctx.fillRect(0, 0, W, H);
 
-  ctx.font = '24px "Pretendard Bold"';
-  ctx.fillStyle = C.white;
-  ctx.fillText(`SparkScope ${program}`, 72, 62);
-  ctx.textAlign = 'right';
+  const right = drawLogo(ctx, 64, 56, 60, true);
   ctx.font = '24px "Pretendard SemiBold"';
   ctx.fillStyle = 'rgba(255,255,255,0.75)';
-  ctx.fillText(dateLabel, W - 72, 62);
+  ctx.fillText(program, right + 16, 65);
+  ctx.textAlign = 'right';
+  ctx.fillText(dateLabel, W - 72, 65);
 
   const page = Math.floor(Math.max(active, 0) / BOARD_PAGE);
   const rows = headlines.slice(page * BOARD_PAGE, (page + 1) * BOARD_PAGE);
@@ -258,16 +301,17 @@ export function boardSlide(dateLabel: string, headlines: BriefingHeadline[], act
     const x = isNow ? 56 : 104;
     const w = W - x * 2;
     const y = top + r * step;
-    ctx.fillStyle = isNow ? C.purple : C.white;
+    const color = SECTION_COLOR[sectionOf(h)];
+    ctx.fillStyle = isNow ? color.fill : C.white;
     ctx.fillRect(x, y, w, barH);
     if (!isNow) {
-      ctx.fillStyle = C.purple;
-      ctx.fillRect(x, y + barH - 6, w, 6);
+      ctx.fillStyle = color.fill;
+      ctx.fillRect(x, y + barH - 8, w, 8);
     }
     const t = fitText(ctx, hangulize(h.headline ?? h.title), w - 72, 1, [42, 40, 38, 36, 34, 32, 30, 28, 26], 'ExtraBold', true);
     ctx.font = `${t.size}px "Pretendard ExtraBold"`;
-    ctx.fillStyle = isNow ? C.white : C.ink;
-    ctx.fillText(t.lines.join(' '), W / 2, y + (isNow ? barH : barH - 6) / 2 + 1);
+    ctx.fillStyle = isNow ? color.ink : C.ink;
+    ctx.fillText(t.lines.join(' '), W / 2, y + (isNow ? barH : barH - 8) / 2 + 1);
   });
   ctx.textAlign = 'left';
   ctx.textBaseline = 'alphabetic';
@@ -281,7 +325,7 @@ export function outroSlide(dateLabel: string, o: SlideOpts = {}): Buffer {
   ctx.fillStyle = C.ink;
   ctx.fillText(o.hostSpace ? '이번 주 뉴스데스크는 여기까지' : '오늘 브리핑은 여기까지', W / 2, 340);
   ctx.font = '30px "Pretendard SemiBold"';
-  ctx.fillStyle = C.purple;
+  ctx.fillStyle = C.accent;
   ctx.fillText('자세한 내용은 스파크스코프 대시보드에서', W / 2, 410);
   ctx.textAlign = 'left';
   return canvas.toBuffer('image/png');
@@ -289,7 +333,7 @@ export function outroSlide(dateLabel: string, o: SlideOpts = {}): Buffer {
 
 /**
  * 오프닝 화면 — 말 없이 뉴스 배경음악만 나오는 3초짜리 타이틀(2026-10-07 소윤 요청).
- * 대시보드 보라색 바탕에 프로그램 이름과 날짜. 위클리는 타이틀 GIF가 이 역할을 한다.
+ * 어두운 바탕에 로고 네 색 빛줄기, 프로그램 이름과 날짜. 위클리는 타이틀 GIF가 이 역할을 한다.
  */
 /** 타이틀 화면. 썸네일은 저장소가 JPEG만 받아서 mime을 넘길 수 있게 했다(기본 PNG — 영상 프레임용). */
 export function openingSlide(dateLabel: string, program = '데일리 브리핑', mime: 'image/png' | 'image/jpeg' = 'image/png', subtitle = '스파크랩 · 포트폴리오 · AI 트렌드'): Buffer {
@@ -297,23 +341,22 @@ export function openingSlide(dateLabel: string, program = '데일리 브리핑',
   const canvas = createCanvas(W, H);
   const ctx = canvas.getContext('2d');
   const g = ctx.createLinearGradient(0, 0, W, H);
-  g.addColorStop(0, '#3B32C8');
-  g.addColorStop(1, '#6A5CF5');
+  g.addColorStop(0, '#141418');
+  g.addColorStop(1, '#2A2A32');
   ctx.fillStyle = g;
   ctx.fillRect(0, 0, W, H);
   // 오른쪽 위 사선 빛줄기 — 뉴스 타이틀 느낌만 살짝
   ctx.save();
-  ctx.globalAlpha = 0.08;
-  ctx.fillStyle = C.white;
-  for (let i = 0; i < 6; i++) {
+  ctx.globalAlpha = 0.85;
+  for (let i = 0; i < 4; i++) {
+    ctx.fillStyle = ['#F80054', '#FF6A00', '#22BB00', '#0000BB'][i];
     ctx.beginPath();
-    ctx.moveTo(760 + i * 90, 0); ctx.lineTo(820 + i * 90, 0); ctx.lineTo(420 + i * 90, H); ctx.lineTo(360 + i * 90, H);
+    ctx.moveTo(1000 + i * 90, 0); ctx.lineTo(1060 + i * 90, 0); ctx.lineTo(660 + i * 90, H); ctx.lineTo(600 + i * 90, H);
     ctx.fill();
   }
   ctx.restore();
+  drawLogo(ctx, 88, 228, 84, true);
   ctx.fillStyle = C.white;
-  ctx.font = '34px "Pretendard Bold"';
-  ctx.fillText('SparkScope', 96, 250);
   ctx.font = '112px "Pretendard ExtraBold"';
   ctx.fillText(program, 90, 380);
   // 날짜 위 가는 선

@@ -7,6 +7,7 @@
  * 사실은 제목·요약에 있는 것만 쓴다 — 음성은 되돌려 확인하기 어려워서, 틀린 숫자 하나가
  * 글보다 더 오래 남는다.
  */
+import { sectionOf, type Section } from './sections';
 import OpenAI from 'openai';
 import type { BriefingHeadline, BriefingSnapshot } from '../sparkscope/briefing';
 import { articleExcerpt, cjkTitleMatch } from './article-text';
@@ -61,17 +62,6 @@ export function longDate(dateKey: string): string {
  */
 // 2026-11-04 우선순위 개편(은빛): 스파크랩 → 국내 포폴 → 알럼나이 → 해외 포폴 → 운영 사업 → 스타트업 업계 동향 → AI.
 // 투자·펀드·정책·지원사업·AC·VC 소식은 모두 「스타트업 업계 동향」 한 섹션으로 소개한다.
-type Section = 'S' | 'P' | 'E' | 'O' | 'R' | 'A' | 'T';
-function sectionOf(h: BriefingHeadline): Section {
-  if (/운영 사업/.test(h.label)) return 'R';
-  if (/알럼나이/.test(h.label)) return 'E';
-  if (/스파크랩/.test(h.label)) return 'S';
-  if (/포트폴리오사 · (대만|글로벌)/.test(h.label)) return 'O';
-  if (/포트폴리오/.test(h.label)) return 'P';
-  if (/정책|지원사업|투자·펀드|업계 동향/.test(h.label)) return 'T';
-  if (/AI|트렌드|해외/.test(h.label) || h.kind === 'trend' || h.kind === 'inter') return 'A';
-  return 'T';
-}
 const SECTION_LEAD: Record<Section, [string, string]> = {
   // [맨 처음일 때, 중간에 바뀔 때]
   S: ['먼저 스파크랩 소식입니다.', '스파크랩 소식입니다.'],
@@ -289,6 +279,15 @@ export const DAILY_LENGTH = `위의 구성·길이·해석 지시는 모두 무�
  우리 쪽 해석은 쓰지 않습니다 — "포트폴리오사 입장에선", "의미가 있다", "시사한다", "지켜볼 변수" 같은 문장은 넣지 마세요.
  예시: 신한금융이 손해보험 부문 규모를 키우기 위해 롯데손해보험과 신한EZ손해보험의 합병을 추진합니다.`;
 
+/**
+ * 우리 포트폴리오사 기사가 "에이티넘인베스트먼트 투자사 올거나이즈가…"처럼 다른 투자사 소속으로 시작하지 않게 한다(2026-11-05 은빛).
+ * 지시로 막고, AI가 어겨도 앞머리를 지운다. 투자 유치 기사의 "○○벤처스가 투자했다"는 사실 설명이라 건드리지 않는다.
+ */
+const OUR_COMPANY_RULE = '\n[표현] 이 회사는 스파크랩 포트폴리오사입니다. 대본·헤드라인·리드 어디에도 "○○인베스트먼트 투자사", "○○ 포트폴리오"처럼 다른 투자사 소속으로 소개하지 말고 회사 이름으로 바로 시작하세요.';
+const OTHER_INVESTOR_PREFIX = /(?:^|(?<=\s))(?!스파크랩)\S*(?:인베스트먼트|인베|벤처스|벤처투자|벤처파트너스|파트너스|캐피탈|창업투자|자산운용)\S*\s+(?:투자사|투자기업|투자 기업|피투자사|피투자기업|포트폴리오사|포트폴리오)\s+/g;
+export const dropOtherInvestor = (text: string) => text.replace(OTHER_INVESTOR_PREFIX, '');
+const isOurCompany = (h: BriefingHeadline) => ['P', 'E', 'O'].includes(sectionOf(h));
+
 /** 위클리는 2026-11-04 폐지 — 지난 위클리 스냅샷을 다시 만들 때(newsdesk.ts)만 쓰인다. */
 export const WEEKLY_LENGTH = DAILY_LENGTH;
 
@@ -317,7 +316,7 @@ export async function writeBriefingScript(snapshot: BriefingSnapshot, frame?: Sc
       response_format: { type: 'json_object' },
       messages: [
         { role: 'system', content: SYSTEM },
-        { role: 'user', content: `이 기사 하나만 씁니다. 다른 기사 내용을 섞지 마세요.${frame?.length ? `\n[길이] ${frame.length}` : ''}${frame?.withHeadline ? HEADLINE_ASK : ''}${feedback}\n${describe(h, i, bodies[i])}` },
+        { role: 'user', content: `이 기사 하나만 씁니다. 다른 기사 내용을 섞지 마세요.${frame?.length ? `\n[길이] ${frame.length}` : ''}${frame?.withHeadline ? HEADLINE_ASK : ''}${isOurCompany(h) ? OUR_COMPANY_RULE : ''}${feedback}\n${describe(h, i, bodies[i])}` },
       ],
     });
     type Item = { text: string; headline?: string; lead?: string; brief?: string; points?: { label?: string; text?: string }[] };
@@ -327,12 +326,14 @@ export async function writeBriefingScript(snapshot: BriefingSnapshot, frame?: Sc
       .map(pt => ({ label: cleanLine(pt.label, 2, 14) ?? '', text: toPlainStyle(cleanLine(pt.text, 10, 130) ?? '') }))
       .filter(pt => pt.label && pt.text)
       .slice(0, 3);
+    const clean = (t: string) => (isOurCompany(h) ? dropOtherInvestor(t) : t);
+    const headline = cleanLine(first.headline, 6, 48);
     extras.set(i, {
-      headline: cleanLine(first.headline, 6, 48),
-      brief: toPlainStyle(cleanLine(first.lead ?? first.brief, 15, 140) ?? '') || undefined,
-      points: points.length >= 1 ? points : undefined,
+      headline: headline && clean(headline),
+      brief: clean(toPlainStyle(cleanLine(first.lead ?? first.brief, 15, 140) ?? '')) || undefined,
+      points: points.length >= 1 ? points.map(pt => ({ ...pt, text: clean(pt.text) })) : undefined,
     });
-    return (first.text ?? '').trim().replace(/^\s*\d+\s*[.)]\s*/, '');
+    return clean((first.text ?? '').trim().replace(/^\s*\d+\s*[.)]\s*/, ''));
   };
   const texts = await Promise.all(heads.map(async (h, i) => {
     let feedback = '';
@@ -386,14 +387,20 @@ export async function writeBriefingScript(snapshot: BriefingSnapshot, frame?: Sc
   const usedStarts = new Set<string>();
   heads.forEach((h, i) => {
     // AI가 빠뜨린 항목은 요약으로라도 채운다 — 화면엔 있는데 말이 없는 슬라이드가 생기지 않게.
-    let body = byIndex.get(i) || fallbackText(h);
+    const fallback = isOurCompany(h) ? dropOtherInvestor(fallbackText(h)) : fallbackText(h);
+    let body = byIndex.get(i) || fallback;
     // 같은 문장으로 시작하는 대본이 두 칸에 들어가면 뒤 칸은 제목·요약으로 대신한다(2026-10-13 대조에서 발견).
-    if (usedStarts.has(body.slice(0, 80))) body = fallbackText(h);
+    if (usedStarts.has(body.slice(0, 80))) body = fallback;
     usedStarts.add(body.slice(0, 80));
     const sec = sectionOf(h);
     const lead = sec === prev ? '' : prev === 'S' && sec === 'P' ? '이어서 포트폴리오 소식입니다.' : SECTION_LEAD[sec][prev ? 1 : 0];
     prev = sec;
-    segments.push({ kind: 'item', index: i, text: lead ? `${lead} ${body}` : body, ...(frame?.withHeadline ? extras.get(i) : {}) });
+    // 화면 헤드라인을 못 받은 칸은 원문 제목이 나간다 — 그때도 다른 투자사 앞머리는 뗀다.
+    const title = isOurCompany(h) ? dropOtherInvestor(h.title) : h.title;
+    segments.push({
+      kind: 'item', index: i, text: lead ? `${lead} ${body}` : body,
+      ...(frame?.withHeadline ? { ...(title !== h.title ? { headline: title } : {}), ...extras.get(i) } : {}),
+    });
   });
   segments.push({
     kind: 'outro',
