@@ -24,6 +24,7 @@ import { ensureArticleKo } from './translate-content';
 import { isBlockedNoise } from './relevance';
 import { loadProgramNews } from './program-news';
 import { loadAiNews } from './ai-news';
+import { loadIndustryNews } from './industry-news';
 import { BRIEFING_COUNT, broadcastFor, kstDateKey, type BriefingHeadline, type BroadcastWindow, type BriefingProgram } from './briefing';
 
 const KIND_RECO = 'briefing_reco';
@@ -320,12 +321,12 @@ const RANK_SYSTEM = `당신은 스파크랩(한국의 스타트업 액셀러레�
   ② 정치·규제: 선거·행정명령·규제가 AI 산업과 시장에 주는 영향. 이 때문에 증시·반도체가 크게 움직였다면 주가 기사여도 고릅니다.
   ③ 조직의 AI 전환: 대기업·그룹이 임직원 교육, 해커톤, 사내 플랫폼으로 일하는 방식을 바꾸는 사례.
   ④ 일의 변화: 직원이 AI로 직접 해내는 업무의 변화, AI 활용의 위험과 한계, AI 인력 시장, 에이전트 같은 새 업무 도구의 흐름.
-  단순 기능 업데이트, 소규모 기업의 도입 홍보, 빅테크의 작은 스타트업 인수, 잘 알려지지 않은 회사 소식, 평범한 시황은 고르지 마세요. AI타임스·IT조선 기사를 우선합니다. 해외 AI 소식이 원칙입니다(OpenAI·Anthropic·구글·메타·엔비디아 등). [국내] 표시 기사는
+  단순 기능 업데이트, 소규모 기업의 도입 홍보, 빅테크의 작은 스타트업 인수, 개별 기업의 채권 발행·자금 조달·계약 체결이나 취소 같은 재무·거래 소식, 잘 알려지지 않은 회사 소식, 평범한 시황은 고르지 마세요. AI타임스·IT조선 기사를 우선합니다. 해외 AI 소식이 원칙입니다(OpenAI·Anthropic·구글·메타·엔비디아 등). [국내] 표시 기사는
   "삼성이 Anthropic에 투자"처럼 해외 주요 매체도 크게 다룰 사건일 때만, 그것도 최대 1건입니다. 국내 기업의 제품 출시·행사·
   협약·전시회 소식은 고르지 마세요.
 - "스타트업 업계 동향" 그룹은 업계 전반에 영향을 주는 소식만 고릅니다 — 중소벤처기업부·금융위 등 정부 정책과 예산, 모태펀드·대형 펀드 결성,
   벤처투자 시장 통계, 규제 변화, AC·VC가 정부 사업 운영사에 선정된 소식, 업계를 이끄는 큰 회사의 결정적 사건.
-  단일 스타트업의 투자 유치·창업·제품 소식, 유명인의 창업 소식은 고르지 마세요. 맞는 기사가 없으면 빈 배열로 두세요.
+  단일 스타트업의 투자 유치·창업·제품 소식, 유명인의 창업 소식, 지자체의 작은 행사는 고르지 마세요. 후보 중 업계 전반에 가장 의미 있는 소식을 고릅니다.
 
 - "정책·지원사업" 그룹에서 해외 사례 소개·기획 기사는 고르지 마세요. 스타트업이 지원할 수 있는 정부·지자체 지원사업 공고를 먼저 고르세요 — 데모데이의 주간 창업공고·
   인기 지원사업 정리 글이 1순위입니다. 그다음이 지원 정책 변화·모태펀드 출자 같은 소식입니다. 칼럼·인터뷰·행사 스케치는 고르지 마세요.
@@ -398,6 +399,7 @@ const FINANCE_RULES = `AI를 업무에 활발히 쓰는 VC·액셀러레이터 �
 뺄 것
 - 보도자료성 제품·기능 출시, 일반 모델·특화 모델 공개, 연구 데모, 벤치마크 자랑
 - 소규모 기업의 AI 도입 홍보(9번의 대기업·그룹 차원 전환은 남긴다)
+- 개별 기업의 채권 발행·자금 조달·칩 임대 같은 계약 체결이나 취소(2026-11-05 은빛: "우리가 알 필요 없다")
 - 해설·기획("~하는 이유", "~할 때 일어나는 일"), 기자 체험기, 칼럼·의견, 인터뷰, 기업 후원·제휴 콘텐츠
 - 7~9번에 해당하지 않는, 금액·기업가치·점유율 같은 숫자가 없는 트렌드 기사
 - 빅테크의 작은 스타트업 인수, 일반인이 모르는 회사 소식, 특정 회사가 낸 분석·리포트 소개(2026-11-05 은빛: "임직원이 알아서 뭐하나")`;
@@ -695,8 +697,6 @@ export async function pickByTiers(w: BroadcastWindow): Promise<{ picked: Briefin
   // 예전 '스타트업계' 칸은 일반 업계 소식이라 쓸데없는 기사가 많았다.
   // 엑시트·인수합병·M&A·IPO·상장은 뺐다 — 사모펀드·대기업 거래가 걸려 들어왔다(2026-10-29 10번 "IPO 약속 깼다" 골프존홀딩스 vs MBK 매각 분쟁).
   // 이 칸은 스타트업이 투자를 받거나 벤처펀드가 만들어지는 소식만이다.
-  // 단일 스타트업 투자 유치는 뺐다(2026-11-05 은빛: "무빈 100억 투자 유치는 사소하다"). 업계 전반의 사건만.
-  const DEAL = /펀드\s?(결성|조성|출범|출자|모집|클로징)|출자\s?(사업|선정)|모태펀드|벤처펀드|벤처투자\s?(시장|규모|실적|동향)|한국벤처투자|중소벤처기업부|중기부|금융위|스타트업\s?(정책|규제|지원)|창업\s?(정책|예산|지원)|벤처\S*\s?(정책|세제|법)|유니콘/i;
   const NOT_STARTUP_DEAL = /MBK|사모펀드|PEF|경영권|매각|인수금융|바이아웃|먹튀/;
   // 깡프로·데모데이에서 나눈 투자·펀드 기사(policy-classify.ts → fund_invest)를 앞에 둔다 — 사람이 고른 큐레이션이다.
   const fundRows = (await prisma.article.findMany({
@@ -714,20 +714,25 @@ export async function pickByTiers(w: BroadcastWindow): Promise<{ picked: Briefin
     select: { id: true, title: true, link: true, source: true, pubDate: true, oneLiner: true, importance: true },
     orderBy: { pubDate: 'desc' },
     take: 400,
-  })).filter(a => isKorean(a.title) && DEAL.test(a.title) && !NOT_STARTUP_DEAL.test(a.title) && !STOCK_TICKER.test(a.title) && !weakForBriefing(a))
+  })).filter(a => isKorean(a.title) && !NOT_STARTUP_DEAL.test(a.title) && !STOCK_TICKER.test(a.title) && !weakForBriefing(a))
     .sort((x, y) => rankOf(y) - rankOf(x))
+    .slice(0, 40)
     .map(a => ({
       kind: 'intra' as const, ref: a.id, title: a.title.replace(/\s+-\s+[^-]{1,20}$/, '').trim() || a.title, summary: a.oneLiner || a.title,
       source: a.source, url: a.link, label: INDUSTRY_LABEL, pubDate: a.pubDate.toISOString(),
     }));
-  const T = [...fundRows, ...industryRows,
+  // 정부·벤처투자 주제 검색 — 수집기 키워드에 없는 소식까지 찾는다. 단일 스타트업 소식은 선정 AI가 거른다.
+  const industryNews = (await loadIndustryNews(w.since, w.until))
+    .filter(a => !NOT_STARTUP_DEAL.test(a.title) && !STOCK_TICKER.test(a.title) && !PERSONNEL.test(a.title))
+    .map(a => ({ kind: 'intra' as const, ref: a.url, title: a.title, summary: a.title, source: a.source, url: a.url, label: INDUSTRY_LABEL, pubDate: a.pubDate.toISOString() }));
+  const T = [...fundRows, ...industryNews, ...industryRows,
   ...buildClusteredPool(candidates.filter(a =>
     a.category === 'competitor' && isKorean(a.title) && COMPETITOR_EVENT.test(a.title) && !STOCK_TICKER.test(a.title) && !weakForBriefing(a)))
     .map(a => ({ ...fromArticle(a, idByLink), label: INDUSTRY_LABEL }))
     .sort((x, y) => rankOf(y) - rankOf(x))]
     .filter(fresh)
     .filter((c, i, arr) => arr.findIndex(x => x.url === c.url) === i)
-    .slice(0, 16);
+    .slice(0, 70);
 
   // 정책·지원사업 — 깡프로·데모데이에서 나눈 기사(policy-classify.ts → policy_support).
   // 위클리: 데모데이 주간 공고 정리 최신 회차 2편(K-Startup 주간 창업공고 TOP 10 · 정부지원사업 TOP 100)을 고정 2칸으로(2026-10-28 소윤).

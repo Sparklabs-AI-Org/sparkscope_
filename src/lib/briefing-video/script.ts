@@ -68,7 +68,7 @@ export function longDate(dateKey: string): string {
 const SECTION_LEAD: Record<Section, [string, string]> = {
   // [맨 처음일 때, 중간에 바뀔 때]
   S: ['먼저 스파크랩 소식입니다.', '스파크랩 소식입니다.'],
-  P: ['먼저 포트폴리오 소식입니다.', '포트폴리오 소식입니다.'],
+  P: ['먼저 국내 포트폴리오 소식입니다.', '국내 포트폴리오 소식입니다.'],
   E: ['먼저 알럼나이 소식입니다.', '알럼나이 소식입니다.'],
   O: ['먼저 글로벌 포트폴리오 소식입니다.', '글로벌 포트폴리오 소식입니다.'],
   R: ['먼저 운영 사업 관련 소식입니다.', '운영 사업 관련 소식입니다.'],
@@ -77,7 +77,7 @@ const SECTION_LEAD: Record<Section, [string, string]> = {
 };
 /** "~부터 전해드리겠습니다"에 쓰는 이름 */
 const SECTION_NAME: Record<Section, string> = {
-  S: '스파크랩 소식', P: '포트폴리오 소식', E: '알럼나이 소식', O: '글로벌 포트폴리오 소식', R: '운영 사업 소식',
+  S: '스파크랩 소식', P: '국내 포트폴리오 소식', E: '알럼나이 소식', O: '글로벌 포트폴리오 소식', R: '운영 사업 소식',
   A: '해외 AI 트렌드', T: '스타트업 업계 동향',
 };
 /** 소식이 없으면 안내하는 칸(2026-11-04 은빛: 우선순위 0~4). */
@@ -402,7 +402,7 @@ export async function writeBriefingScript(snapshot: BriefingSnapshot, frame?: Sc
     if (usedStarts.has(body.slice(0, 80))) body = fallback;
     usedStarts.add(body.slice(0, 80));
     const sec = sectionOf(h);
-    const lead = sec === prev ? '' : prev === 'S' && sec === 'P' ? '이어서 포트폴리오 소식입니다.' : SECTION_LEAD[sec][prev ? 1 : 0];
+    const lead = sec === prev ? '' : prev === 'S' && sec === 'P' ? '이어서 국내 포트폴리오 소식입니다.' : SECTION_LEAD[sec][prev ? 1 : 0];
     prev = sec;
     // 화면 헤드라인을 못 받은 칸은 원문 제목이 나간다 — 그때도 다른 투자사 앞머리는 뗀다.
     const title = isOurCompany(h) ? dropOtherInvestor(h.title) : h.title;
