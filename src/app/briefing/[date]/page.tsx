@@ -46,7 +46,7 @@ export default async function BriefingPage({
       </main>
     );
   }
-  const past = (await listBriefingVideos(5)).filter(v => v.dateKey !== video.dateKey).slice(0, 7);
+  const past = (await listBriefingVideos(8)).filter(v => v.dateKey !== video.dateKey).slice(0, 7);
   const watched = await watchedDates(await viewerSubscriberId(searchParams.s), past.map(v => v.dateKey));
   const viewer = await viewerIdentity(searchParams.s);
   const mine = viewer ? await myFeedback(video.dateKey, viewer.email) : null;

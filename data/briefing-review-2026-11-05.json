@@ -154,5 +154,53 @@
       "headline": "AI 전방 배치 엔지니어, 연봉 최대 19억원 경쟁",
       "script": "미국 기업들이 AI 전방 배치 엔지니어 확보에 나서며, 최상위급 연간 총보수가 최대 145만달러(약 19억원)에 달합니다."
     }
+  ],
+  "past": [
+    {
+      "dateKey": "2026-10-29",
+      "program": "daily",
+      "seconds": 206,
+      "url": "https://fdsfvsblbnqongeyvfjo.supabase.co/storage/v1/object/public/briefings/2026-10-29/briefing.mp4",
+      "audioUrl": "https://fdsfvsblbnqongeyvfjo.supabase.co/storage/v1/object/public/briefings/2026-10-29/briefing.m4a?v=1793236933922"
+    },
+    {
+      "dateKey": "2026-10-28",
+      "program": "daily",
+      "seconds": 217,
+      "url": "https://fdsfvsblbnqongeyvfjo.supabase.co/storage/v1/object/public/briefings/2026-10-28/briefing.mp4",
+      "audioUrl": "https://fdsfvsblbnqongeyvfjo.supabase.co/storage/v1/object/public/briefings/2026-10-28/briefing.m4a?v=1793142959390"
+    },
+    {
+      "dateKey": "2026-10-27",
+      "program": "daily",
+      "seconds": 166,
+      "url": "https://fdsfvsblbnqongeyvfjo.supabase.co/storage/v1/object/public/briefings/2026-10-27/briefing.mp4",
+      "audioUrl": "https://fdsfvsblbnqongeyvfjo.supabase.co/storage/v1/object/public/briefings/2026-10-27/briefing.m4a?v=1793056516497"
+    },
+    {
+      "dateKey": "2026-10-26",
+      "program": "weekly",
+      "seconds": 193,
+      "url": "https://fdsfvsblbnqongeyvfjo.supabase.co/storage/v1/object/public/briefings/2026-10-26/briefing.mp4",
+      "audioUrl": "https://fdsfvsblbnqongeyvfjo.supabase.co/storage/v1/object/public/briefings/2026-10-26/briefing.m4a?v=1792998611991"
+    },
+    {
+      "dateKey": "2026-10-23",
+      "program": "daily",
+      "seconds": 204,
+      "url": "https://fdsfvsblbnqongeyvfjo.supabase.co/storage/v1/object/public/briefings/2026-10-23/briefing.mp4"
+    },
+    {
+      "dateKey": "2026-10-22",
+      "program": "daily",
+      "seconds": 356,
+      "url": "https://fdsfvsblbnqongeyvfjo.supabase.co/storage/v1/object/public/briefings/2026-10-22/briefing.mp4"
+    },
+    {
+      "dateKey": "2026-10-21",
+      "program": "daily",
+      "seconds": 262,
+      "url": "https://fdsfvsblbnqongeyvfjo.supabase.co/storage/v1/object/public/briefings/2026-10-21/briefing.mp4"
+    }
   ]
 }
