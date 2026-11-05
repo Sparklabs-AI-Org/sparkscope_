@@ -33,7 +33,7 @@ const CATS: [string, string][] = [
 const CAT_LABEL: Record<string, string> = Object.fromEntries(CATS);
 
 /** 추천 기사 표시 — 어느 칸으로 뽑혔는지. 칸 정의는 briefing-reco.ts(서버 전용이라 여기선 이름만 복사). */
-const SLOT_NAME = ['', '스파크랩', '국내 포트폴리오', '알럼나이', '해외 포트폴리오', '운영 사업', '업계 동향', '정책·지원사업', 'AI·글로벌'];
+const SLOT_NAME = ['', '스파크랩', '국내 포트폴리오', '알럼나이', '글로벌 포트폴리오', '운영 사업', '업계 동향', '정책·지원사업', 'AI·글로벌'];
 function TierBadge({ tier }: { tier: number }) {
   return <span className="mr-1 rounded bg-spark-light-purple/40 px-1 text-[10px] font-bold text-spark-purple align-middle">추천·{SLOT_NAME[tier] ?? ''}</span>;
 }

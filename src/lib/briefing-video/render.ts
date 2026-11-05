@@ -29,6 +29,8 @@ export interface Clip {
   seconds: number;
   /** 화면 전체를 이 GIF로(반복 재생) — 뉴스데스크 오프닝 타이틀. png 대신 쓴다. */
   backgroundGif?: string;
+  /** 이 영상을 반복해 깔고 png(투명)를 위에 얹는다. 장면이 바뀌어도 영상은 끊기지 않고 이어진다. */
+  backgroundVideo?: string;
   /** 슬라이드 위에 반복 재생할 GIF(캐릭터) — 오른쪽 아래, 너비 w */
   overlayGif?: { file: string; w: number; x: number; y: number };
   /** 배경음악 — file의 start초부터 깔고 volume(0~1)으로 줄인다. 클립 끝 1초는 페이드아웃(fadeOut일 때). */
@@ -53,6 +55,13 @@ export async function renderVideo(clips: Clip[], workDirIn: string, outFileIn: s
   await mkdir(workDir, { recursive: true });
   const parts: string[] = [];
   let total = 0;
+  // 배경 영상은 전체 길이만큼 한 번 늘려 두고 장면마다 그 시각부터 잘라 쓴다 — 장면마다 처음부터 틀면 넘어갈 때 튄다.
+  const bgSource = clips.find(c => c.backgroundVideo)?.backgroundVideo;
+  const bgLong = path.join(workDir, 'bg-long.mp4');
+  if (bgSource) {
+    const length = clips.reduce((n, c) => n + c.seconds + GAP_SECONDS, 0) + 1;
+    await ffmpeg(['-stream_loop', '-1', '-i', path.resolve(bgSource), '-t', length.toFixed(2), '-an', '-vf', 'scale=1280:720,fps=30', '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '20', bgLong]);
+  }
   for (let i = 0; i < clips.length; i++) {
     const c = clips[i];
     const png = path.join(workDir, `s${i}.png`);
@@ -62,11 +71,14 @@ export async function renderVideo(clips: Clip[], workDirIn: string, outFileIn: s
     await writeFile(wav, c.wav);
     const dur = c.seconds + GAP_SECONDS;
     // 입력: 0 화면(png 또는 GIF) · 1 목소리 · [2 캐릭터 GIF] · [다음 배경음악]
-    const inputs: string[] = c.backgroundGif
+    const inputs: string[] = c.backgroundVideo
+      ? ['-ss', total.toFixed(3), '-i', bgLong, '-i', wav, '-loop', '1', '-framerate', '30', '-i', png]
+      : c.backgroundGif
       ? ['-stream_loop', '-1', '-i', path.resolve(c.backgroundGif), '-i', wav]
       : ['-loop', '1', '-framerate', '30', '-i', png, '-i', wav];
     const graph: string[] = [];
     let vOut = '0:v';
+    if (c.backgroundVideo) { graph.push('[0:v][2:v]overlay=0:0:format=auto,format=yuv420p[v]'); vOut = '[v]'; }
     if (c.backgroundGif) { graph.push('[0:v]scale=1280:720,fps=30,format=yuv420p[v]'); vOut = '[v]'; }
     if (c.overlayGif) {
       inputs.push('-stream_loop', '-1', '-i', path.resolve(c.overlayGif.file));
@@ -77,7 +89,7 @@ export async function renderVideo(clips: Clip[], workDirIn: string, outFileIn: s
     graph.push(`[1:a]aresample=44100,apad=pad_dur=${GAP_SECONDS}[voice]`);
     let aOut = '[voice]';
     if (c.bgm) {
-      const idx = c.overlayGif ? 3 : 2;
+      const idx = c.overlayGif || c.backgroundVideo ? 3 : 2;
       inputs.push('-i', path.resolve(c.bgm.file));
       const fade = c.bgm.fadeOut ? `,afade=t=out:st=${Math.max(0, dur - 1).toFixed(2)}:d=1` : '';
       graph.push(`[${idx}:a]aresample=44100,atrim=start=${c.bgm.start},asetpts=PTS-STARTPTS,volume=${c.bgm.volume}${fade}[m]`);
@@ -89,7 +101,7 @@ export async function renderVideo(clips: Clip[], workDirIn: string, outFileIn: s
       '-filter_complex', graph.join(';'),
       '-map', vOut, '-map', aOut,
       '-t', dur.toFixed(2),
-      '-c:v', 'libx264', ...(c.backgroundGif || c.overlayGif ? [] : ['-tune', 'stillimage']), '-pix_fmt', 'yuv420p', '-r', '30',
+      '-c:v', 'libx264', ...(c.backgroundGif || c.overlayGif || c.backgroundVideo ? [] : ['-tune', 'stillimage']), '-pix_fmt', 'yuv420p', '-r', '30',
       '-c:a', 'aac', '-b:a', '128k', '-ar', '44100', '-ac', '1',
       mp4,
     ]);

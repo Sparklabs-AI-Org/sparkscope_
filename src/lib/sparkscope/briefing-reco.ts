@@ -277,22 +277,22 @@ const AI_TOPIC = /AI|인공지능|생성형|LLM|GPT|에이전트|챗봇|딥러�
 
 /** 추천 칸 종류 — 화면의 "추천①~⑤"가 이 순서다. */
 export const SLOT_LABEL: Record<number, string> = {
-  1: '스파크랩', 2: '국내 포트폴리오', 3: '알럼나이', 4: '해외 포트폴리오', 5: '운영 사업', 6: '업계 동향', 7: '정책·지원사업', 8: 'AI·글로벌',
+  1: '스파크랩', 2: '국내 포트폴리오', 3: '알럼나이', 4: '글로벌 포트폴리오', 5: '운영 사업', 6: '업계 동향', 7: '정책·지원사업', 8: 'AI·글로벌',
 };
 
 type Group = 'S' | 'P' | 'E' | 'D' | 'R' | 'T' | 'Y' | 'G';
 const GROUP_TIER: Record<Group, number> = { S: 1, P: 2, E: 3, D: 4, R: 5, T: 6, Y: 7, G: 8 };
 const GROUP_NAME: Record<Group, string> = {
-  S: '스파크랩 자사 소식', P: '국내 포트폴리오사 소식', E: '알럼나이(엑싯한 포트폴리오사) 소식', D: '해외 포트폴리오사 소식(대만·글로벌벤처스)',
+  S: '스파크랩 자사 소식', P: '국내 포트폴리오사 소식', E: '알럼나이(엑싯한 포트폴리오사) 소식', D: '글로벌 포트폴리오사 소식(대만·미국 등 스파크랩코리아 외 그룹 해외 포트폴리오)',
   R: '스파크랩이 운영하는 사업과 참여기업 소식', T: '스타트업 업계 동향(투자·펀드, AC·VC 소식)', Y: '정부·지자체 지원사업 공고·정책', G: '글로벌 AI 기업·업계 소식',
 };
 
 /**
- * 칸 수 — 데일리 12개(2026-11-04 은빛 결정: 0 스파크랩 → 1 국내 포폴 → 2 알럼나이 → 3 해외 포폴 → 4 운영 사업 →
+ * 칸 수 — 데일리 12개(2026-11-04 은빛 결정: 0 스파크랩 → 1 국내 포폴 → 2 알럼나이 → 3 글로벌 포폴(스파크랩코리아 외 그룹 해외 포트폴리오 전체) → 4 운영 사업 →
  * 5 스타트업 업계 동향(T·Y) → 6 AI·글로벌). 위쪽 칸부터 채우고, 맨 아래 AI·글로벌은 소식이 있으면 2칸을 남긴다.
  * 위 칸이 비면 그 자리는 AI·글로벌이 받고, 그래도 남으면 위 칸부터 더 받는다.
  */
-const SLOT_CAPS: [Group, number][] = [['S', 2], ['P', 3], ['E', 2], ['D', 2], ['R', 2], ['T', 2], ['Y', 1]];
+const SLOT_CAPS: [Group, number][] = [['S', 2], ['P', 3], ['E', 2], ['D', 3], ['R', 2], ['T', 2], ['Y', 1]];
 function quotas(avail: Record<Group, number>, total: number): Record<Group, number> {
   const q: Record<Group, number> = { S: 0, P: 0, E: 0, D: 0, R: 0, T: 0, Y: 0, G: 0 };
   q.G = Math.min(2, avail.G);
@@ -322,7 +322,7 @@ const RANK_SYSTEM = `당신은 스파크랩(한국의 스타트업 액셀러레�
 - "정책·지원사업" 그룹은 스타트업이 지원할 수 있는 정부·지자체 지원사업 공고를 먼저 고르세요 — 데모데이의 주간 창업공고·
   인기 지원사업 정리 글이 1순위입니다. 그다음이 지원 정책 변화·모태펀드 출자 같은 소식입니다. 칼럼·인터뷰·행사 스케치는 고르지 마세요.
 
-- "해외 포트폴리오사" 그룹은 대만·글로벌벤처스 포트폴리오사 소식입니다. 주가·매출 조회 페이지, 회사명만 우연히 겹친 기사(날씨·일반 명사 등)는 고르지 마세요.
+- "글로벌 포트폴리오사" 그룹은 스파크랩코리아 외 그룹 해외 포트폴리오사(대만·미국 등) 소식입니다. [회사: …]가 기사의 실제 주인공일 때만 고르세요. 주가·매출 조회 페이지, 회사명만 우연히 겹친 기사(날씨·일반 명사 등)는 고르지 마세요.
 
 - "알럼나이" 그룹은 엑싯한 포트폴리오사 소식입니다. 주가 기사와 회사명만 겹친 기사는 고르지 마세요.
 
@@ -614,7 +614,10 @@ export async function pickByTiers(w: BroadcastWindow): Promise<{ picked: Briefin
   const overseasRows = (await prisma.article.findMany({
     where: {
       category: { in: ['portfolio_company_tw', 'portfolio_company_gv'] },
-      pubDate: { gte: w.since, ...(w.until ? { lt: w.until } : {}) },
+      // 메일과 같은 기준(review.ts sendArticleWindow) — 이번에 수집됐고 사흘 안에 나온 기사. 발행 시각으로만 자르면
+      // 해외 기사는 시차·색인 지연으로 창 앞에 걸려 거의 다 빠졌다(2026-11-05 GV 7건 수집, 브리핑 0건).
+      collectedAt: { gte: w.since, ...(w.until ? { lt: w.until } : {}) },
+      pubDate: { gte: new Date(w.since.getTime() - 72 * 3600e3) },
       isNoise: false, analyzedAt: { not: null },
     },
     orderBy: { priorityScore: 'desc' },
@@ -630,7 +633,7 @@ export async function pickByTiers(w: BroadcastWindow): Promise<{ picked: Briefin
     .filter(a => (seenOverseas.has(a.matchedKeyword) ? false : (seenOverseas.add(a.matchedKeyword), true)))
     .map(a => ({ ...fromArticle(a as unknown as AnalyzedArticle & { id: string }, idByLink), title: a.titleKo || a.title }))
     .filter(a => !briefedCompanies.has(a.company) && fresh(a) && notExit(a))
-    .slice(0, 8);
+    .slice(0, 12);
 
   // 국내 AI — 72시간 후보 중 AI 주제의 국내 기사(업계·경쟁사), 같은 사건 묶고 중요도 순.
   const domesticAi = buildClusteredPool(candidates.filter(a =>
@@ -735,6 +738,7 @@ export async function pickByTiers(w: BroadcastWindow): Promise<{ picked: Briefin
   const GA = [...GE, ...DA.filter((_, i) => keepDomestic.has(i))];
   const pools: Record<Group, BriefingCandidate[]> = { S, P, E, D, R, T, Y, G: GA };
   const counts = { S: S.length, P: P.length, E: E.length, D: D.length, R: R.length, T: T.length, Y: Y.length, G: GA.length };
+  console.log('[briefing-reco] 칸별 후보 수', JSON.stringify(counts));
   const total = BRIEFING_COUNT[w.program];
   const q = quotas(counts, total);
   const aiEither = false; // 국내·글로벌 AI "둘 중 하나" 칸은 없어졌다(10-06부터 한 그룹)

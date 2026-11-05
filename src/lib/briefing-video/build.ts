@@ -10,12 +10,14 @@ import type { AnalyzedArticle } from '../sparkscope/types';
 import { writeBriefingScript, checkAlignment, spokenDate, longDate, DAILY_LENGTH, type ScriptSegment } from './script';
 import type { BriefingHeadline } from '../sparkscope/briefing';
 import { synthesizeAll } from './tts';
-import { boardSlide, outroSlide, openingSlide } from './slides';
+import { boardSlide, outroOverVideo, openingSlide } from './slides';
 import { renderVideo, probeSeconds, silentWav, GAP_SECONDS, type Clip } from './render';
 
 /** 오프닝 배경음악 — scripts/make-news-bgm.py로 만든 자체 제작 음원(저작권 걱정 없음). 다른 음원을 쓰려면 이 파일만 바꾸면 된다. */
 export const NEWS_BGM = path.join(process.cwd(), 'assets/briefing/news-bgm.wav');
 export const OPENING_SECONDS = 3.2;
+/** 기사 화면 배경 — 힉스필드로 만든 서울의 이른 아침(출근길에 듣는 브리핑). 10초 → 끝과 처음을 겹쳐 끊김 없이 반복(2026-11-05 은빛). */
+const BOARD_BACKGROUND = path.join(process.cwd(), 'assets/briefing/bg-city.mp4');
 /** 영상 전체 상한 — 5분(300초)을 넘으면 우선순위가 낮은(뒤 칸) 기사부터 뺀다(2026-11-04 은빛 결정, 이전 4분). */
 export const MAX_VIDEO_SECONDS = 300;
 const MIN_ITEMS = 6;
@@ -157,9 +159,10 @@ export async function buildBriefingVideo(opts: { outDir: string; prepare?: boole
     // 오프닝 — 말 없이 뉴스 배경음악 + 타이틀 화면(OPENING_SECONDS), 이어지는 인사 동안 음악을 낮게 깔고 끝에서 줄인다.
     { png: openingSlide(openingDate(snapshot.dateKey), '데일리 브리핑', 'image/png', '스파크스코프 주요 뉴스'), wav: silentWav(OPENING_SECONDS), seconds: OPENING_SECONDS, bgm: { file: NEWS_BGM, start: 0, volume: 0.9 } },
     ...segments.map((s, i): Clip => ({
-      png: s.kind === 'intro' ? boardSlide(dateLabel, trimmed.headlines, -1)
-        : s.kind === 'outro' ? outroSlide(dateLabel)
-        : boardSlide(dateLabel, trimmed.headlines, s.index!),
+      png: s.kind === 'intro' ? boardSlide(dateLabel, trimmed.headlines, -1, undefined, true)
+        : s.kind === 'outro' ? outroOverVideo()
+        : boardSlide(dateLabel, trimmed.headlines, s.index!, undefined, true),
+      backgroundVideo: BOARD_BACKGROUND,
       wav: speeches[i].wav,
       seconds: speeches[i].seconds,
       // 첫 말소리 동안 음악을 낮게 깔고 끝에서 줄인다(안내가 없는 날은 첫 기사).

@@ -266,21 +266,28 @@ export function itemSlide(dateLabel: string, h: BriefingHeadline, index: number,
 
 /** 보드 한 화면의 헤드라인 수 */
 const BOARD_PAGE = 5;
+/** 배경 영상 위에 까는 어두운 막 — 로고·날짜가 밝은 아침 하늘에 묻히지 않게 */
+const VIDEO_VEIL = 'rgba(8,8,14,0.42)';
 
 /**
  * 헤드라인 보드 — 데일리 영상의 기사 화면(2026-11-05 은빛: 더벨 데일리 브리핑처럼).
  * 어두운 바탕에 흰 띠 5개를 가운데 정렬로 깔고, 지금 읽는 기사만 섹션 색 띠로 키운다. 흰 띠의 밑줄도 섹션 색이다. 5개를 넘으면 다음 화면으로 넘어간다.
  * active가 -1이면 첫 화면을 강조 없이 보여 준다(소식 없음 안내가 나오는 동안).
  */
-export function boardSlide(dateLabel: string, headlines: BriefingHeadline[], active: number, program = '데일리 브리핑'): Buffer {
+export function boardSlide(dateLabel: string, headlines: BriefingHeadline[], active: number, program = '데일리 브리핑', overVideo = false): Buffer {
   ensureFonts();
   const canvas = createCanvas(W, H);
   const ctx = canvas.getContext('2d');
-  const g = ctx.createLinearGradient(0, 0, 0, H);
-  g.addColorStop(0, '#141418');
-  g.addColorStop(1, '#2A2A32');
-  ctx.fillStyle = g;
-  ctx.fillRect(0, 0, W, H);
+  if (overVideo) {
+    ctx.fillStyle = VIDEO_VEIL;
+    ctx.fillRect(0, 0, W, H);
+  } else {
+    const g = ctx.createLinearGradient(0, 0, 0, H);
+    g.addColorStop(0, '#141418');
+    g.addColorStop(1, '#2A2A32');
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, W, H);
+  }
 
   const right = drawLogo(ctx, 64, 56, 60, true);
   ctx.font = '24px "Pretendard SemiBold"';
@@ -315,6 +322,24 @@ export function boardSlide(dateLabel: string, headlines: BriefingHeadline[], act
   });
   ctx.textAlign = 'left';
   ctx.textBaseline = 'alphabetic';
+  return canvas.toBuffer('image/png');
+}
+
+/** 데일리 마무리 화면 — 배경 영상 위에 얹는 투명 PNG */
+export function outroOverVideo(): Buffer {
+  ensureFonts();
+  const canvas = createCanvas(W, H);
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = VIDEO_VEIL;
+  ctx.fillRect(0, 0, W, H);
+  drawLogo(ctx, 64, 56, 60, true);
+  ctx.textAlign = 'center';
+  ctx.font = '60px "Pretendard ExtraBold"';
+  ctx.fillStyle = C.white;
+  ctx.fillText('오늘 브리핑은 여기까지', W / 2, 350);
+  ctx.font = '30px "Pretendard SemiBold"';
+  ctx.fillText('자세한 내용은 스파크스코프 대시보드에서', W / 2, 420);
+  ctx.textAlign = 'left';
   return canvas.toBuffer('image/png');
 }
 
