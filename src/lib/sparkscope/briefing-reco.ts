@@ -329,7 +329,7 @@ const RANK_SYSTEM = `당신은 스파크랩(한국의 스타트업 액셀러레�
   협약·전시회 소식은 고르지 마세요.
 - "스타트업 업계 동향" 그룹은 업계 전반에 영향을 주는 소식만 고릅니다 — 중소벤처기업부·금융위 등 정부 정책과 예산, 모태펀드·대형 펀드 결성,
   벤처투자 시장 통계, 규제 변화, AC·VC가 정부 사업 운영사에 선정된 소식, 업계를 이끄는 큰 회사의 결정적 사건.
-  단일 스타트업의 투자 유치·창업·제품 소식, 유명인의 창업 소식, 지자체의 작은 행사는 고르지 마세요. 후보 중 업계 전반에 가장 의미 있는 소식을 고릅니다.
+  단일 스타트업의 투자 유치·창업·제품 소식, 유명인의 창업 소식, 지자체의 작은 행사는 고르지 마세요. 지역 행사, 특정 기업의 프로그램 소식도 고르지 마세요. 전국 단위 정책·시장 변화가 없으면 빈 배열로 두세요.
 
 - "정책·지원사업" 그룹에서 해외 사례 소개·기획 기사는 고르지 마세요. 스타트업이 지원할 수 있는 정부·지자체 지원사업 공고를 먼저 고르세요 — 데모데이의 주간 창업공고·
   인기 지원사업 정리 글이 1순위입니다. 그다음이 지원 정책 변화·모태펀드 출자 같은 소식입니다. 칼럼·인터뷰·행사 스케치는 고르지 마세요.
@@ -771,13 +771,21 @@ export async function pickByTiers(w: BroadcastWindow): Promise<{ picked: Briefin
   const pools: Record<Group, BriefingCandidate[]> = { S, P, E, D, R, T, Y, G: GA };
   const counts = { S: S.length, P: P.length, E: E.length, D: D.length, R: R.length, T: T.length, Y: Y.length, G: GA.length };
   console.log('[briefing-reco] 칸별 후보 수', JSON.stringify(counts));
+  console.log('[briefing-reco] 업계·정책 후보\n' + [...Y, ...T].map(c => `  - ${c.title} (${c.source})`).join('\n'));
   const total = BRIEFING_COUNT[w.program];
   const q = quotas(counts, total);
   const aiEither = false; // 국내·글로벌 AI "둘 중 하나" 칸은 없어졌다(10-06부터 한 그룹)
 
   let chosen: Record<Group, BriefingCandidate[]> | null = null;
   try {
-    chosen = await rankWithAI(pools, q, aiEither);
+    // 칸마다 따로 고른다 — 후보 170건을 한 번에 주니 AI 칸이 4건에서 1건으로 줄었다(2026-11-05).
+    const groups = (Object.keys(q) as Group[]).filter(g => q[g] > 0);
+    const results = await Promise.all(groups.map(g => {
+      const only = Object.fromEntries((Object.keys(q) as Group[]).map(k => [k, k === g ? q[g] : 0])) as Record<Group, number>;
+      return rankWithAI(pools, only, aiEither);
+    }));
+    chosen = { S: [], P: [], E: [], D: [], R: [], T: [], Y: [], G: [] };
+    groups.forEach((g, i) => { chosen![g] = results[i]?.[g] ?? []; });
   } catch (e) {
     console.error('[briefing-reco] AI 선정 실패 — 그룹별 중요도 순으로 대신합니다:', e);
   }
