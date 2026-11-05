@@ -70,7 +70,7 @@ const CATEGORY_LABEL: Record<string, string> = {
 
 // ── 방송 일정과 기사 기간 (2026-11-04 은빛 결정 — 위클리 폐지) ─────────────────────
 //
-//   월~금 08:30 메일·잔디 — 데일리. 지난 메일 확정(08:10) 이후 기사에서 12개.
+//   월~금 08:30 메일·잔디 — 데일리. 지난 메일 확정(08:10) 이후 기사에서 최대 16개.
 //   월요일은 지난 금요일 08:10부터 — 주말(특히 해외) 뉴스를 함께 싣는다(review.ts sendWindowStart와 같은 기준).
 //   지난 7일 브리핑에 나간 기사는 데일리에 다시 넣지 않는다(briefing-reco recentlyBriefed).
 //   'weekly'는 2026-10-26까지 월요일에 나간 지난 영상 기록용으로만 남긴다.
@@ -78,8 +78,8 @@ const CATEGORY_LABEL: Record<string, string> = {
 // 검수 화면·추천·영상·메일 크론이 모두 이 함수 하나로 "다음 방송"을 정한다.
 
 export type BriefingProgram = 'daily' | 'weekly';
-/** 방송별 기사 수 — 데일리 12건(2026-11-04, 기사당 한 문장으로 줄여 칸을 늘렸다). 위클리는 지난 기록용. */
-export const BRIEFING_COUNT: Record<BriefingProgram, number> = { daily: 12, weekly: 10 };
+/** 방송별 최대 기사 수 — 데일리 16건(기사당 한 문장이라 5분 안에 든다). 기준에 맞는 기사가 적으면 더 적게 나간다. 위클리는 지난 기록용. */
+export const BRIEFING_COUNT: Record<BriefingProgram, number> = { daily: 16, weekly: 10 };
 // 메일 크론이 헤드라인·기사 창을 확정하는 시각(첫 실행). 도착은 영상이 나온 뒤 08:20~08:30(2026-10-22, 이전 09:30).
 export const SEND_KST = { h: 8, m: 10 };
 
