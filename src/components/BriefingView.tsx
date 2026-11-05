@@ -2,6 +2,7 @@
 import Link from 'next/link';
 import BriefingTracker from '@/components/BriefingTracker';
 import BriefingArticleCard from '@/components/BriefingArticleCard';
+import BriefingRecommend from '@/components/BriefingRecommend';
 import { spokenDate } from '@/lib/briefing-video/script';
 import type { BriefingVideoRecord } from '@/lib/briefing-video/publish';
 import type { FeedbackVote } from '@/lib/briefing-video/feedback-reasons';
@@ -42,6 +43,7 @@ export default function BriefingView({ video, past, watched, token, mine }: Prop
           />
         ))}
       </ol>
+      {mine && <BriefingRecommend dateKey={video.dateKey} token={token} />}
       <details className="mt-3 text-sm text-spark-ink-soft">
         <summary className="cursor-pointer text-xs font-semibold text-spark-muted">대본 보기</summary>
         <div className="mt-2 space-y-2">{video.script.map((t, i) => <p key={i}>{t}</p>)}</div>

@@ -63,6 +63,43 @@ export async function clearFeedback(dateKey: string, url: string, email: string)
   await prisma.dashboardInsight.deleteMany({ where: { kind: KIND, key: feedbackKey(dateKey, url, email) } });
 }
 
+/** 「이런 기사 더 보고 싶어요」로 임직원이 남긴 기사 링크. 피드백과 같은 표에 kind만 달리해 둔다. */
+const RECOMMEND_KIND = 'briefing_recommendation';
+export const RECOMMEND_DAILY_MAX = 10;
+
+export interface Recommendation extends Viewer {
+  dateKey: string;
+  url: string;
+  comment?: string;
+  at: string;
+}
+
+export async function saveRecommendation(r: Recommendation): Promise<void> {
+  const key = feedbackKey(r.dateKey, r.url, r.email);
+  const value = JSON.stringify(r);
+  await prisma.dashboardInsight.upsert({ where: { kind_key: { kind: RECOMMEND_KIND, key } }, create: { kind: RECOMMEND_KIND, key, value }, update: { value } });
+}
+
+/** 이 사람이 그날 남긴 추천 수. */
+export async function recommendationCount(dateKey: string, email: string): Promise<number> {
+  return prisma.dashboardInsight.count({
+    where: { kind: RECOMMEND_KIND, key: { startsWith: `${dateKey}|`, endsWith: `|${hash(email.toLowerCase())}` } },
+  });
+}
+
+/** 기간(방송일 기준)에 들어온 추천, 최근 것부터. */
+export async function recommendationsIn(from: string, to: string): Promise<Recommendation[]> {
+  const rows = await prisma.dashboardInsight.findMany({
+    where: { kind: RECOMMEND_KIND, key: { gte: `${from}|`, lt: `${to}|~` } },
+    select: { value: true },
+  });
+  return rows
+    .flatMap(r => {
+      try { return [JSON.parse(r.value) as Recommendation]; } catch { return []; }
+    })
+    .sort((x, y) => y.at.localeCompare(x.at));
+}
+
 export interface FeedbackPerson extends Viewer { articles: number; ups: number; downs: number; reasons: number; comments: number }
 export interface FeedbackArticle {
   dateKey: string; url: string; title: string; ups: number; downs: number;
