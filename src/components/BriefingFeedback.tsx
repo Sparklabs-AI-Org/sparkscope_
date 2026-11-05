@@ -9,10 +9,12 @@ interface Props {
   url: string;
   token?: string;
   initial?: { vote: FeedbackVote; reason?: string; comment?: string };
+  /** 검토용 화면 — 서버로 보내지 않고 화면 동작만 보여 준다 */
+  demo?: boolean;
   children: ReactNode;
 }
 
-export default function BriefingFeedback({ dateKey, url, token, initial, children }: Props) {
+export default function BriefingFeedback({ dateKey, url, token, initial, demo, children }: Props) {
   const [vote, setVote] = useState<FeedbackVote | null>(initial?.vote ?? null);
   const [reason, setReason] = useState(initial?.reason ?? '');
   const [comment, setComment] = useState(initial?.comment ?? '');
@@ -21,6 +23,7 @@ export default function BriefingFeedback({ dateKey, url, token, initial, childre
 
   const send = async (next: { vote: FeedbackVote | null; reason?: string; comment?: string }) => {
     setFailed(false);
+    if (demo) return;
     const res = await fetch('/api/briefing/feedback', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },

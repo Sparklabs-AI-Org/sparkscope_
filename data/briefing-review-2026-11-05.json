@@ -1,0 +1,158 @@
+{
+  "dateKey": "2026-11-05",
+  "script": [
+    "사내 공지입니다. 2026년 10월 개인비용을 11월 6일 금요일까지 제출해 주시기 바랍니다.",
+    "오늘은 스파크랩, 글로벌 포트폴리오 소식이 없어, 국내 포트폴리오 소식부터 전해드리겠습니다.",
+    "올거나이즈가 일본 도쿄증권거래소 그로스시장에 상장하며 2021년 본사를 일본으로 이전한 뒤 현지 사업 확장과 지주회사 설립을 추진했습니다.",
+    "딥파인이 전국 6개 전통시장에 AI 관광 안내 플랫폼을 도입해 방문객 맞춤형 점포 추천과 길안내 서비스를 제공합니다.",
+    "임팩터스가 인공지능 기반 수업 플랫폼 임팩트 스페이스로 한국교육학술정보원의 공교육 적합도 점검에서 적합 판정을 받아 2026 에듀테크 소프트랩 실증 디렉토리북에 수록됐습니다.",
+    "알럼나이 소식입니다. 홈즈컴퍼니가 강원 고성군에 300가구 규모 시니어 임대주택 사업을 추진하며 보미건설과 채비로부터 투자확약서(LOC)를 확보했습니다.",
+    "피처링이 AI로 SNS 빅데이터 4억 건을 분석해 광고모델 선정과 신제품 기획을 지원합니다.",
+    "운영 사업 관련 소식입니다. 국회예산정책처가 중소벤처기업부의 내년 모두의 창업 예산 4411억원에 대해 규모를 조정하고 성과에 따라 단계적으로 확대할 필요가 있다고 제언했습니다.",
+    "매니패스트가 플러그앤플레이 서밋 한국 스타트업 쇼케이스에서 수상하고, 미국 사업 확대를 위해 100만달러 투자 유치를 추진합니다.",
+    "스타트업 업계 동향입니다. 중소벤처기업부와 한국벤처투자가 이달 광주에 지역 투자센터를 개소하고, 내년 상반기까지 전국 7개소 구축을 목표로 합니다.",
+    "경기 수원특례시가 1차 3149억원, 2차 4887억5000만원 등 총 8036억원 규모 벤처투자 펀드에 이어 3차 수원기업새빛펀드 조성을 추진합니다.",
+    "올해 상반기 국내 게임산업 매출은 13조3427억원으로 19.3% 증가했지만, 게임 분야 벤처투자는 424억원으로 76.3% 감소했습니다.",
+    "지난 3일 서울 팁스타운에서 열린 세미나에서 크로스보더 창업 기업의 정부 지원사업 참여 자격과 제도별 상이한 기준 문제가 논의됐습니다.",
+    "AI 쪽 소식입니다. 미국 중간선거에서 민주당이 압승하자 데이터센터 규제 강화 기대에 아마존 등 빅테크 주가가 최대 7.4% 급등했습니다.",
+    "반면 한국에서는 민주당 선전으로 AI 산업 규제와 감독이 강화될 수 있다는 우려에 반도체주가 흔들렸습니다.",
+    "챗GPT가 국내 모바일 이용자 2470만명으로 1위를 지켰고, 클로드는 1년 새 853% 성장했습니다.",
+    "AI를 활용한 해킹 우려가 산업계로 번지면서 현대자동차그룹 등 주요 대기업들이 내부 보안을 강화하고 있습니다.",
+    "1인 기업 대표가 월 200만원으로 AI 직원 19명을 운영하는 등 AI를 활용한 슈퍼 개인이 늘면서, 국내 1인 기업은 4년 새 129만개 증가했습니다.",
+    "미국 기업들이 AI 전방 배치 엔지니어 확보에 나서며, 최상위급 연간 총보수가 최대 145만달러(약 19억원)에 달합니다.",
+    "오늘 준비한 브리핑은 여기까지입니다. 더 자세한 내용은 스파크스코프 대시보드에서 확인해 주세요!"
+  ],
+  "items": [
+    {
+      "title": "에이티넘인베 투자기업 올거나이즈, 일본 증시 상장",
+      "url": "https://news.google.com/rss/articles/CBMiakFVX3lxTFA0UGNneWJrai1BdVk0STk0WUlIUkZtcklZeEpPbWJrX3VuZEZmczlfR3RueHpSVlVxZGR2RTlFQmQ2M2dnTjRia3RxTDZoaDhsWmdjYmZ1LUZaNU54Zk9Eb05uWmJpeTZnQ3c?oc=5",
+      "label": "💼 포트폴리오사",
+      "source": "AI타임스",
+      "headline": "올거나이즈, 일본 증시 상장, 본사 이전 후 현지 확장",
+      "script": "올거나이즈가 일본 도쿄증권거래소 그로스시장에 상장하며 2021년 본사를 일본으로 이전한 뒤 현지 사업 확장과 지주회사 설립을 추진했습니다."
+    },
+    {
+      "title": "망원·경동시장 등 전통시장에 딥파인 AI 관광 지도",
+      "url": "https://news.google.com/rss/articles/CBMiakFVX3lxTFBlTFlLN2xpT2Zpa1U4TTNBdThDNmhjQjh5YnpObk1RT1hRN3RiSmNFN0hydUE1ejg0RVpOTmJpWDRsYjYyUUFMaF8xd2hteTBieFFhakgzbTl2OS1TWXhOUnQyYU9NTExmenc?oc=5",
+      "label": "💼 포트폴리오사",
+      "source": "컨슈머타임스",
+      "headline": "딥파인, 6개 전통시장 AI 관광 안내 플랫폼 도입",
+      "script": "딥파인이 전국 6개 전통시장에 AI 관광 안내 플랫폼을 도입해 방문객 맞춤형 점포 추천과 길안내 서비스를 제공합니다."
+    },
+    {
+      "title": "임팩터스, 공교육 적합도 ‘적합’ 판정… ‘2026 에듀테크 소프트랩 실증 디렉토리북’ 수록",
+      "url": "https://edu.donga.com/news/articleView.html?idxno=113494",
+      "label": "💼 포트폴리오사",
+      "source": "동아일보",
+      "headline": "임팩터스, AI 수업 플랫폼 공교육 적합 판정 디렉토리북 수록",
+      "script": "임팩터스가 인공지능 기반 수업 플랫폼 임팩트 스페이스로 한국교육학술정보원의 공교육 적합도 점검에서 적합 판정을 받아 2026 에듀테크 소프트랩 실증 디렉토리북에 수록됐습니다."
+    },
+    {
+      "title": "홈즈컴퍼니 “시니어 임대주택 ‘코빌리지 고성’, 보미건설·채비 LOC 확보”",
+      "url": "https://news.google.com/rss/articles/CBMimAFBVV95cUxQd1hiaWllRWpBaFBMVmxfYkRvcElOUTVKUEdQYVg1eXhJUjlEWnFPY0NIalMxcDdPcUJIcWFPMlBNNW1WVENFY0VEMUgySFBqQ181WHRBX3pORG5IZ0lxZ0oyS2xlNnkzTTJIUXEtWjNlZFRwRHRVb3N6SWVmdGkxaUl6SWJlb0lRemFlcGZFVFIzbHpsa3pqYdIBrAFBVV95cUxQbzY5cVd5QVg4NlkwUDJGT1J1SXFPWUppT1lNUnd4ZVVFZ0pqQWRwMzYtcU54QTFZNTRkNUpicmpyd3BLVmpjaXFtVUFvT182TjFnRXFlZUpKZlpWbmN6eWVnUWxJTnhmbUMycVFodzBIUmtienZaMHpTczZ4LXB5NWVMZm5DVERhdDNVUFVCZzZWdmtaMGxNSFRGZjZheXNnVHNIaURMMDNyRG1l?oc=5",
+      "label": "🎓 알럼나이",
+      "source": "조선비즈",
+      "headline": "홈즈컴퍼니, 고성 시니어주택 300가구 LOC 확보",
+      "script": "홈즈컴퍼니가 강원 고성군에 300가구 규모 시니어 임대주택 사업을 추진하며 보미건설과 채비로부터 투자확약서(LOC)를 확보했습니다."
+    },
+    {
+      "title": "광고모델 선정부터 신제품 기획까지…SNS 속 일상 읽어내는 AI",
+      "url": "https://www.donga.com/news/Economy/article/all/20261103/134956902/1",
+      "label": "🎓 알럼나이",
+      "source": "동아일보",
+      "headline": "피처링, AI로 SNS 4억건 분석 마케팅 자동화",
+      "script": "피처링이 AI로 SNS 빅데이터 4억 건을 분석해 광고모델 선정과 신제품 기획을 지원합니다."
+    },
+    {
+      "title": "내년 '모두의 창업'에 예산 4411억…\"성과 검증 후 단계적으로 확대해야\"",
+      "url": "https://news.google.com/rss/articles/CBMiXEFVX3lxTE9GcG51QmdZNHVabjNnTDB6OVdYNjg4a1luaWJ3MzFtODRkQVp1LUhqQ0FaNFdGOS1obnpYX1B5UXVIWjhmRDZFTjNVY0FIbGM0cDVJRDhLZTMtX21M?oc=5",
+      "label": "🤝 운영 사업·참여기업",
+      "source": "뉴스1",
+      "script": "국회예산정책처가 중소벤처기업부의 내년 모두의 창업 예산 4411억원에 대해 규모를 조정하고 성과에 따라 단계적으로 확대할 필요가 있다고 제언했습니다."
+    },
+    {
+      "title": "출시 8개월 만에 2만5000명…매니패스트, 플러그앤플레이 서밋서 수상",
+      "url": "https://news.google.com/rss/articles/CBMiRkFVX3lxTE1VbFA2SmN4RVhpVmhfT3NGZUxyUXFLWk1JRUVSMWRFd0ktb3pURXJQV3FQdmszVlJLSkdqV1B4My1rZXBNYmc?oc=5",
+      "label": "🤝 운영 사업·참여기업",
+      "source": "매일경제",
+      "headline": "매니패스트, 플러그앤플레이 수상과 100만달러 투자 추진",
+      "script": "매니패스트가 플러그앤플레이 서밋 한국 스타트업 쇼케이스에서 수상하고, 미국 사업 확대를 위해 100만달러 투자 유치를 추진합니다."
+    },
+    {
+      "title": "한국벤처투자, 이달 광주 투자센터 문 연다",
+      "url": "https://n.news.naver.com/article/030/0003481411",
+      "label": "🌐 스타트업 업계 동향",
+      "source": "전자신문",
+      "headline": "한국벤처투자, 광주 투자센터 이달 개소 전국 7곳 확대",
+      "script": "중소벤처기업부와 한국벤처투자가 이달 광주에 지역 투자센터를 개소하고, 내년 상반기까지 전국 7개소 구축을 목표로 합니다."
+    },
+    {
+      "title": "\"유망기업에 더 투자\"…이재준 수원시장, 3차 새빛펀드 만든다",
+      "url": "https://news.google.com/rss/articles/CBMiWkFVX3lxTFAxckRJUFc0V0dJUFNPa2FUMDdkOURTWWN6bE9lMTRUajlRMm1vWkdiQld5a2ExWmFIdVZmS3NIb01aai11dEVGaUFtQWtwYXpfa1RMcDNMUi1xZw?oc=5",
+      "label": "🌐 스타트업 업계 동향",
+      "source": "한국경제",
+      "headline": "수원시, 8036억 벤처펀드 이어 3차 새빛펀드 추진",
+      "script": "경기 수원특례시가 1차 3149억원, 2차 4887억5000만원 등 총 8036억원 규모 벤처투자 펀드에 이어 3차 수원기업새빛펀드 조성을 추진합니다."
+    },
+    {
+      "title": "게임 벤처투자 급감...신규 개발사 자금조달 어쩌나",
+      "url": "https://news.google.com/rss/articles/CBMic0FVX3lxTE1nTTVza1BQemNJdmhxUWFaZjBxaHNwRW43SlJLSXpBSWxuRjNpQzhWeTFsUkhneHVDcHVmUmYzekRmdEkyM1JnVnlsNWcweFhFa29iQVdvaHpHSDdSR052eUcwVnFIZWlCZ2RSQ0xyaWpuTlk?oc=5",
+      "label": "🌐 스타트업 업계 동향",
+      "source": "디지털투데이",
+      "headline": "게임산업 매출 13조, 벤처투자 76% 감소",
+      "script": "올해 상반기 국내 게임산업 매출은 13조3427억원으로 19.3% 증가했지만, 게임 분야 벤처투자는 424억원으로 76.3% 감소했습니다."
+    },
+    {
+      "title": "[현장] “해외 진출하라면서 지원 자격은 제각각”…크로스보더 창업이 마주한 제도의 역설",
+      "url": "https://news.google.com/rss/articles/CBMingJBVV95cUxPUDVRWF9iTnVvWjdZd3hfOERSRFlaZjFKVmhybDU2MWZ3a1ZWWnYybzZUZjhReDcyV1Yxa2RkQUJsTHRHbVpuN3BRdmVocTdOZ1h1T0FubFV3Nm9UUnFoVUhhMkgwX2dXRkNuT0hWY2tTLTFXM1FtelpIYjlzUGMtY00tR2VYbGwwdjRocl8zYmcyWlFkR053TjQtQy1sLVRoS3dDbS13UlZGaVkzcTVOdm0wNTk1dnpETjU4aWg4RmZvTC0tOHI2OS0wOGRxU0cxSUJQZTI0VkN4LUFxV0JiT0RkMmsxUnltckxFNFFHcEpLTzZSQ3NtY2dpdXg3b2g5ZkNlaFlLQmtVUjlEOGJCMjhQWk1IcWRqbDc0LWtn?oc=5",
+      "label": "🌐 스타트업 업계 동향",
+      "source": "테크42",
+      "headline": "크로스보더 창업, 지원 자격 기준 혼선 논의",
+      "script": "지난 3일 서울 팁스타운에서 열린 세미나에서 크로스보더 창업 기업의 정부 지원사업 참여 자격과 제도별 상이한 기준 문제가 논의됐습니다."
+    },
+    {
+      "title": "미 민주당 압승에 빅테크 주가 급등…'데이터센터 규제' 호재로 해석",
+      "url": "https://www.aitimes.com/news/articleView.html?idxno=217024",
+      "label": "🤖 AI 소식",
+      "source": "AI타임스",
+      "headline": "미 민주당 압승, 데이터센터 규제 기대에 빅테크 주가 급등",
+      "script": "미국 중간선거에서 민주당이 압승하자 데이터센터 규제 강화 기대에 아마존 등 빅테크 주가가 최대 7.4% 급등했습니다."
+    },
+    {
+      "title": "美 민주당 선전에 AI 규제 우려… 韓 반도체 흔들",
+      "url": "https://it.chosun.com/news/articleView.html?idxno=3000000000224",
+      "label": "🤖 AI 소식",
+      "source": "IT조선",
+      "script": "반면 한국에서는 민주당 선전으로 AI 산업 규제와 감독이 강화될 수 있다는 우려에 반도체주가 흔들렸습니다."
+    },
+    {
+      "title": "챗GPT, 국내 모바일 이용자 2470만명으로 1위…클로드는 1년 새 853% 성장",
+      "url": "https://biz.chosun.com/it-science/ict/2026/11/04/OGQVJ3TPRVA5PNNRQXBZLBHXPE/",
+      "label": "🤖 AI 소식",
+      "source": "조선비즈",
+      "script": "챗GPT가 국내 모바일 이용자 2470만명으로 1위를 지켰고, 클로드는 1년 새 853% 성장했습니다."
+    },
+    {
+      "title": "AX 바람 속 보안 경고등…대기업들, 기술 정보 유출 가능성에 비상",
+      "url": "https://www.newsis.com/view/NISX20261104_0003854213",
+      "label": "🤖 AI 소식",
+      "source": "뉴시스",
+      "script": "AI를 활용한 해킹 우려가 산업계로 번지면서 현대자동차그룹 등 주요 대기업들이 내부 보안을 강화하고 있습니다."
+    },
+    {
+      "title": "月 200만원에 'AI직원 19명' 쓰는 김 대표… \"사람은 중요한 결정만\"",
+      "url": "https://www.munhwa.com/article/11628640",
+      "label": "🤖 AI 소식",
+      "source": "문화일보",
+      "script": "1인 기업 대표가 월 200만원으로 AI 직원 19명을 운영하는 등 AI를 활용한 슈퍼 개인이 늘면서, 국내 1인 기업은 4년 새 129만개 증가했습니다."
+    },
+    {
+      "title": "\"AI 현장 엔지니어 연봉 최대 19억원\"...기업들 FDE 확보 총력",
+      "url": "https://www.aitimes.com/news/articleView.html?idxno=217007",
+      "label": "🤖 AI 소식",
+      "source": "AI타임스",
+      "headline": "AI 전방 배치 엔지니어, 연봉 최대 19억원 경쟁",
+      "script": "미국 기업들이 AI 전방 배치 엔지니어 확보에 나서며, 최상위급 연간 총보수가 최대 145만달러(약 19억원)에 달합니다."
+    }
+  ]
+}

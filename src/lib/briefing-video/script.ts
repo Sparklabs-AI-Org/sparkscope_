@@ -409,7 +409,7 @@ export async function writeBriefingScript(snapshot: BriefingSnapshot, frame?: Sc
     const title = isOurCompany(h) ? dropOtherInvestor(h.title) : h.title;
     segments.push({
       kind: 'item', index: i, text: lead ? `${lead} ${body}` : body,
-      ...(frame?.withHeadline ? { ...(title !== h.title ? { headline: title } : {}), ...extras.get(i) } : {}),
+      ...(frame?.withHeadline ? { ...(title !== h.title ? { headline: title } : {}), ...extras.get(i), ...(h.fixedHeadline ? { headline: h.fixedHeadline } : {}) } : {}),
     });
   });
   segments.push({

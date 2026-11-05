@@ -4,7 +4,7 @@ name: Briefing Preview
 # 개선 작업 브랜치에 푸시하면 돈다. 메일·잔디·스냅샷을 건드리지 않아 일시 중지 스위치와 무관하다.
 on:
   push:
-    branches: [eunbit/briefing-daily-v2]
+    branches: [eunbit/briefing-daily-v2, eunbit/briefing-review]
   workflow_dispatch:
 
 concurrency:
@@ -42,7 +42,7 @@ jobs:
         run: printf '%s' "$GCP_SA" > "$GOOGLE_APPLICATION_CREDENTIALS"
 
       - name: Build preview (no publish)
-        run: npx tsx scripts/preview-briefing.ts --out out/preview
+        run: npx tsx scripts/preview-briefing.ts --out out/preview --from data/briefing-review-2026-11-05.json
 
       - name: Upload preview
         if: always()
