@@ -24,8 +24,9 @@ model User {
   createdAt     DateTime  @default(now())
 
   // ===== 계정 종류 (2.1 로그인·계정 체계) =====
-  // role: ADMIN(스파크랩 내부 — 전체 열람) / PORTFOLIO(포트폴리오사 — 공개 범위만)
-  // 스파크랩 도메인 메일로 처음 로그인하면 events.createUser가 ADMIN을 넣는다(src/lib/auth.ts).
+  // role: 이 컬럼은 등급 판정에 쓰지 않는다. 실제 등급은 메일 주소로 정한다(src/lib/roles.ts resolveRole).
+  // 관리자는 ADMIN_EMAILS 명단, 그 밖의 사내 메일은 STAFF. 처음 로그인하면 기본값 PORTFOLIO 가 들어간다.
+  // 2026-09-22 이전 사내 계정 행에는 ADMIN 이 그대로 남아 있지만 권한과는 무관하다.
   role          String            @default("PORTFOLIO")
   // PORTFOLIO 계정이 소속된 회사. MonitoringTarget(category=portfolio_company*)을 그대로 가리킨다 —
   // 회사 테이블을 새로 만들지 않는 이유는 포트폴리오사가 이미 감시대상으로 등록돼 있기 때문.

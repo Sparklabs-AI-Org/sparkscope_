@@ -142,15 +142,6 @@ export async function countPending(): Promise<{ pending: number; unnotified: num
 }
 
 /**
- * 승인 권한이 있는 주소. 알림을 받는 사람과 같은 목록을 쓴다 —
- * 목록을 둘로 나누면 사람이 바뀔 때 한쪽만 고쳐져서 어긋난다.
- * ACCESS_REQUEST_APPROVERS 로 따로 지정할 수도 있다.
- *
- * 사내 메일이면 누구나 ADMIN 이 되므로(authz.ts) 승인까지 열어 두면
- * 전 직원이 외부 회사에 포트폴리오 자료 접근을 줄 수 있다. 그래서 승인은
- * 키워드 관리(SCRAP_ALLOWED_EMAILS)처럼 지정된 사람만 한다.
- */
-/**
  * 접근요청 승인자 = 관리자 명단(ADMIN_EMAILS).
  *
  * 2026-09-22 이전에는 ACCESS_REQUEST_APPROVERS 라는 별도 명단이었다. 관리자 등급이
