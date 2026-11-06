@@ -42,7 +42,11 @@ jobs:
         run: printf '%s' "$GCP_SA" > "$GOOGLE_APPLICATION_CREDENTIALS"
 
       - name: Build preview (no publish)
-        run: npx tsx scripts/preview-briefing.ts --out out/preview
+        run: |
+          # 오늘 확정본이 있으면 기사를 새로 고르지 않고 그대로 만든다.
+          FIXED="data/briefing-fixed-$(date +%F).json"
+          if [ -f "$FIXED" ]; then npx tsx scripts/preview-briefing.ts --out out/preview --from "$FIXED"
+          else npx tsx scripts/preview-briefing.ts --out out/preview; fi
 
       - name: Upload preview
         if: always()
