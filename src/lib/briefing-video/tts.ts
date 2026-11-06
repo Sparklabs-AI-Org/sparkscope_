@@ -9,14 +9,21 @@
 import { GoogleAuth } from 'google-auth-library';
 
 const PROJECT = 'communication-504101';
-/** 여성 아나운서 목소리(2026-11-05 은빛, 이전 Charon). speed 1.2 — 2026-11-02 대표님 미팅 "너무 느리다"(1.2~1.3배 시험 후 확정 예정). */
+/** 여성 아나운서 목소리(2026-11-05 은빛, 이전 Charon). speed 1.25 — 2026-11-02 대표님 미팅 "너무 느리다", 11-06 은빛 시청 후 1.2에서 조금 더 올림. */
 export const VOICE = {
   model: 'gemini-2.5-flash-tts',
   name: 'Kore',
   style: '아침 뉴스 여성 아나운서처럼 또렷하고 안정된 톤으로, 약간 빠른 속도로 읽어 주세요.',
-  speed: 1.2,
+  speed: 1.25,
 } as const;
 const SAMPLE_RATE = 24000;
+
+/** 음성이 뭉개 읽는 말의 읽는 법. 화면·대본은 그대로 두고 합성할 때만 바꾼다(2026-11-06 은빛: "오픈에이", "억만장들이"로 들림). */
+const PRONOUNCE: [RegExp, string][] = [
+  [/오픈\s?AI/g, '오픈 에이아이'],
+  [/억만장자/g, '억만 장자'],
+];
+export const forSpeech = (text: string) => PRONOUNCE.reduce((t, [from, to]) => t.replace(from, to), text);
 
 /**
  * WAV의 실제 재생 길이(초). 44바이트 헤더를 가정하면 헤더가 더 긴 응답에서 길이가 조금씩 부풀고,
@@ -77,7 +84,8 @@ async function speedUp(s: Speech, factor: number): Promise<Speech> {
   return { wav, seconds: wavSeconds(wav) };
 }
 
-async function callTts(text: string, gemini: boolean, v: VoiceSpec = VOICE): Promise<Speech> {
+async function callTts(raw: string, gemini: boolean, v: VoiceSpec = VOICE): Promise<Speech> {
+  const text = forSpeech(raw);
   const r = await fetch('https://texttospeech.googleapis.com/v1/text:synthesize', {
     method: 'POST',
     headers: {
