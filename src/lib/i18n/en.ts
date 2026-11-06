@@ -1330,6 +1330,8 @@ export const EN: Record<string, string> = {
     'Which applies to you?',
   '스파크랩 임직원':
     'SparkLabs employee',
+  '회사 메일 주소로 로그인 링크를 보내드립니다':
+    'We will send a sign-in link to your work email',
   '@sparklabs.co.kr 계정으로 로그인합니다':
     'Sign in with your @sparklabs.co.kr account',
   '포트폴리오사 로그인':

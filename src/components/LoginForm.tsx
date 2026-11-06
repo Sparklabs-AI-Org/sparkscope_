@@ -41,6 +41,7 @@ function LoginFormInner({ googleEnabled }: { googleEnabled: boolean }) {
   const t = useT();
   const params = useSearchParams();
   const [submitting, setSubmitting] = useState(false);
+  const [email, setEmail] = useState('');
   const checkEmail = params.get('check') === 'email';
   // NextAuth가 실패를 ?error=로 실어 보낸다. 가장 흔한 건 Verification —
   // 매직 링크는 한 번 쓰면 소진되므로, 링크를 다시 누르거나 새로고침하면 여기로 온다.
@@ -112,6 +113,50 @@ function LoginFormInner({ googleEnabled }: { googleEnabled: boolean }) {
 
   // 로그인 전에 보고 있던 곳으로 돌려보낸다(middleware 가 붙여 준다).
   const callbackUrl = params.get('callbackUrl');
+
+  /**
+   * 메일 링크 로그인 — ?mail=1 로 들어온 사람만 본다.
+   *
+   * 구글 로그인은 스파크랩 구글 조직 기준으로 설정돼 있어서, 회사 도메인이 다른
+   * 임직원(STAFF_EMAILS)은 구글로 못 들어올 수 있다. 첫 화면에 입구를 늘리면 모든
+   * 임직원이 고민하게 되므로 이 주소를 받은 사람에게만 보인다. 누가 들어올 수 있는지는
+   * 서버의 canSignIn 이 판정한다 — 명단에 없는 주소는 이 화면을 봐도 링크를 받지 못한다.
+   */
+  if (params.get('mail') === '1') {
+    return (
+      <div className="max-w-md w-full">
+        <div className="text-xs font-bold tracking-wider text-spark-purple mb-2 text-center">SPARKSCOPE</div>
+        <h1 className="text-2xl font-bold mb-1 text-center">{t('로그인')}</h1>
+        <p className="text-sm text-gray-600 mb-6 text-center">{t('회사 메일 주소로 로그인 링크를 보내드립니다')}</p>
+        {errorBanner}
+        <form
+          onSubmit={e => {
+            e.preventDefault();
+            setSubmitting(true);
+            signIn('email', { email: email.trim().toLowerCase(), callbackUrl: callbackUrl || '/dashboard' });
+          }}
+          className="space-y-2.5"
+        >
+          <input
+            type="email"
+            required
+            autoComplete="email"
+            value={email}
+            onChange={e => setEmail(e.target.value)}
+            placeholder="name@company.com"
+            className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-white text-[15px] outline-none focus:border-spark-purple"
+          />
+          <button
+            type="submit"
+            disabled={submitting}
+            className="w-full px-4 py-3 rounded-xl bg-spark-purple text-white font-semibold text-[15px] hover:opacity-90 transition disabled:opacity-50"
+          >
+            {t('로그인 링크 받기')}
+          </button>
+        </form>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-md w-full">

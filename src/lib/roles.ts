@@ -46,13 +46,27 @@ export function primaryStaffDomain(): string {
 }
 
 /**
- * 사내 계정인가 — 도메인만으로 판단한다.
+ * 사내 도메인 밖의 임직원 개별 명단(STAFF_EMAILS, 쉼표 구분).
+ *
+ * 회사 메일 도메인이 다른 임직원을 한 사람씩 넣는다. 그 도메인을 위 목록에 넣으면
+ * 그 도메인 메일을 쓰는 모두가 임직원이 되므로, 한 사람만 열 때는 이 명단을 쓴다.
+ * 권한 회수도 이 줄에서 주소를 지우면 끝난다.
+ */
+function extraStaffEmails(): string[] {
+  return (process.env.STAFF_EMAILS ?? '')
+    .split(',')
+    .map(s => s.trim().toLowerCase())
+    .filter(Boolean);
+}
+
+/**
+ * 사내 계정인가 — 사내 도메인이거나 개별 명단에 있으면 그렇다.
  * '@'를 붙여 비교하는 것이 중요하다. 빼면 notsparklabs.co.kr 같은 남의 도메인이 통과한다.
  */
 export function isStaffEmail(email: string | null | undefined): boolean {
   if (!email) return false;
   const addr = email.trim().toLowerCase();
-  return staffDomains().some(d => addr.endsWith(`@${d}`));
+  return staffDomains().some(d => addr.endsWith(`@${d}`)) || extraStaffEmails().includes(addr);
 }
 
 /**
