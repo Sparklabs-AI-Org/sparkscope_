@@ -46,6 +46,8 @@ export interface BriefingHeadline {
   brief?: string;
   /** 사람이 직접 쓴 대본. 있으면 AI가 쓰지 않고 이 문장을 읽는다. */
   fixedScript?: string;
+  /** 사람이 직접 쓴 화면 헤드라인. 있으면 AI가 쓴 헤드라인 대신 이 문장을 보여 준다. */
+  fixedHeadline?: string;
   /** 라벨을 단 사실 2~3개 — 더벨 데일리 브리핑 형식("투자 규모: …"). 영상을 만들 때 채워진다. */
   points?: { label: string; text: string }[];
 }

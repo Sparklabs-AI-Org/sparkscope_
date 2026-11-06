@@ -12,7 +12,7 @@ import {
   type Program,
   type Range,
 } from '@/lib/sparkscope/briefing-stats';
-import { feedbackStats } from '@/lib/briefing-video/feedback';
+import { feedbackStats, recommendationsIn } from '@/lib/briefing-video/feedback';
 
 export const dynamic = 'force-dynamic';
 
@@ -52,7 +52,12 @@ export default async function BriefingStatsPage({
   // 시작일이 종료일보다 뒤면 기간을 뒤집어 보여준다(잘못 고른 경우를 막는다).
   const range: Range = from <= to ? { from, to } : { from: to, to: from };
 
-  const [divisions, people, feedback] = await Promise.all([divisionStats(range, program), personStats(range, program), feedbackStats(range.from, range.to)]);
+  const [divisions, people, feedback, recommendations] = await Promise.all([
+    divisionStats(range, program),
+    personStats(range, program),
+    feedbackStats(range.from, range.to),
+    recommendationsIn(range.from, range.to),
+  ]);
 
   const linkFor = (r: Range, p: Program) => `/dashboard/briefing-stats?from=${r.from}&to=${r.to}&program=${p}`;
   const yesterday = addDays(today, -1);
@@ -231,6 +236,25 @@ export default async function BriefingStatsPage({
                 <div className="mt-1 text-xs text-spark-ink-soft">{a.reasons.map(r => `${r.reason} ${r.count}`).join(' · ')}</div>
               )}
               {a.comments.map((c, i) => <p key={i} className="mt-1 text-xs text-spark-ink-soft">“{c}”</p>)}
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section className="mt-8">
+        <h2 className="text-lg font-bold">이런 기사도 보고 싶어요</h2>
+        <p className="mt-1 text-xs text-spark-muted">임직원이 추천한 기사 · 최근 순 · 기사 선정 기준을 다듬는 재료입니다</p>
+        <div className="mt-3 space-y-2">
+          {recommendations.length === 0 && (
+            <div className="rounded-xl border border-spark-border bg-white px-3 py-6 text-center text-sm text-spark-muted">이 기간에 추천이 없습니다.</div>
+          )}
+          {recommendations.map(r => (
+            <div key={`${r.dateKey}|${r.email}|${r.url}`} className="rounded-xl border border-spark-border bg-white p-3 text-sm">
+              <div className="flex items-baseline justify-between gap-3">
+                <a href={r.url} target="_blank" rel="noopener noreferrer" className="min-w-0 truncate font-semibold hover:text-spark-purple">{r.url}</a>
+                <span className="whitespace-nowrap text-xs text-spark-muted">{r.dateKey} · {r.name ?? r.email}</span>
+              </div>
+              {r.comment && <p className="mt-1 text-xs text-spark-ink-soft">“{r.comment}”</p>}
             </div>
           ))}
         </div>

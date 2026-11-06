@@ -120,6 +120,8 @@ export interface BriefingVideoSummary {
   program?: 'daily' | 'weekly';
   seconds: number;
   count: number;
+  url: string;
+  audioUrl?: string;
 }
 
 export async function listBriefingVideos(limit = 30): Promise<BriefingVideoSummary[]> {
@@ -130,7 +132,7 @@ export async function listBriefingVideos(limit = 30): Promise<BriefingVideoSumma
   for (const r of rows) {
     try {
       const v = JSON.parse(r.value) as BriefingVideoRecord;
-      out.push({ dateKey: v.dateKey, program: v.program, seconds: v.seconds, count: v.headlines?.length ?? 0 });
+      out.push({ dateKey: v.dateKey, program: v.program, seconds: v.seconds, count: v.headlines?.length ?? 0, url: v.url, audioUrl: v.audioUrl });
     } catch { /* 깨진 기록은 건너뛴다 */ }
   }
   return out;

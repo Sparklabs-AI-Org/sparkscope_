@@ -218,7 +218,7 @@ export interface ScriptFrame {
 
 const HEADLINE_ASK = `
 [추가로 쓸 것] 더벨 데일리 브리핑 형식으로 정리합니다. JSON을 {"items":[{"index":0,"text":"대본","headline":"...","lead":"...","points":[{"label":"...","text":"..."}]}]} 형태로 답하세요.
- - headline: 기사 제목처럼 쉼표로 끊는 짧은 헤드라인, 20~32자(예: "롯데손보, 신한EZ손보 합병 전망, 규모의 경제로", "넥센서, 300억 프리IPO 착수"). 핵심 숫자가 있으면 넣고, 따옴표·마침표는 쓰지 않습니다. 기사에 없는 사실은 쓰지 않습니다.
+ - headline: 기사 제목처럼 쉼표로 끊는 짧은 헤드라인, 20~32자(예: "롯데손보, 신한EZ손보 합병 전망, 규모의 경제로", "넥센서, 300억 프리IPO 착수"). 핵심 숫자가 있으면 %·억원 같은 단위까지 넣고, 따옴표·마침표는 쓰지 않습니다. 기사에 없는 사실은 쓰지 않습니다.
  - lead: 기사 핵심을 담은 한 문장 요약(60~100자). "~했다", "~이다"로 끝나는 평서문, 주체·사건·핵심 숫자를 담습니다.
  - points: 사실 2~3개. label은 "투자 규모", "추진 배경", "향후 일정"처럼 4~10자 명사구, text는 한 문장(40~90자) 사실로 숫자·일정·상대방을 구체적으로 씁니다. 원문에 있는 것만, 해석·전망은 쓰지 않습니다.`;
 
@@ -409,7 +409,7 @@ export async function writeBriefingScript(snapshot: BriefingSnapshot, frame?: Sc
     const title = isOurCompany(h) ? dropOtherInvestor(h.title) : h.title;
     segments.push({
       kind: 'item', index: i, text: lead ? `${lead} ${body}` : body,
-      ...(frame?.withHeadline ? { ...(title !== h.title ? { headline: title } : {}), ...extras.get(i) } : {}),
+      ...(frame?.withHeadline ? { ...(title !== h.title ? { headline: title } : {}), ...extras.get(i), ...(h.fixedHeadline ? { headline: h.fixedHeadline } : {}) } : {}),
     });
   });
   segments.push({
