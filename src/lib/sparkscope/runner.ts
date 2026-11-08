@@ -615,7 +615,10 @@ export async function runDailyDigest(opts: RunOptions = {}) {
       where: { id: log.id },
       data: {
         finishedAt: new Date(),
-        status: skipped ? 'SKIPPED' : 'SUCCESS',
+        // 수집 실행은 수집이 끝났으면 SUCCESS — 메일을 안 보낸 사유는 errors에만 남긴다.
+        // SKIPPED로 적으면 오늘 수집 완료를 SUCCESS로 찾는 곳(collect-guard·대시보드 수집 시각·추천 캐시)이
+        // 수집이 안 된 것으로 읽는다(2026-10-29 메일 일시정지 뒤 예비 수집이 매일 한 번 더 돌았다).
+        status: skipped && opts.skipCollect ? 'SKIPPED' : 'SUCCESS',
         collected: raw.length,
         analyzed: analyzed.length,
         errors: skipped ? `발송 스킵: ${skipped}` : undefined,
