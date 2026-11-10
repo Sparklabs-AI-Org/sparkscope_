@@ -35,8 +35,11 @@ export default function BriefingTracker({ dateKey, token, title }: { dateKey: st
 
     // 영상과 '소리로 듣기'(audio) 둘 다 같은 이벤트로 잰다 — 소리로만 들어도 시청으로 본다.
     const media = Array.from(document.querySelectorAll<HTMLMediaElement>('video, audio'));
+    // 영상은 들어오자마자 자동 재생된다(BriefingVideo). 소리 없이 저절로 도는 것은 시청으로 세지 않고,
+    // 소리가 켜진 채 재생될 때부터 센다.
     const cleanups = media.map(el => {
       const onPlay = () => {
+        if (el.muted) return;
         send('play');
         // 잠금화면·알림창에 제목이 뜨게(소리로 듣기를 백그라운드에서 켰을 때)
         if (el.tagName === 'AUDIO' && 'mediaSession' in navigator && title) {
@@ -44,13 +47,17 @@ export default function BriefingTracker({ dateKey, token, title }: { dateKey: st
         }
       };
       const onTime = () => {
-        if (el.duration > 0 && el.currentTime >= el.duration * 0.5) send('half');
+        if (!el.muted && el.duration > 0 && el.currentTime >= el.duration * 0.5) send('half');
       };
-      const onEnded = () => send('complete');
+      const onEnded = () => { if (!el.muted) send('complete'); };
+      // 소리 없이 돌던 영상에 '소리 켜기'를 누르면 그때 재생으로 센다
+      const onVolume = () => { if (!el.muted && !el.paused) onPlay(); };
       el.addEventListener('play', onPlay);
       el.addEventListener('timeupdate', onTime);
       el.addEventListener('ended', onEnded);
+      el.addEventListener('volumechange', onVolume);
       return () => {
+        el.removeEventListener('volumechange', onVolume);
         el.removeEventListener('play', onPlay);
         el.removeEventListener('timeupdate', onTime);
         el.removeEventListener('ended', onEnded);
