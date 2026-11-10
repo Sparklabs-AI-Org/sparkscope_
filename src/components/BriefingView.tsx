@@ -1,6 +1,7 @@
 // 브리핑 페이지 본문 — 모바일에서 영상과 기사 제목이 먼저 보이도록 글을 줄였다(2026-11-05 은빛).
 import Link from 'next/link';
 import BriefingTracker from '@/components/BriefingTracker';
+import BriefingVideo from '@/components/BriefingVideo';
 import BriefingArticleCard from '@/components/BriefingArticleCard';
 import BriefingRecommend from '@/components/BriefingRecommend';
 import { spokenDate } from '@/lib/briefing-video/script';
@@ -26,7 +27,7 @@ export default function BriefingView({ video, past, watched, token, mine }: Prop
         <h1 className="text-lg font-bold text-spark-ink">{spokenDate(video.dateKey)} 브리핑</h1>
         <Link href={`/briefing${tokenQ}`} className="shrink-0 text-xs font-semibold text-spark-purple">지난 영상</Link>
       </div>
-      <video src={video.url} controls playsInline preload="metadata" className="mt-2 w-full rounded-xl bg-black aspect-video" />
+      <BriefingVideo src={video.url} />
       {video.audioUrl && (
         <div className="mt-2 rounded-xl border border-spark-border bg-white p-2.5">
           <div className="flex flex-wrap items-baseline justify-between gap-x-2">
