@@ -1,0 +1,108 @@
+{
+  "dateKey": "2026-11-13",
+  "program": "daily",
+  "dateLabel": "2026-11-13",
+  "headlines": [
+    {
+      "kind": "intra",
+      "ref": "https://www.hvacrj.co.kr/news/articleView.html?idxno=31466",
+      "title": "엣지크로스, 냉동공조 원격 A/S 솔루션 공개",
+      "summary": "엣지크로스가 원격 관제 플랫폼과 LTE 통신 장치를 묶어, 냉동공조 설비의 운전 상태와 알람 이력을 원격으로 확인하는 A/S 솔루션을 선보였습니다.",
+      "source": "냉동공조저널",
+      "url": "https://www.hvacrj.co.kr/news/articleView.html?idxno=31466",
+      "label": "💼 포트폴리오사",
+      "brief": "엣지크로스가 원격 관제 플랫폼과 LTE 통신 장치를 묶어, 냉동공조 설비의 운전 상태와 알람 이력을 원격으로 확인하는 A/S 솔루션을 선보였습니다.",
+      "headline": "엣지크로스, 냉동공조 원격 A/S 솔루션 공개"
+    },
+    {
+      "kind": "intra",
+      "ref": "https://www.rapportian.com/news/articleView.html?idxno=242378",
+      "title": "스카이랩스 카트, 외래 환자 41% 치료 변경",
+      "summary": "스카이랩스의 반지형 혈압계 카트를 쓴 대학병원 외래 환자 1,564명을 분석한 결과, 24시간 측정 완료율은 95.2%였고 측정 뒤 41%의 환자가 약물 치료를 바꿨습니다.",
+      "source": "라포르시안",
+      "url": "https://www.rapportian.com/news/articleView.html?idxno=242378",
+      "label": "🎓 알럼나이",
+      "brief": "스카이랩스의 반지형 혈압계 카트를 쓴 대학병원 외래 환자 1,564명을 분석한 결과, 24시간 측정 완료율은 95.2%였고 측정 뒤 41%의 환자가 약물 치료를 바꿨습니다.",
+      "headline": "스카이랩스 카트, 외래 환자 41% 치료 변경"
+    },
+    {
+      "kind": "intra",
+      "ref": "https://biz.chosun.com/industry/business_info/2026/11/12/H7R4DG774ZAI7B6JT2HCPUXEYQ/",
+      "title": "모티브인텔리전스, 호텔 객실 TV 광고 출시",
+      "summary": "모티브인텔리전스가 호텔 TV 플랫폼 콘텐츠큐브를 운영하는 엑세스와 제휴해, 전국 2천여 개 호텔 6만여 객실 TV에 광고를 내보내는 상품을 출시했습니다.",
+      "source": "조선비즈",
+      "url": "https://biz.chosun.com/industry/business_info/2026/11/12/H7R4DG774ZAI7B6JT2HCPUXEYQ/",
+      "label": "🎓 알럼나이",
+      "brief": "모티브인텔리전스가 호텔 TV 플랫폼 콘텐츠큐브를 운영하는 엑세스와 제휴해, 전국 2천여 개 호텔 6만여 객실 TV에 광고를 내보내는 상품을 출시했습니다.",
+      "headline": "모티브인텔리전스, 호텔 객실 TV 광고 출시"
+    },
+    {
+      "kind": "intra",
+      "ref": "https://news.kbs.co.kr/news/pc/view/view.do?ncd=8711203",
+      "title": "중기부, 메가프로젝트 중소기업에 2조 원",
+      "summary": "중기부가 정부 메가프로젝트에 참여하는 중소기업을 위해 2030년까지 2조 원 규모의 상생 재원을 만들고, 지역 PF 보증도 새로 만들기로 했습니다.",
+      "source": "KBS",
+      "url": "https://news.kbs.co.kr/news/pc/view/view.do?ncd=8711203",
+      "label": "🌐 스타트업 업계 동향",
+      "brief": "중기부가 정부 메가프로젝트에 참여하는 중소기업을 위해 2030년까지 2조 원 규모의 상생 재원을 만들고, 지역 PF 보증도 새로 만들기로 했습니다.",
+      "headline": "중기부, 메가프로젝트 중소기업에 2조 원"
+    },
+    {
+      "kind": "intra",
+      "ref": "https://www.pointdaily.co.kr/news/articleView.html?idxno=325786",
+      "title": "10월 스타트업 투자 1조 원, 상위 5곳에 쏠림",
+      "summary": "더브이씨 집계로 10월 스타트업 투자는 1조 187억 원으로 5개월 만에 1조 원을 넘었지만, 투자 건수는 86건에 그쳤고 상위 5개사가 전체의 65.8%를 가져갔습니다.",
+      "source": "포인트데일리",
+      "url": "https://www.pointdaily.co.kr/news/articleView.html?idxno=325786",
+      "label": "🌐 스타트업 업계 동향",
+      "brief": "더브이씨 집계로 10월 스타트업 투자는 1조 187억 원으로 5개월 만에 1조 원을 넘었지만, 투자 건수는 86건에 그쳤고 상위 5개사가 전체의 65.8%를 가져갔습니다.",
+      "headline": "10월 스타트업 투자 1조 원, 상위 5곳에 쏠림"
+    },
+    {
+      "kind": "intra",
+      "ref": "https://www.newstopkorea.com/news/articleView.html?idxno=48994",
+      "title": "500억 특허기술사업화 펀드 운용사 1곳 선정",
+      "summary": "한국벤처투자가 모태펀드 특허계정과 성장사다리펀드2에서 250억 원을 출자해, 500억 원 규모 특허기술사업화 펀드를 운용할 벤처캐피탈 1곳을 뽑습니다.",
+      "source": "뉴스톱",
+      "url": "https://www.newstopkorea.com/news/articleView.html?idxno=48994",
+      "label": "🌐 스타트업 업계 동향",
+      "brief": "한국벤처투자가 모태펀드 특허계정과 성장사다리펀드2에서 250억 원을 출자해, 500억 원 규모 특허기술사업화 펀드를 운용할 벤처캐피탈 1곳을 뽑습니다.",
+      "headline": "500억 특허기술사업화 펀드 운용사 1곳 선정"
+    },
+    {
+      "kind": "intra",
+      "ref": "https://www.aitimes.com/news/articleView.html?idxno=217348",
+      "title": "젠슨 황, 33년 만에 엔비디아 CEO 사임",
+      "summary": "어제 해임 준비 보도에 이어, 젠슨 황이 33년 만에 엔비디아 CEO와 이사직에서 물러났고 콜레트 크레스 CFO가 임시 CEO를 맡았으며, 주가는 장중 14% 넘게 급락했습니다.",
+      "source": "AI타임스",
+      "url": "https://www.aitimes.com/news/articleView.html?idxno=217348",
+      "label": "🤖 AI 소식",
+      "brief": "어제 해임 준비 보도에 이어, 젠슨 황이 33년 만에 엔비디아 CEO와 이사직에서 물러났고 콜레트 크레스 CFO가 임시 CEO를 맡았으며, 주가는 장중 14% 넘게 급락했습니다.",
+      "headline": "젠슨 황, 33년 만에 엔비디아 CEO 사임"
+    },
+    {
+      "kind": "intra",
+      "ref": "https://www.dailian.co.kr/news/view/1714383",
+      "title": "삼성·구글, 제미나이 AI 안경 30종 공개",
+      "summary": "삼성전자와 구글이 젠틀몬스터, 워비파커와 함께 제미나이를 탑재한 AI 안경 30종을 뉴욕에서 공개했고, 국내에는 12월 10일 65만 원부터 출시됩니다.",
+      "source": "데일리안",
+      "url": "https://www.dailian.co.kr/news/view/1714383",
+      "label": "🤖 AI 소식",
+      "brief": "삼성전자와 구글이 젠틀몬스터, 워비파커와 함께 제미나이를 탑재한 AI 안경 30종을 뉴욕에서 공개했고, 국내에는 12월 10일 65만 원부터 출시됩니다.",
+      "headline": "삼성·구글, 제미나이 AI 안경 30종 공개"
+    },
+    {
+      "kind": "intra",
+      "ref": "https://www.bloter.net/news/articleView.html?idxno=678462",
+      "title": "오픈AI, 챗GPT에 기업 프로필 기능 출시",
+      "summary": "오픈AI가 인증받은 기업이 챗GPT 안에서 회사 소개와 상품, 가격 정보를 직접 관리하는 비즈니스 인 챗GPT를 베타로 내놔, AI 검색 최적화 업계와 광고 시장에 영향이 예상됩니다.",
+      "source": "블로터",
+      "url": "https://www.bloter.net/news/articleView.html?idxno=678462",
+      "label": "🤖 AI 소식",
+      "brief": "오픈AI가 인증받은 기업이 챗GPT 안에서 회사 소개와 상품, 가격 정보를 직접 관리하는 비즈니스 인 챗GPT를 베타로 내놔, AI 검색 최적화 업계와 광고 시장에 영향이 예상됩니다.",
+      "headline": "오픈AI, 챗GPT에 기업 프로필 기능 출시"
+    }
+  ],
+  "source": "editor",
+  "computedAt": "2026-11-13T09:30:00+09:00"
+}
