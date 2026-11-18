@@ -41,6 +41,14 @@ const live = process.argv.includes('--live');
 const kstMinutes = () => { const k = new Date(Date.now() + 9 * 3600e3); return k.getUTCHours() * 60 + k.getUTCMinutes(); };
 const sleep = (ms: number) => new Promise(r => setTimeout(r, ms));
 const squash = (t: string) => t.toLowerCase().replace(/[^0-9a-z가-힣]/g, '');
+/** 사람이라면 빼는 기사 — 부고·인사 동정(리허설 11/18: "[부음] 센스톤 대표 부친상"이 포트폴리오 칸에 들어옴). */
+const OBITUARY_PERSONNEL = /부음|부고|별세|부친상|모친상|빙부상|빙모상|장인상|장모상|\[인사\]|인사\]|\[동정\]/;
+/** 여러 소식을 묶은 정리 글 — 한 사건이 아니다(리허설 11/18: "한국 비즈니스 브리핑 — 2026년 11월 17일"). */
+const ROUNDUP_TITLE = /브리핑\s*[—–-]\s*\d{4}년|뉴스\s*브리핑|^(주요 뉴스|오늘의 뉴스|모닝|이브닝)|\d{4}년\s*\d{1,2}월\s*\d{1,2}일\s*$|주간\s*(뉴스|이슈|동향)\s*$/;
+/** 칸 안내("알럼나이 소식입니다." 등)를 뺀 문장 수 — 기사당 한 문장 규칙(아주 중요할 때 두 문장)을 넘으면 그 칸을 뺀다. */
+function bodySentences(text: string): number {
+  return text.split(/(?<=[다요]\.)\s+/).map(s => s.trim()).filter(s => s && !/(소식|동향)입니다\.$|^이어서/.test(s)).length;
+}
 
 async function waitForCollect(): Promise<void> {
   for (;;) {
@@ -81,6 +89,8 @@ async function select(dateKey: string): Promise<Pick[]> {
   (picked as Pick['c'][]).forEach((c, i) => {
     const tier = tiers[i];
     if (prev.urls.has(c.url) || prev.titles.has(titleKey(c.title))) { console.log(`[auto] 직전 방송과 겹침 — 제외: ${c.title.slice(0, 40)}`); return; }
+    if (OBITUARY_PERSONNEL.test(c.title)) { console.log(`[auto] 부고·인사 — 제외: ${c.title.slice(0, 40)}`); return; }
+    if (ROUNDUP_TITLE.test(c.title)) { console.log(`[auto] 여러 소식 묶음 글 — 제외: ${c.title.slice(0, 40)}`); return; }
     // 국내 포트폴리오·알럼나이 칸은 제목에 그 회사 이름이 있어야 한다(키워드 오매칭·동명 회사 방지 — 사람 검토의 '회사 확인' 대신).
     if ((tier === 2 || tier === 3) && c.company && !squash(c.title).includes(squash(c.company))) {
       console.log(`[auto] 제목에 회사 이름(${c.company}) 없음 — 동음이의어 의심, 제외: ${c.title.slice(0, 40)}`);
@@ -106,11 +116,19 @@ async function buildWithRetry(dateKey: string, initial: Pick[], outDir: string):
   // build.ts가 먼저 중복을 지우므로, 칸 번호가 맞게 여기서 같은 규칙으로 미리 지운다.
   const keepUrls = new Set(dedupeHeadlines(initial.map(p => ({ url: p.c.url, title: p.c.title }))).map(h => h.url));
   let picks = initial.filter((p, i, arr) => keepUrls.has(p.c.url) && arr.findIndex(x => x.c.url === p.c.url) === i);
-  for (let attempt = 1; attempt <= 4; attempt++) {
+  for (let attempt = 1; attempt <= 5; attempt++) {
     if (picks.length < MIN_ITEMS) throw new Error(`기사 ${picks.length}건 — ${MIN_ITEMS}건 미만이라 게시하지 않습니다`);
     console.log(`[auto] 제작 ${attempt}회차 — ${picks.length}건`);
     try {
       const built = await buildBriefingVideo({ outDir, snapshot: snapshotOf(dateKey, picks) });
+      // 기사당 한 문장(두 문장까지 허용)·200자 이내 — 넘는 칸은 빼고 다시 만든다.
+      const long = new Set(built.segments.filter(s => s.kind === 'item' && (bodySentences(s.text) > 2 || s.text.length > 200))
+        .map(s => built.snapshot.headlines[s.index!]?.url).filter(Boolean));
+      if (long.size > 0) {
+        for (const p of picks.filter(p => long.has(p.c.url))) console.warn(`[auto] 대본이 너무 김 — 빼고 다시 만듦: ${p.c.title.slice(0, 40)}`);
+        picks = picks.filter(p => !long.has(p.c.url));
+        continue;
+      }
       return { built, picks };
     } catch (e) {
       const msg = String((e as Error)?.message ?? e);
@@ -148,15 +166,20 @@ export function jandiText(built: BriefingSnapshot & { seconds: number }, picks: 
   const hs = built.headlines.map(h => ({ h, p: byUrl.get(h.url) }));
   const portfolio = hs.filter(x => x.p && x.p.tier >= 2 && x.p.tier <= 4)
     .map(x => x.p!.c.company || (x.h.headline ?? x.h.title).split(/[,，]/)[0]).filter((v, i, a) => v && a.indexOf(v) === i).slice(0, 2);
-  const industry = hs.filter(x => x.p && x.p.tier >= 5).map(x => (x.h.headline ?? x.h.title).replace(/[.。]$/, '')).slice(0, 3);
+  // 업계 1건 + AI 2건(없으면 있는 대로) — 헤드라인 안에도 쉼표가 있어 작은따옴표로 묶는다.
+  const short = (x: { h: BriefingHeadline }) => `‘${(x.h.headline ?? x.h.title).split('…')[0].replace(/[.。]$/, '').trim()}’`;
+  const others = hs.filter(x => x.p && x.p.tier >= 5);
+  const ind = others.filter(x => x.p!.tier < 8);
+  const ai = others.filter(x => x.p!.tier === 8);
+  const industry = [...ind.slice(0, 1), ...ai.slice(0, 2), ...ind.slice(1), ...ai.slice(2)].slice(0, 3).map(short);
   const n = built.headlines.length;
   const body: string[] = [`🎧 ${m}월 ${d}일(${dow}) 스파크스코프 브리핑이 올라왔습니다 (${Math.floor(sec / 60)}분 ${sec % 60}초)`, ''];
   if (portfolio.length && industry.length) {
-    body.push(`${portfolio.join('·')} 등 포트폴리오·알럼나이 소식과 함께`, `${industry.join(', ')}까지 ${n}건 담았어요.`);
+    body.push(`${portfolio.join('·')} 등 포트폴리오·알럼나이 소식과 함께`, `${industry.join(', ')} 등 업계·AI 소식까지 ${n}건 담았어요.`);
   } else if (portfolio.length) {
     body.push(`${portfolio.join('·')} 등 포트폴리오·알럼나이 소식 ${n}건 담았어요.`);
   } else {
-    body.push(`${industry.join(', ')}까지 ${n}건 담았어요.`);
+    body.push(`${industry.join(', ')} 등 업계·AI 소식까지 ${n}건 담았어요.`);
   }
   for (const nt of (notices as { from: string; to: string; screen: string[] }[]).filter(x => x.from <= built.dateKey && built.dateKey <= x.to)) {
     body.push(`📢 ${nt.screen.join(' · ')}`);
