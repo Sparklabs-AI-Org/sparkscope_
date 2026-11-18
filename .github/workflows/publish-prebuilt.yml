@@ -1,6 +1,18 @@
 name: Publish Prebuilt Briefing Video
 
 # 이미 만들어 둔 영상(publish-prebuilt/<날짜>/)을 올린다. 영상을 새로 만들지 않는다(승인된 파일 그대로).
+#
+# ── 2026-11-19(목) 1회 자동 게시(은빛 귀국 비행 — 사람 검토 없이) ─────────────────────────────
+# date 입력이 'auto-2026-11-19'면 수동 게시 대신 아래 auto-* 작업이 돈다(scripts/auto-publish-once.ts).
+#   GitHub 예약(schedule)은 기본 브랜치(main)에서만 돌아서, 여기서는 '대기 릴레이'로 시각을 맞춘다:
+#   auto-wait가 최대 5시간 40분 기다리고, 07:25 KST가 아직 멀면 같은 입력으로 이 워크플로를 다시 실행시키고 끝난다(GITHUB_TOKEN).
+#   07:25 KST가 되면 auto-run이 수집 완료 확인 → 자동 선정 → 제작·대조 → 게시 → 08:30 잔디(시크릿 JANDI_WEBHOOK_URL 있을 때)를 한다.
+#   일시 정지 스위치(briefing_pause·digest_pause)는 건드리지 않는다. 메일은 나가지 않는다.
+#   허용 날짜는 2026-11-19 하나뿐이고, 그날 12시 KST가 지나면 릴레이·게시 모두 아무것도 하지 않고 끝난다.
+#   취소: GitHub → Actions → 이 워크플로 → ⋯ → Disable workflow (수동 게시도 같이 멈추니 귀국 후 Enable).
+# date 입력이 'rehearsal'이면 오늘 방송 기준 리허설 — 선정·제작·대조·잔디 문구까지만, 게시·잔디·DB 기록 없음.
+# date 입력이 'relaycheck'면 아무것도 안 하는 확인용 실행(릴레이 재실행 권한 시험).
+# 11/20부터는 원래대로 날짜(YYYY-MM-DD)를 넣어 수동 게시만 쓴다.
 on:
   workflow_dispatch:
     inputs:
@@ -9,8 +21,13 @@ on:
         required: true
         type: string
 
+permissions:
+  contents: read
+  actions: write   # 릴레이(auto-wait)·리허설이 이 워크플로를 다시 실행시킬 때만 쓴다
+
 jobs:
   publish:
+    if: ${{ !startsWith(inputs.date, 'auto-') && inputs.date != 'rehearsal' && inputs.date != 'relaycheck' }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     env:
@@ -29,3 +46,145 @@ jobs:
       - run: npx prisma generate
       - name: Publish
         run: npx tsx scripts/publish-prebuilt.ts "${{ inputs.date }}"
+
+  relaycheck:
+    if: ${{ inputs.date == 'relaycheck' }}
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "릴레이 재실행 확인 — 실행 주체 ${{ github.triggering_actor }}"
+
+  # ── 1회 자동 게시: 대기 릴레이 ──
+  auto-wait:
+    if: ${{ startsWith(inputs.date, 'auto-') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 355
+    concurrency:
+      group: auto-publish-once-wait
+      cancel-in-progress: false
+    outputs:
+      go: ${{ steps.wait.outputs.go }}
+      date: ${{ steps.wait.outputs.date }}
+    steps:
+      - name: Wait until 07:25 KST (or relay)
+        id: wait
+        env:
+          INPUT_DATE: ${{ inputs.date }}
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          REF: ${{ github.ref_name }}
+        run: |
+          DATE="${INPUT_DATE#auto-}"
+          echo "date=$DATE" >> "$GITHUB_OUTPUT"
+          if [ "$DATE" != "2026-11-19" ]; then echo "허용되지 않은 날짜: $DATE — 종료"; echo "go=false" >> "$GITHUB_OUTPUT"; exit 0; fi
+          TARGET=$(date -d "${DATE}T07:25:00+09:00" +%s)
+          CUTOFF=$(date -d "${DATE}T12:00:00+09:00" +%s)
+          NOW=$(date +%s)
+          if [ "$NOW" -ge "$CUTOFF" ]; then echo "${DATE} 12:00 KST 지남 — 종료"; echo "go=false" >> "$GITHUB_OUTPUT"; exit 0; fi
+          LEFT=$((TARGET - NOW))
+          HOP=20400   # 5시간 40분 — 작업 최대 6시간 안에서 릴레이할 여유를 남긴다
+          if [ "$LEFT" -gt "$HOP" ]; then
+            echo "07:25 KST까지 ${LEFT}초 — ${HOP}초 기다린 뒤 다음 릴레이 실행"
+            sleep "$HOP"
+            for i in 1 2 3 4 5 6 7 8 9 10; do
+              CODE=$(curl -s -o /tmp/r.txt -w '%{http_code}' -X POST \
+                -H "Authorization: Bearer $GH_TOKEN" -H "Accept: application/vnd.github+json" \
+                "https://api.github.com/repos/$REPO/actions/workflows/publish-prebuilt.yml/dispatches" \
+                -d "{\"ref\":\"$REF\",\"inputs\":{\"date\":\"$INPUT_DATE\"}}")
+              if [ "$CODE" = "204" ]; then echo "다음 릴레이 실행 요청 완료"; echo "go=false" >> "$GITHUB_OUTPUT"; exit 0; fi
+              echo "릴레이 요청 실패 $CODE: $(head -c 300 /tmp/r.txt) — 30초 뒤 재시도($i/10)"; sleep 30
+            done
+            echo "::error::릴레이 요청이 계속 실패 — 11/19 자동 게시가 진행되지 않습니다"; exit 1
+          fi
+          if [ "$LEFT" -gt 0 ]; then echo "07:25 KST까지 ${LEFT}초 대기"; sleep "$LEFT"; fi
+          echo "go=true" >> "$GITHUB_OUTPUT"
+
+  # ── 1회 자동 게시: 선정 → 제작 → 대조 → 게시 → 잔디 ──
+  auto-run:
+    needs: auto-wait
+    if: ${{ needs.auto-wait.outputs.go == 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 150
+    concurrency:
+      group: auto-publish-once-run
+      cancel-in-progress: false
+    env:
+      POSTGRES_PRISMA_URL: ${{ secrets.POSTGRES_PRISMA_URL }}
+      POSTGRES_URL_NON_POOLING: ${{ secrets.POSTGRES_URL_NON_POOLING }}
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      JANDI_WEBHOOK_URL: ${{ secrets.JANDI_WEBHOOK_URL }}
+      GOOGLE_APPLICATION_CREDENTIALS: ${{ github.workspace }}/../gcp-sa.json
+      PROGRAM_NEWS_LIVE: '1'
+      TZ: Asia/Seoul
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+      - run: npm ci
+      - run: npx prisma generate
+      - name: Write GCP credentials
+        env:
+          GCP_SA: ${{ secrets.GCP_SERVICE_ACCOUNT_JSON }}
+        run: printf '%s' "$GCP_SA" > "$GOOGLE_APPLICATION_CREDENTIALS"
+      - name: Auto select, build, publish, Jandi
+        run: npx tsx scripts/auto-publish-once.ts --live --date "${{ needs.auto-wait.outputs.date }}" --out out/auto
+      - name: Upload result
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: auto-briefing
+          path: out/auto/*.*
+          retention-days: 14
+          if-no-files-found: ignore
+
+  # ── 리허설: 오늘 방송 기준, 게시·잔디 없음. 끝에 릴레이 재실행 권한도 시험한다(relaycheck 실행 하나가 생긴다). ──
+  rehearsal:
+    if: ${{ inputs.date == 'rehearsal' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      POSTGRES_PRISMA_URL: ${{ secrets.POSTGRES_PRISMA_URL }}
+      POSTGRES_URL_NON_POOLING: ${{ secrets.POSTGRES_URL_NON_POOLING }}
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      JANDI_WEBHOOK_URL: ${{ secrets.JANDI_WEBHOOK_URL }}
+      GOOGLE_APPLICATION_CREDENTIALS: ${{ github.workspace }}/../gcp-sa.json
+      PROGRAM_NEWS_LIVE: '1'
+      TZ: Asia/Seoul
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+      - run: npm ci
+      - run: npx prisma generate
+      - name: Write GCP credentials
+        env:
+          GCP_SA: ${{ secrets.GCP_SERVICE_ACCOUNT_JSON }}
+        run: printf '%s' "$GCP_SA" > "$GOOGLE_APPLICATION_CREDENTIALS"
+      - name: Rehearsal (no publish)
+        run: npx tsx scripts/auto-publish-once.ts --rehearsal --out out/auto
+      - name: Relay permission check
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          CODE=$(curl -s -o /tmp/r.txt -w '%{http_code}' -X POST \
+            -H "Authorization: Bearer $GH_TOKEN" -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/${{ github.repository }}/actions/workflows/publish-prebuilt.yml/dispatches" \
+            -d '{"ref":"${{ github.ref_name }}","inputs":{"date":"relaycheck"}}')
+          echo "릴레이 재실행 요청 결과: $CODE $(head -c 300 /tmp/r.txt)"
+          [ "$CODE" = "204" ]
+      - name: Upload result
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: auto-briefing-rehearsal
+          path: out/auto/*.*
+          retention-days: 7
+          if-no-files-found: ignore
