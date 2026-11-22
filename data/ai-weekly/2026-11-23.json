@@ -1,0 +1,109 @@
+{
+  "dateKey": "2026-11-23",
+  "rangeLabel": "11월 16일~22일",
+  "rangeSpoken": "11월 16일부터 22일까지",
+  "items": [
+    {
+      "label": "🌐 글로벌 AI",
+      "date": "2026-11-19",
+      "title": "앤스로픽 나스닥 상장, 공모 813억 달러로 사상 최대 IPO",
+      "url": "https://www.cnbc.com/2026/11/18/anthropic-ipo-ai-offering-price.html",
+      "source": "CNBC",
+      "headline": "앤스로픽 상장, 813억 달러 사상 최대 IPO",
+      "script": "앤스로픽이 19일 나스닥에 상장해 813억 달러를 모으며 사상 최대 기업공개를 기록했습니다. AI 랩 상장이 실제 엑싯 창구로 열린 만큼, AI 포트폴리오사의 후기 라운드 밸류에이션에도 새 기준점이 생겼습니다.",
+      "image": "https://image.cnbcfm.com/api/v1/image/108554572-1795033463943-108554572-1795033101955-gettyimages-2305196401-ANTHROPIC_IPO.jpg?v=1795033477&w=1920&h=1080"
+    },
+    {
+      "label": "🌐 글로벌 AI",
+      "date": "2026-11-18",
+      "title": "엔비디아, 사상 최대 실적에도 이사회 '젠슨 황 복귀 없다'… SEC 조사 보도에 주간 23% 급락",
+      "url": "https://www.cnbc.com/2026/11/17/nvidia-nvda-earnings-report-q3-2027.html",
+      "source": "CNBC",
+      "headline": "엔비디아 이사회 '젠슨 황 복귀 없다', 주간 23% 급락",
+      "script": "엔비디아는 3분기 매출이 103% 늘었지만, 이사회가 젠슨 황의 복귀를 거부하고 SEC 조사 보도까지 나오며 주가가 한 주 새 23% 떨어졌습니다. 실적이 좋아도 창업자 리스크와 거버넌스가 기업가치를 흔든다는 점은 투자 심사에서도 다시 볼 대목입니다.",
+      "image": "https://image.cnbcfm.com/api/v1/image/108191473-1794959027080-108191473-1756316822404-gettyimages-2232398609-_75a2581_gkk2kuie.jpeg?v=1794959062&w=1920&h=1080"
+    },
+    {
+      "label": "🌐 글로벌 AI",
+      "date": "2026-11-20",
+      "title": "AI 투자 불안에 나스닥 올해 상승분 소멸, 코스피도 5% 급락",
+      "url": "https://www.cnn.com/2026/11/20/investing/us-stocks-anthropic-ai",
+      "source": "CNN",
+      "headline": "나스닥 올해 상승분 소멸, 코스피도 5% 급락",
+      "script": "AI 투자 불안에 20일 나스닥이 5.28% 떨어져 올해 상승분을 모두 반납했고, 같은 날 코스피도 5.21% 급락했습니다. 공개시장 조정은 시차를 두고 비상장 AI 투자 유치에도 번지는 만큼, 포트폴리오사의 자금 여력을 미리 살펴야 합니다.",
+      "image": "https://media.cnn.com/api/v1/images/stellar/prod/ap26323536233201.jpg?c=16x9&q=w_1280,c_fill"
+    },
+    {
+      "label": "🌐 글로벌 AI",
+      "date": "2026-11-17",
+      "title": "미 상무부, 해외 데이터센터 통한 중국의 AI칩 원격 사용 차단",
+      "url": "https://techcrunch.com/2026/11/16/us-tightens-ai-chip-export-controls-to-deter-chinese-companies-from-accessing-compute-remotely/",
+      "source": "TechCrunch",
+      "headline": "미 상무부, 중국의 AI칩 원격 사용 우회로 차단",
+      "script": "미국 상무부가 중국 기업이 해외 데이터센터에서 AI칩을 원격으로 빌려 쓰는 우회로를 막아, 한국 데이터센터도 중국 고객에게 대규모 연산을 빌려주려면 미국 심사를 받아야 합니다. GPU 클라우드나 해외 고객을 둔 포트폴리오사는 고객 구성이 규제 리스크가 되지 않는지 살펴야 합니다.",
+      "image": "https://techcrunch.com/wp-content/uploads/2026/11/us-commerce.jpg?w=1280"
+    },
+    {
+      "label": "🇰🇷 국내 AI·업계 동향",
+      "date": "2026-11-22",
+      "title": "수능 'AI 커닝' 파문에 교육부 장관 사의, 국가시험 전면 개편 지시",
+      "url": "https://www.chosun.com/national/education/2026/11/22/HUH4K5WMMRAOJMHRJQZ3FTKSYQ/",
+      "source": "조선일보",
+      "headline": "수능 'AI 커닝' 파문, 교육부 장관 사의",
+      "script": "수능 전자기기 부정행위가 111건 적발되는 등 AI 부정행위 대책 혼선이 커지자, 교육부 장관이 22일 사의를 밝혔고 대통령은 국가시험 전면 개편을 지시했습니다. 지원서도 AI로 쓰는 시대인 만큼, 우리 프로그램의 선발과 심사 방식도 다시 생각해 볼 때입니다.",
+      "image": "https://www.chosun.com/resizer/v2/XISR4MWNWFNYDDPKHT6CQJZ4XI.jpg?auth=787e20aa19e05283f80b1bdd45083615d259e4613fe48438e7db5b415ab4e147&width=1200&height=630&focal=1780,1401"
+    },
+    {
+      "label": "🇰🇷 국내 AI·업계 동향",
+      "date": "2026-11-17",
+      "title": "한은 \"취업자 66.5% 업무에 AI, 주 3.7시간 절감했지만 성과는 아직\"",
+      "url": "https://www.hani.co.kr/arti/economy/economy_general/1287694.html",
+      "source": "한겨레",
+      "headline": "한은 \"취업자 66.5% 업무에 AI, 성과는 아직\"",
+      "script": "한국은행 조사에서 취업자의 66.5%가 업무에 생성형 AI를 쓰고 주 3.7시간을 아끼지만, 아낀 시간이 처리량 증가로는 아직 이어지지 않았습니다. 우리가 쌓아 온 AX 노하우를 바탕으로, 업무 재설계에 초점을 둔 포트폴리오사 AX 지원도 고려해 볼 만합니다.",
+      "image": "https://flexible.img.hani.co.kr/flexible/normal/706/499/imgdb/original/2026/1117/20261117501543.webp"
+    },
+    {
+      "label": "🛠 실무 AI",
+      "date": "2026-11-21",
+      "title": "메타 '뮤즈' 메시지 접근 논란, 노션 AI 대화 유출… AI 에이전트 보안 경고",
+      "url": "https://arstechnica.com/tech-policy/2026/11/muse-privacy-invasions-are-freaking-out-meta-staffers-internal-chats-show/",
+      "source": "Ars Technica",
+      "headline": "AI 에이전트 보안 경고, 메타 뮤즈·노션 유출",
+      "script": "메타의 AI 에이전트 '뮤즈'가 암호화된 메시지까지 읽는다는 우려가 내부에서도 나왔고, 노션은 외부 AI 업체 해킹으로 일부 AI 대화 기록이 유출됐다고 밝혔습니다. 투자 정보는 물론 각종 비밀번호 같은 대외비를 AI에 넣을 때는 어떤 도구에 어떤 권한을 주는지부터 점검해야 합니다.",
+      "related": [
+        {
+          "source": "Notion",
+          "title": "노션 보안 공지: 외부 AI 업체(파이어웍스) 사고",
+          "url": "https://www.notion.com/security/advisories/security-incident-involving-a-third-party-ai-vendor"
+        },
+        {
+          "source": "TechCrunch",
+          "title": "시그널, AI 감시에 맞서 모바일 스크린샷 제한",
+          "url": "https://techcrunch.com/2026/11/21/signal-restricts-mobile-screenshots-as-it-confronts-existential-threat-of-ai-surveillance/"
+        }
+      ],
+      "image": "https://cdn.arstechnica.net/wp-content/uploads/2026/11/GettyImages-2299665210-1024x648.jpg"
+    },
+    {
+      "label": "🛠 실무 AI",
+      "date": "2026-11-18",
+      "title": "구글, 제미나이 '태스크' 한국 등 6개국 무료 공개",
+      "url": "https://blog.google/innovation-and-ai/products/gemini-app/tasks-in-gemini-free-new-features/",
+      "source": "Google",
+      "headline": "구글 제미나이, 일 대신 처리하는 기능 한국 무료",
+      "script": "구글이 제미나이가 60개 넘는 앱을 오가며 일을 대신 처리하는 기능을 한국 등 6개국에 무료로 열었습니다. 빅테크가 에이전트를 무료로 풀면서, 비슷한 기능에 머무는 에이전트 스타트업은 차별화 압박이 커질 수 있습니다.",
+      "image": "https://storage.googleapis.com/gweb-uniblog-publish-prod/images/Hero_2784_x_1566_1.width-1300.png"
+    },
+    {
+      "label": "🛠 실무 AI",
+      "date": "2026-11-20",
+      "title": "클로드 팀 요금제, 12월 1일부터 채팅·코워크 통합 기본 적용",
+      "url": "https://support.claude.com/en/articles/18342806-set-up-and-manage-the-new-unified-claude-experience-for-your-team-organization",
+      "source": "Claude 고객센터",
+      "headline": "클로드 팀 요금제, 12월 1일부터 채팅·코워크 통합",
+      "script": "앤스로픽은 클로드 팀 요금제에서 채팅과 코워크를 합친 화면을 12월 1일부터 기본으로 켜며, 원치 않으면 관리자가 미리 꺼야 합니다. 업무 도구가 대화형에서 작업형으로 바뀌는 흐름이라, 업무용 SaaS 포트폴리오사에는 경쟁 지형이 바뀌는 신호입니다.",
+      "image": "https://assets.claude.com/9716b96b8df867765a639f3ea8a07170508200bf.jpg?w=1920&h=1080&fit=crop"
+    }
+  ]
+}
