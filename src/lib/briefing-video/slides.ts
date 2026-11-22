@@ -22,7 +22,7 @@ const C = {
 };
 
 let fontsReady = false;
-function ensureFonts() {
+export function ensureFonts() {
   if (fontsReady) return;
   const dir = path.join(process.cwd(), 'node_modules/pretendard/dist/public/static');
   for (const w of ['Regular', 'SemiBold', 'Bold', 'ExtraBold']) {
@@ -122,7 +122,7 @@ function fitText(ctx: SKRSContext2D, text: string, maxWidth: number, maxLines: n
  * x는 왼쪽 끝, cy는 세로 중심, size는 표시 높이. 그린 뒤 오른쪽 끝 x를 돌려준다.
  * 어두운 바탕에서는 로고 파랑(#0000BB)이 묻혀 밝은 파랑을 쓴다.
  */
-function drawLogo(ctx: SKRSContext2D, x: number, cy: number, size: number, dark: boolean): number {
+export function drawLogo(ctx: SKRSContext2D, x: number, cy: number, size: number, dark: boolean): number {
   const ink = dark ? C.white : C.ink;
   const colors = ['#F80054', '#FF6A00', '#22BB00', dark ? '#4D6BFF' : '#0000BB'];
   const markW = size * 1.56;

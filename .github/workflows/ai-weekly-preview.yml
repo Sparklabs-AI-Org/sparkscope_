@@ -1,8 +1,9 @@
 name: AI Weekly Preview
 
-# 스파크랩 AI 위클리(월요일 AI 미팅용) 영상 제작 — 발행하지 않는다(scripts/preview-ai-weekly.ts).
-# data/ai-weekly/<월요일 날짜>.json을 이 브랜치에 푸시하면 가장 최근에 바뀐 확정 파일로 영상을 만든다.
-# 결과는 이 실행의 Artifacts(ai-weekly-preview)에 남는다. 데일리 브리핑(briefing-preview.yml)과 파일·동시 실행 그룹이 따로다.
+# 스파크랩 AI 위클리(월요일 AI 미팅용) — 음성만 만든다(scripts/preview-ai-weekly.ts --voice). 발행하지 않는다.
+# data/ai-weekly/<월요일 날짜>.json을 이 브랜치에 푸시하면 가장 최근에 바뀐 확정 파일로 클로이 목소리를 합성해
+# Artifacts(ai-weekly-voice)에 wav·voice.json을 남긴다. 기사 사진을 넣은 화면·영상은 은빛 PC에서 만든다(사진이 공개 저장소를 거치지 않게).
+# 데일리 브리핑(briefing-preview.yml)과 파일·동시 실행 그룹이 따로다.
 on:
   push:
     branches: [eunbit/briefing-daily-v2]
@@ -48,7 +49,7 @@ jobs:
           GCP_SA: ${{ secrets.GCP_SERVICE_ACCOUNT_JSON }}
         run: printf '%s' "$GCP_SA" > "$GOOGLE_APPLICATION_CREDENTIALS"
 
-      - name: Build AI weekly (no publish)
+      - name: Synthesize AI weekly voice (no publish)
         env:
           INPUT_DATE: ${{ inputs.date }}
         run: |
@@ -57,17 +58,13 @@ jobs:
           fi
           [ -n "$FIXED" ] && [ -f "$FIXED" ] || { echo "확정 파일이 없습니다: '$FIXED'"; exit 1; }
           echo "확정 파일: $FIXED"
-          npx tsx scripts/preview-ai-weekly.ts "$FIXED" --out out/ai-weekly
+          npx tsx scripts/preview-ai-weekly.ts "$FIXED" --voice --out out/ai-weekly/voice
 
       - name: Upload
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: ai-weekly-preview
-          path: |
-            out/ai-weekly/*.mp4
-            out/ai-weekly/preview.md
-            out/ai-weekly/segments.json
-            out/ai-weekly/seconds.txt
-          retention-days: 14
+          name: ai-weekly-voice
+          path: out/ai-weekly/voice/
+          retention-days: 7
           if-no-files-found: ignore

@@ -31,6 +31,10 @@ export interface Clip {
   backgroundGif?: string;
   /** 이 영상을 반복해 깔고 png(투명)를 위에 얹는다. 장면이 바뀌어도 영상은 끊기지 않고 이어진다. */
   backgroundVideo?: string;
+  /** 1280×720 사진을 천천히 확대(켄 번스)하며 깔고 png(투명)를 위에 얹는다 — AI 위클리 기사 화면(ai-weekly.ts). */
+  backgroundImage?: string;
+  /** backgroundGif 위에 png(투명)를 얹는다 — AI 위클리 마무리 화면. */
+  gifOverlayPng?: boolean;
   /** 슬라이드 위에 반복 재생할 GIF(캐릭터) — 오른쪽 아래, 너비 w */
   overlayGif?: { file: string; w: number; x: number; y: number };
   /** 배경음악 — file의 start초부터 깔고 volume(0~1)으로 줄인다. 클립 끝 1초는 페이드아웃(fadeOut일 때). */
@@ -73,13 +77,24 @@ export async function renderVideo(clips: Clip[], workDirIn: string, outFileIn: s
     // 입력: 0 화면(png 또는 GIF) · 1 목소리 · [2 캐릭터 GIF] · [다음 배경음악]
     const inputs: string[] = c.backgroundVideo
       ? ['-ss', total.toFixed(3), '-i', bgLong, '-i', wav, '-loop', '1', '-framerate', '30', '-i', png]
+      : c.backgroundImage
+      ? ['-loop', '1', '-framerate', '30', '-i', path.resolve(c.backgroundImage), '-i', wav, '-loop', '1', '-framerate', '30', '-i', png]
+      : c.backgroundGif && c.gifOverlayPng
+      ? ['-stream_loop', '-1', '-i', path.resolve(c.backgroundGif), '-i', wav, '-loop', '1', '-framerate', '30', '-i', png]
       : c.backgroundGif
       ? ['-stream_loop', '-1', '-i', path.resolve(c.backgroundGif), '-i', wav]
       : ['-loop', '1', '-framerate', '30', '-i', png, '-i', wav];
     const graph: string[] = [];
     let vOut = '0:v';
     if (c.backgroundVideo) { graph.push('[0:v][2:v]overlay=0:0:format=auto,format=yuv420p[v]'); vOut = '[v]'; }
-    if (c.backgroundGif) { graph.push('[0:v]scale=1280:720,fps=30,format=yuv420p[v]'); vOut = '[v]'; }
+    if (c.backgroundImage) {
+      // 장면 길이 동안 1.0배 → 1.08배로 천천히 확대(가운데 기준)
+      graph.push(`[0:v]scale=w='ceil(1280*(1+0.08*t/${dur.toFixed(2)})/2)*2':h=-2:eval=frame,crop=1280:720,setsar=1,fps=30[bg];[bg][2:v]overlay=0:0:format=auto,format=yuv420p[v]`);
+      vOut = '[v]';
+    } else if (c.backgroundGif && c.gifOverlayPng) {
+      graph.push('[0:v]scale=1280:720,fps=30[g];[g][2:v]overlay=0:0:format=auto,format=yuv420p[v]');
+      vOut = '[v]';
+    } else if (c.backgroundGif) { graph.push('[0:v]scale=1280:720,fps=30,format=yuv420p[v]'); vOut = '[v]'; }
     if (c.overlayGif) {
       inputs.push('-stream_loop', '-1', '-i', path.resolve(c.overlayGif.file));
       graph.push(`[2:v]scale=${c.overlayGif.w}:-1,fps=30[h];[0:v][h]overlay=${c.overlayGif.x}:${c.overlayGif.y}:format=auto,format=yuv420p[v]`);
@@ -89,7 +104,7 @@ export async function renderVideo(clips: Clip[], workDirIn: string, outFileIn: s
     graph.push(`[1:a]aresample=44100,apad=pad_dur=${GAP_SECONDS}[voice]`);
     let aOut = '[voice]';
     if (c.bgm) {
-      const idx = c.overlayGif || c.backgroundVideo ? 3 : 2;
+      const idx = c.overlayGif || c.backgroundVideo || c.backgroundImage || (c.backgroundGif && c.gifOverlayPng) ? 3 : 2;
       inputs.push('-stream_loop', '-1', '-i', path.resolve(c.bgm.file));
       const fade = c.bgm.fadeOut ? `,afade=t=out:st=${Math.max(0, dur - 1).toFixed(2)}:d=1` : '';
       graph.push(`[${idx}:a]aresample=44100,atrim=start=${c.bgm.start},asetpts=PTS-STARTPTS,volume=${c.bgm.volume}${fade}[m]`);
@@ -101,7 +116,7 @@ export async function renderVideo(clips: Clip[], workDirIn: string, outFileIn: s
       '-filter_complex', graph.join(';'),
       '-map', vOut, '-map', aOut,
       '-t', dur.toFixed(2),
-      '-c:v', 'libx264', ...(c.backgroundGif || c.overlayGif || c.backgroundVideo ? [] : ['-tune', 'stillimage']), '-pix_fmt', 'yuv420p', '-r', '30',
+      '-c:v', 'libx264', ...(c.backgroundGif || c.overlayGif || c.backgroundVideo || c.backgroundImage ? [] : ['-tune', 'stillimage']), '-pix_fmt', 'yuv420p', '-r', '30',
       '-c:a', 'aac', '-b:a', '128k', '-ar', '44100', '-ac', '1',
       mp4,
     ]);
