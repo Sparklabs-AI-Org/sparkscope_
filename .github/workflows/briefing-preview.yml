@@ -5,6 +5,8 @@ name: Briefing Preview
 on:
   push:
     branches: [eunbit/briefing-daily-v2]
+    # AI 위클리(ai-weekly-preview.yml) 파일만 바뀐 푸시로는 데일리 시험 제작을 돌리지 않는다.
+    paths-ignore: ['data/ai-weekly/**', 'scripts/preview-ai-weekly.ts', 'src/lib/briefing-video/ai-weekly.ts', '.github/workflows/ai-weekly-preview.yml']
   workflow_dispatch:
 
 concurrency:

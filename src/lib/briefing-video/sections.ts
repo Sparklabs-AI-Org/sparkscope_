@@ -7,6 +7,8 @@ import type { BriefingHeadline } from '../sparkscope/briefing';
 export type Section = 'S' | 'P' | 'E' | 'O' | 'R' | 'A' | 'T';
 
 export function sectionOf(h: Pick<BriefingHeadline, 'label'> & { kind?: BriefingHeadline['kind'] }): Section {
+  // AI 위클리(ai-weekly.ts)의 '실무 AI' 칸 — 데일리 라벨에는 없는 말이라 데일리에 영향이 없다. 색만 주황(P)을 빌린다.
+  if (/실무 AI/.test(h.label)) return 'P';
   if (/운영 사업/.test(h.label)) return 'R';
   if (/알럼나이/.test(h.label)) return 'E';
   if (/스파크랩/.test(h.label)) return 'S';

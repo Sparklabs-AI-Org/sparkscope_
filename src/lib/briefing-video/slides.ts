@@ -345,8 +345,8 @@ export function noticeOverVideo(lines: string[]): Buffer {
   return canvas.toBuffer('image/png');
 }
 
-/** 데일리 마무리 화면 — 배경 영상 위에 얹는 투명 PNG */
-export function outroOverVideo(): Buffer {
+/** 데일리 마무리 화면 — 배경 영상 위에 얹는 투명 PNG. AI 위클리(ai-weekly.ts)는 문구만 바꿔 쓴다. */
+export function outroOverVideo(title = '오늘 브리핑은 여기까지', sub = '자세한 내용은 스파크스코프 대시보드에서'): Buffer {
   ensureFonts();
   const canvas = createCanvas(W, H);
   const ctx = canvas.getContext('2d');
@@ -356,9 +356,9 @@ export function outroOverVideo(): Buffer {
   ctx.textAlign = 'center';
   ctx.font = '60px "Pretendard ExtraBold"';
   ctx.fillStyle = C.white;
-  ctx.fillText('오늘 브리핑은 여기까지', W / 2, 350);
+  ctx.fillText(title, W / 2, 350);
   ctx.font = '30px "Pretendard SemiBold"';
-  ctx.fillText('자세한 내용은 스파크스코프 대시보드에서', W / 2, 420);
+  ctx.fillText(sub, W / 2, 420);
   ctx.textAlign = 'left';
   return canvas.toBuffer('image/png');
 }
