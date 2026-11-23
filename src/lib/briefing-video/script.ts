@@ -394,6 +394,9 @@ export async function writeBriefingScript(snapshot: BriefingSnapshot, frame?: Sc
     .map(n => ({ kind: 'intro' as const, text: n.speech, notice: n.screen })));
   // 안내 문장이 이미 "○○부터 전해드리겠습니다"라고 했으면 첫 섹션의 "먼저 ○○ 소식입니다"는 붙이지 않는다.
   let prev: Section | null = note && heads[0] ? sectionOf(heads[0]) : null;
+  // 바이오 업계 소식 칸(2026-11-23 은빛) — 색·순서는 업계 동향(T)과 같고, 전환 멘트만 따로 말한다.
+  const isBio = (h: BriefingHeadline) => /바이오 업계/.test(h.label);
+  let prevBio = false;
   const usedStarts = new Set<string>();
   heads.forEach((h, i) => {
     // AI가 빠뜨린 항목은 요약으로라도 채운다 — 화면엔 있는데 말이 없는 슬라이드가 생기지 않게.
@@ -403,8 +406,12 @@ export async function writeBriefingScript(snapshot: BriefingSnapshot, frame?: Sc
     if (usedStarts.has(body.slice(0, 80))) body = fallback;
     usedStarts.add(body.slice(0, 80));
     const sec = sectionOf(h);
-    const lead = sec === prev ? '' : prev === 'S' && sec === 'P' ? '이어서 국내 포트폴리오 소식입니다.' : SECTION_LEAD[sec][prev ? 1 : 0];
+    const bio = isBio(h);
+    const lead = bio
+      ? (prevBio ? '' : prev ? '바이오 업계 소식입니다.' : '먼저 바이오 업계 소식입니다.')
+      : sec === prev && !prevBio ? '' : prev === 'S' && sec === 'P' ? '이어서 국내 포트폴리오 소식입니다.' : SECTION_LEAD[sec][prev ? 1 : 0];
     prev = sec;
+    prevBio = bio;
     // 화면 헤드라인을 못 받은 칸은 원문 제목이 나간다 — 그때도 다른 투자사 앞머리는 뗀다.
     const title = isOurCompany(h) ? dropOtherInvestor(h.title) : h.title;
     segments.push({
