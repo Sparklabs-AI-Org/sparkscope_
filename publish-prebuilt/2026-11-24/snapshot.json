@@ -1,0 +1,240 @@
+{
+  "dateKey": "2026-11-24",
+  "program": "daily",
+  "dateLabel": "2026-11-24",
+  "headlines": [
+    {
+      "kind": "intra",
+      "ref": "https://www.biztribune.co.kr/news/articleView.html?idxno=363002",
+      "title": "미미박스, '누니 립오일'로 글로벌 승부",
+      "summary": "미미박스 하형석 대표가 '누니 립오일'로 글로벌 공략에 나섰고, 올해 이 제품의 글로벌 소매 매출은 747억 원으로 전망됩니다.",
+      "source": "비즈트리뷴",
+      "url": "https://www.biztribune.co.kr/news/articleView.html?idxno=363002",
+      "label": "💼 포트폴리오사",
+      "brief": "미미박스 하형석 대표가 '누니 립오일'로 글로벌 공략에 나섰고, 올해 이 제품의 글로벌 소매 매출은 747억 원으로 전망됩니다.",
+      "headline": "미미박스, '누니 립오일'로 글로벌 승부"
+    },
+    {
+      "kind": "intra",
+      "ref": "https://www.etnews.com/20261123000154",
+      "title": "증강지능, 日 XR 전시회서 항공정비 AI 공개",
+      "summary": "증강지능이 일본 XR 전시회에서 항공정비 교육 솔루션을 선보여, 주목 제품 조회수 1위에 올랐습니다.",
+      "source": "전자신문",
+      "url": "https://www.etnews.com/20261123000154",
+      "label": "💼 포트폴리오사",
+      "brief": "증강지능이 일본 XR 전시회에서 항공정비 교육 솔루션을 선보여, 주목 제품 조회수 1위에 올랐습니다.",
+      "headline": "증강지능, 日 XR 전시회서 항공정비 AI 공개"
+    },
+    {
+      "kind": "intra",
+      "ref": "https://view.asiae.co.kr/article/2026112309242254703",
+      "title": "피처링, SW고성장클럽 우수기업 선정",
+      "summary": "피처링이 AI로 마케팅 캠페인 준비 기간을 평균 24일에서 약 3일로 줄여, 정부 지원사업 우수기업으로 소개됐습니다.",
+      "source": "아시아경제",
+      "url": "https://view.asiae.co.kr/article/2026112309242254703",
+      "label": "💼 포트폴리오사",
+      "brief": "피처링이 AI로 마케팅 캠페인 준비 기간을 평균 24일에서 약 3일로 줄여, 정부 지원사업 우수기업으로 소개됐습니다.",
+      "headline": "피처링, SW고성장클럽 우수기업 선정"
+    },
+    {
+      "kind": "intra",
+      "ref": "https://www.newsis.com/view/NISX20261123_0003878877",
+      "title": "오브젠, 47억 규모 마케팅·AI 에이전트 계약",
+      "summary": "알럼나이 소식입니다. 오브젠이 LG CNS와 47억 원 규모의 신한카드 마케팅 시스템·AI 에이전트 계약을 맺었습니다.",
+      "source": "뉴시스",
+      "url": "https://www.newsis.com/view/NISX20261123_0003878877",
+      "label": "🎓 알럼나이",
+      "brief": "알럼나이 소식입니다. 오브젠이 LG CNS와 47억 원 규모의 신한카드 마케팅 시스템·AI 에이전트 계약을 맺었습니다.",
+      "headline": "오브젠, 47억 규모 마케팅·AI 에이전트 계약"
+    },
+    {
+      "kind": "intra",
+      "ref": "https://it.donga.com/109986/",
+      "title": "매니패스트, AI 네이티브 기획서로 북미 진출",
+      "summary": "운영 사업 관련 소식입니다. 매니패스트가 코드와 연결되는 AI 네이티브 기획서로 북미 시장에 진출합니다.",
+      "source": "IT동아",
+      "url": "https://it.donga.com/109986/",
+      "label": "🤝 운영 사업·참여기업",
+      "brief": "운영 사업 관련 소식입니다. 매니패스트가 코드와 연결되는 AI 네이티브 기획서로 북미 시장에 진출합니다.",
+      "headline": "매니패스트, AI 네이티브 기획서로 북미 진출"
+    },
+    {
+      "kind": "intra",
+      "ref": "https://www.donga.com/news/Economy/article/all/20261123/135073807/2",
+      "title": "서울창업허브, 스타트업 766곳 발굴",
+      "summary": "서울창업허브가 올해 대·중견기업 92곳과 협업해 스타트업 766곳을 발굴했습니다.",
+      "source": "동아일보",
+      "url": "https://www.donga.com/news/Economy/article/all/20261123/135073807/2",
+      "label": "🤝 운영 사업·참여기업",
+      "brief": "서울창업허브가 올해 대·중견기업 92곳과 협업해 스타트업 766곳을 발굴했습니다.",
+      "headline": "서울창업허브, 스타트업 766곳 발굴"
+    },
+    {
+      "kind": "intra",
+      "ref": "https://www.yna.co.kr/view/AKR20261123146100030",
+      "title": "중기부, 베를린서 초격차 스타트업 투자유치전",
+      "summary": "스타트업 업계 동향입니다. 중기부가 독일 베를린에서 초격차 스타트업 8곳의 투자유치 발표회를 열었습니다.",
+      "source": "연합뉴스",
+      "url": "https://www.yna.co.kr/view/AKR20261123146100030",
+      "label": "🌐 스타트업 업계 동향",
+      "brief": "스타트업 업계 동향입니다. 중기부가 독일 베를린에서 초격차 스타트업 8곳의 투자유치 발표회를 열었습니다.",
+      "headline": "중기부, 베를린서 초격차 스타트업 투자유치전"
+    },
+    {
+      "kind": "intra",
+      "ref": "https://news.google.com/rss/articles/CBMiVkFVX3lxTE9UbU5oNWR0N3VnNUR6b3l2UU52SldWcFVYdHBUUll6WFI4eklkeU9uWG1hMWp1bVZXSDk3c0VYWlpJMVdzb19GN3NUUUlKMWZaMUEwcE1n?oc=5",
+      "title": "정부, 국가 대규모 프로젝트에 중소기업 참여 확대",
+      "summary": "정부가 양극화를 줄이려고 국가 대규모 프로젝트에 중소기업 참여를 늘리기로 했습니다.",
+      "source": "헤럴드경제",
+      "url": "https://news.google.com/rss/articles/CBMiVkFVX3lxTE9UbU5oNWR0N3VnNUR6b3l2UU52SldWcFVYdHBUUll6WFI4eklkeU9uWG1hMWp1bVZXSDk3c0VYWlpJMVdzb19GN3NUUUlKMWZaMUEwcE1n?oc=5",
+      "label": "🌐 스타트업 업계 동향",
+      "brief": "정부가 양극화를 줄이려고 국가 대규모 프로젝트에 중소기업 참여를 늘리기로 했습니다.",
+      "headline": "정부, 국가 대규모 프로젝트에 중소기업 참여 확대"
+    },
+    {
+      "kind": "intra",
+      "ref": "https://www.mt.co.kr/future/2026/11/22/2026112215104528505",
+      "title": "AI 의료·헬스케어 스타트업에 투자 몰려",
+      "summary": "지난주 벤처투자는 메디인테크 338억 원 등 AI를 결합한 의료·헬스케어 스타트업에 몰렸습니다.",
+      "source": "머니투데이",
+      "url": "https://www.mt.co.kr/future/2026/11/22/2026112215104528505",
+      "label": "🌐 스타트업 업계 동향",
+      "brief": "지난주 벤처투자는 메디인테크 338억 원 등 AI를 결합한 의료·헬스케어 스타트업에 몰렸습니다.",
+      "headline": "AI 의료·헬스케어 스타트업에 투자 몰려"
+    },
+    {
+      "kind": "intra",
+      "ref": "https://n.news.naver.com/article/014/0005608498",
+      "title": "카카오, TPG와 1조5000억 국제중재",
+      "summary": "TPG가 카카오모빌리티 미국 상장 지연을 문제 삼아, 카카오를 상대로 1조5000억 원 이상 규모의 국제중재를 신청했습니다.",
+      "source": "파이낸셜뉴스",
+      "url": "https://n.news.naver.com/article/014/0005608498",
+      "label": "🌐 스타트업 업계 동향",
+      "brief": "TPG가 카카오모빌리티 미국 상장 지연을 문제 삼아, 카카오를 상대로 1조5000억 원 이상 규모의 국제중재를 신청했습니다.",
+      "headline": "카카오, TPG와 1조5000억 국제중재"
+    },
+    {
+      "kind": "intra",
+      "ref": "https://n.news.naver.com/article/011/0004685250",
+      "title": "한한령 해제 기대에 K게임 중국행 채비",
+      "summary": "한중 FTA 후속협상 타결로 한한령 해제 기대가 커지자, 국내 게임사들이 중국행 채비에 나섰습니다.",
+      "source": "서울경제",
+      "url": "https://n.news.naver.com/article/011/0004685250",
+      "label": "🌐 스타트업 업계 동향",
+      "brief": "한중 FTA 후속협상 타결로 한한령 해제 기대가 커지자, 국내 게임사들이 중국행 채비에 나섰습니다.",
+      "headline": "한한령 해제 기대에 K게임 중국행 채비"
+    },
+    {
+      "kind": "intra",
+      "ref": "https://n.news.naver.com/article/366/0001206765",
+      "title": "스페이스X, 32시간 만에 재발사 세계 신기록",
+      "summary": "스페이스X가 같은 발사대에서 32시간 만에 로켓을 다시 쏘아 올려 세계 신기록을 세웠습니다.",
+      "source": "조선비즈",
+      "url": "https://n.news.naver.com/article/366/0001206765",
+      "label": "🌐 스타트업 업계 동향",
+      "brief": "스페이스X가 같은 발사대에서 32시간 만에 로켓을 다시 쏘아 올려 세계 신기록을 세웠습니다.",
+      "headline": "스페이스X, 32시간 만에 재발사 세계 신기록"
+    },
+    {
+      "kind": "intra",
+      "ref": "https://www.yna.co.kr/view/AKR20261123174351072",
+      "title": "젠슨 황 복귀, 엔비디아 31%·나스닥 6.5% 급등",
+      "summary": "AI 쪽 소식입니다. 젠슨 황이 11일 만에 엔비디아 CEO로 복귀하자, 엔비디아 주가는 31% 넘게, 나스닥은 6.5% 올랐습니다.",
+      "source": "연합뉴스",
+      "url": "https://www.yna.co.kr/view/AKR20261123174351072",
+      "label": "🤖 AI 소식",
+      "brief": "AI 쪽 소식입니다. 젠슨 황이 11일 만에 엔비디아 CEO로 복귀하자, 엔비디아 주가는 31% 넘게, 나스닥은 6.5% 올랐습니다.",
+      "headline": "젠슨 황 복귀, 엔비디아 31%·나스닥 6.5% 급등"
+    },
+    {
+      "kind": "intra",
+      "ref": "https://www.yna.co.kr/view/AKR20261123087100075",
+      "title": "머스크 \"AI기업 내년에 자금난\"",
+      "summary": "머스크가 데이터센터 건설 차질로 내년에 AI 기업들의 자금난이 심각할 것이라고 우려했습니다.",
+      "source": "연합뉴스",
+      "url": "https://www.yna.co.kr/view/AKR20261123087100075",
+      "label": "🤖 AI 소식",
+      "brief": "머스크가 데이터센터 건설 차질로 내년에 AI 기업들의 자금난이 심각할 것이라고 우려했습니다.",
+      "headline": "머스크 \"AI기업 내년에 자금난\""
+    },
+    {
+      "kind": "intra",
+      "ref": "https://it.chosun.com/news/articleView.html?idxno=3000000001593",
+      "title": "美 AI칩 수출 통제, 동남아 데이터센터 타격",
+      "summary": "미국이 동남아 4개국으로 가는 AI칩 수출에 사전 허가를 받게 해, 동남아 데이터센터가 타격을 받습니다.",
+      "source": "IT조선",
+      "url": "https://it.chosun.com/news/articleView.html?idxno=3000000001593",
+      "label": "🤖 AI 소식",
+      "brief": "미국이 동남아 4개국으로 가는 AI칩 수출에 사전 허가를 받게 해, 동남아 데이터센터가 타격을 받습니다.",
+      "headline": "美 AI칩 수출 통제, 동남아 데이터센터 타격"
+    },
+    {
+      "kind": "intra",
+      "ref": "https://www.kbsm.net/news/view.php?idx=542795",
+      "title": "AI 데이터센터, 비수도권 50MW까지 전력평가 면제",
+      "summary": "AI 데이터센터 특별법 시행령으로, 비수도권은 50메가와트까지 전력평가가 면제됩니다.",
+      "source": "경북신문",
+      "url": "https://www.kbsm.net/news/view.php?idx=542795",
+      "label": "🤖 AI 소식",
+      "brief": "AI 데이터센터 특별법 시행령으로, 비수도권은 50메가와트까지 전력평가가 면제됩니다.",
+      "headline": "AI 데이터센터, 비수도권 50MW까지 전력평가 면제"
+    },
+    {
+      "kind": "intra",
+      "ref": "https://n.news.naver.com/article/015/0005357094",
+      "title": "통신사, 'AI 브로커' 사업에 뛰어든다",
+      "summary": "통신사들이 기업의 여러 AI 모델 비용을 한 번에 관리해 주는 'AI 브로커' 사업에 뛰어들고 있습니다.",
+      "source": "한국경제",
+      "url": "https://n.news.naver.com/article/015/0005357094",
+      "label": "🤖 AI 소식",
+      "brief": "통신사들이 기업의 여러 AI 모델 비용을 한 번에 관리해 주는 'AI 브로커' 사업에 뛰어들고 있습니다.",
+      "headline": "통신사, 'AI 브로커' 사업에 뛰어든다"
+    },
+    {
+      "kind": "intra",
+      "ref": "https://www.chosun.com/economy/tech_it/2026/11/23/56I3GEDHFVA5FACSFRL62BZIUQ/",
+      "title": "통신3사·네이버, AI 에이전트 전화 응대 거부",
+      "summary": "통신3사와 네이버가 고객센터로 걸려 오는 AI 에이전트의 전화에는 응대하지 않기로 했습니다.",
+      "source": "조선일보",
+      "url": "https://www.chosun.com/economy/tech_it/2026/11/23/56I3GEDHFVA5FACSFRL62BZIUQ/",
+      "label": "🤖 AI 소식",
+      "brief": "통신3사와 네이버가 고객센터로 걸려 오는 AI 에이전트의 전화에는 응대하지 않기로 했습니다.",
+      "headline": "통신3사·네이버, AI 에이전트 전화 응대 거부"
+    },
+    {
+      "kind": "intra",
+      "ref": "https://n.news.naver.com/article/366/0001206751",
+      "title": "메신저 앱, AI 에이전트 허용 범위 고민",
+      "summary": "외부 AI 에이전트가 대화를 읽고 답장까지 하자, 시그널은 차단하고 텔레그램은 여는 등 메신저 앱들의 대응이 엇갈립니다.",
+      "source": "조선비즈",
+      "url": "https://n.news.naver.com/article/366/0001206751",
+      "label": "🤖 AI 소식",
+      "brief": "외부 AI 에이전트가 대화를 읽고 답장까지 하자, 시그널은 차단하고 텔레그램은 여는 등 메신저 앱들의 대응이 엇갈립니다.",
+      "headline": "메신저 앱, AI 에이전트 허용 범위 고민"
+    },
+    {
+      "kind": "intra",
+      "ref": "https://n.news.naver.com/article/014/0005608488",
+      "title": "화이트해커 취약점 신고, 내년 제도화",
+      "summary": "정부가 화이트해커 698명과 보안 취약점 202건을 찾아 고쳤고, 내년부터 상시 신고제를 제도화합니다.",
+      "source": "파이낸셜뉴스",
+      "url": "https://n.news.naver.com/article/014/0005608488",
+      "label": "🤖 AI 소식",
+      "brief": "정부가 화이트해커 698명과 보안 취약점 202건을 찾아 고쳤고, 내년부터 상시 신고제를 제도화합니다.",
+      "headline": "화이트해커 취약점 신고, 내년 제도화"
+    },
+    {
+      "kind": "intra",
+      "ref": "https://n.news.naver.com/article/050/0000113655",
+      "title": "'AI 안경' 불안에 뜨는 '안티 AI' 보안 시장",
+      "summary": "AI 안경으로 몰래 찍힐 수 있다는 불안이 커지면서, 이를 탐지하는 '안티 AI' 보안 시장이 뜨고 있습니다.",
+      "source": "한경비즈니스",
+      "url": "https://n.news.naver.com/article/050/0000113655",
+      "label": "🤖 AI 소식",
+      "brief": "AI 안경으로 몰래 찍힐 수 있다는 불안이 커지면서, 이를 탐지하는 '안티 AI' 보안 시장이 뜨고 있습니다.",
+      "headline": "'AI 안경' 불안에 뜨는 '안티 AI' 보안 시장"
+    }
+  ],
+  "source": "editor",
+  "computedAt": "2026-11-24T09:30:00+09:00"
+}
