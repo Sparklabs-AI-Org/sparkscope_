@@ -893,7 +893,9 @@ export async function pickByTiers(w: BroadcastWindow, edits: BriefingEdits = {})
   // 칸이 비어도 12건을 억지로 채우지 않는다 — 사소한 기사로 채우지 않는다(2026-11-05 은빛).
   // 같은 칸 안에서는 고른 순서 그대로 — 위클리 공고 정리만 창업공고 TOP 10을 TOP 100보다 앞에.
   const top10First = (c: BriefingCandidate) => Number(weekly && /TOP\s?10\b/.test(c.title));
-  const order = picked.map((c, i) => ({ c, t: tiers[i] })).sort((a, b) => a.t - b.t || top10First(b.c) - top10First(a.c));
+  // 투자·펀드는 영상에서 별도 칸이라(2026-11-25 은빛) 스타트업계 칸 안에서 앞에 모은다 — 섞이면 칸 안내 멘트가 오락가락한다.
+  const fundFirst = (c: BriefingCandidate) => Number(c.label === '💰 투자·펀드');
+  const order = picked.map((c, i) => ({ c, t: tiers[i] })).sort((a, b) => a.t - b.t || fundFirst(b.c) - fundFirst(a.c) || top10First(b.c) - top10First(a.c));
   picked.splice(0, picked.length, ...order.map(x => x.c));
   tiers.splice(0, tiers.length, ...order.map(x => x.t));
   return { picked, tiers };
