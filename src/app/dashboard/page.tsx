@@ -1157,6 +1157,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: { 
           {/* 공개 화면은 튜토리얼을 제목 옆 오른쪽에 크게(보라색) — 처음 온 포트폴리오사가 바로 찾게(2026-10-26 소윤). */}
           {portfolioView && <DashboardTutorial publicView prominent />}
           {canScrap && !portfolioView && <Link href="/dashboard/scraps" className="rounded-lg border border-spark-border bg-white px-3 py-1.5 text-sm font-semibold text-spark-ink-soft hover:border-spark-purple/40 hover:text-spark-purple transition-colors whitespace-nowrap">⭐ {tr('스크랩함')}</Link>}
+          {canScrap && !portfolioView && <Link href="/dashboard/deals" className="rounded-lg border border-spark-border bg-white px-3 py-1.5 text-sm font-semibold text-spark-ink-soft hover:border-spark-purple/40 hover:text-spark-purple transition-colors whitespace-nowrap">💰 {tr('투자 딜·펀드')}</Link>}
           {canBookmark && <Link href="/dashboard/bookmarks" className="rounded-lg border border-spark-border bg-white px-3 py-1.5 text-sm font-semibold text-spark-ink-soft hover:border-spark-purple/40 hover:text-spark-purple transition-colors whitespace-nowrap">🔖 {tr('내 북마크')}</Link>}
           {/* 구독 설정은 지금 숨김(digest.ts SHOW_SUBSCRIPTION_UI) — 다시 띄울 때 그 스위치만 켜면 된다. */}
           {!portfolioView && SHOW_SUBSCRIPTION_UI && <Link href="/dashboard/subscriptions" className="rounded-lg border border-spark-border bg-white px-3 py-1.5 text-sm font-semibold text-spark-ink-soft hover:border-spark-purple/40 hover:text-spark-purple transition-colors whitespace-nowrap">✉️ {tr('구독 설정')}</Link>}

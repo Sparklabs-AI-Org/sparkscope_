@@ -79,6 +79,7 @@ model VerificationToken {
 
 // ===== SparkScope 핵심 =====
 model MonitoringTarget {
+  dealCompanies   Company[]
   id              String    @id @default(cuid())
   name            String    @unique
   englishName     String?
@@ -148,9 +149,11 @@ model SynergyPair {
 }
 
 model Article {
-  id               String    @id @default(cuid())
+  dealSources      DealSource[]
+  fundSources      FundSource[]
+  id               String       @id @default(cuid())
   title            String
-  link             String    @unique
+  link             String       @unique
   source           String
   pubDate          DateTime
   matchedKeyword   String
@@ -179,16 +182,18 @@ model Article {
   // 화면은 title로 떨어진다 — 국내 4만여 건을 헛번역하지 않기 위한 것이다.
   titleKo          String?
   riskFlag         String?
-  isNoise          Boolean   @default(false)
+  isNoise          Boolean      @default(false)
   noiseReason      String?
-  priorityScore    Int       @default(0)
+  priorityScore    Int          @default(0)
   // 스크랩 (본부 큐레이션)
-  isScrapped       Boolean   @default(false)
+  isScrapped       Boolean      @default(false)
   scrappedAt       DateTime?
   scrappedBy       String?
   // 메타
-  collectedAt      DateTime  @default(now())
+  collectedAt      DateTime     @default(now())
   analyzedAt       DateTime?
+  dealCheckedAt    DateTime? // 딜·펀드 추출기가 본 시각(deal-extract.ts)
+  dealVerdict      String? // DEAL / FUND / NONE / OVERSEAS / UNVERIFIED / ERROR
 
   @@index([pubDate])
   @@index([category, importance])
@@ -573,12 +578,156 @@ model DigestSubscriber {
 // 구독자 연결은 문자열 참조만 둔다 — 구독자 행을 지워도 집계 기록이 같이 사라지지 않게.
 model BriefingView {
   id           String   @id @default(cuid())
-  dateKey      String   // 브리핑 날짜 (2026-10-12)
-  event        String   // open / play / half / complete
-  visitorId    String?  // 익명 재방문 구분용 브라우저 값
-  subscriberId String?  // DigestSubscriber.id (토큰이 맞을 때만)
+  dateKey      String // 브리핑 날짜 (2026-10-12)
+  event        String // open / play / half / complete
+  visitorId    String? // 익명 재방문 구분용 브라우저 값
+  subscriberId String? // DigestSubscriber.id (토큰이 맞을 때만)
   createdAt    DateTime @default(now())
 
   @@index([dateKey, event])
   @@index([subscriberId])
+}
+
+// ── 투자 딜·펀드 결성 DB (2026-11-24, migrations/20261124_deal_fund_db) ──
+// 국내만. 기사에서 AI가 뽑고 근거 기사(DealSource·FundSource)를 남긴다. 내부 전용 — 파트너 뷰 없음.
+
+model Investor {
+  id        String         @id @default(cuid())
+  name      String         @unique
+  aliases   String[]       @default([])
+  kind      String? // VC / CVC / AC / PE / POLICY / BANK / ANGEL / CORP / OTHER
+  website   String?
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @default(now()) @updatedAt
+  gpOf      FundGP[]
+  lpOf      FundLP[]
+  deals     DealInvestor[]
+}
+
+model Company {
+  id                 String            @id @default(cuid())
+  name               String            @unique
+  aliases            String[]          @default([])
+  ceoName            String? // 대표자 이름만
+  foundedYear        Int?
+  description        String?
+  sector             String?
+  monitoringTargetId String?
+  monitoringTarget   MonitoringTarget? @relation(fields: [monitoringTargetId], references: [id], onDelete: SetNull)
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @default(now()) @updatedAt
+  deals              Deal[]
+
+  @@index([monitoringTargetId])
+}
+
+model Fund {
+  id            String         @id @default(cuid())
+  programName   String?
+  fundName      String?
+  stage         String         @default("CLOSED") // ANNOUNCED / GP_SELECTED / CLOSED
+  targetSizeKrw BigInt?
+  closedSizeKrw BigInt?
+  sizeText      String?
+  sectors       String[]       @default([])
+  announcedAt   DateTime?
+  closedAt      DateTime?
+  parentFundId  String?
+  parent        Fund?          @relation("FundChildren", fields: [parentFundId], references: [id], onDelete: SetNull)
+  children      Fund[]         @relation("FundChildren")
+  reviewStatus  String         @default("AUTO") // AUTO / VERIFIED / REJECTED
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @default(now()) @updatedAt
+  gps           FundGP[]
+  lps           FundLP[]
+  sources       FundSource[]
+  dealInvestors DealInvestor[]
+
+  @@index([stage])
+  @@index([announcedAt])
+}
+
+model FundGP {
+  id         String   @id @default(cuid())
+  fundId     String
+  fund       Fund     @relation(fields: [fundId], references: [id], onDelete: Cascade)
+  investorId String
+  investor   Investor @relation(fields: [investorId], references: [id], onDelete: Cascade)
+  role       String? // SOLE / CO_GP
+  amountKrw  BigInt?
+
+  @@unique([fundId, investorId])
+}
+
+model FundLP {
+  id         String   @id @default(cuid())
+  fundId     String
+  fund       Fund     @relation(fields: [fundId], references: [id], onDelete: Cascade)
+  investorId String
+  investor   Investor @relation(fields: [investorId], references: [id], onDelete: Cascade)
+  amountKrw  BigInt?
+
+  @@unique([fundId, investorId])
+}
+
+model Deal {
+  id                    String         @id @default(cuid())
+  companyId             String
+  company               Company        @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  round                 String?
+  amountKrw             BigInt?
+  amountText            String?
+  announcedAt           DateTime
+  reportedCumulativeKrw BigInt? // 기사상 누적액(대조용)
+  reviewStatus          String         @default("AUTO")
+  createdAt             DateTime       @default(now())
+  updatedAt             DateTime       @default(now()) @updatedAt
+  investors             DealInvestor[]
+  sources               DealSource[]
+
+  @@index([companyId, announcedAt])
+  @@index([announcedAt])
+}
+
+model DealInvestor {
+  id         String   @id @default(cuid())
+  dealId     String
+  deal       Deal     @relation(fields: [dealId], references: [id], onDelete: Cascade)
+  investorId String
+  investor   Investor @relation(fields: [investorId], references: [id], onDelete: Cascade)
+  role       String? // LEAD / FOLLOW / NEW / EXISTING
+  fundId     String?
+  fund       Fund?    @relation(fields: [fundId], references: [id], onDelete: SetNull)
+  fundName   String? // 기사에 적힌 펀드명 그대로
+
+  @@unique([dealId, investorId])
+  @@index([investorId])
+}
+
+model DealSource {
+  id        String   @id @default(cuid())
+  dealId    String
+  deal      Deal     @relation(fields: [dealId], references: [id], onDelete: Cascade)
+  articleId String
+  article   Article  @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  evidence  String?
+  extracted Json?
+  createdAt DateTime @default(now())
+
+  @@unique([dealId, articleId])
+  @@index([articleId])
+}
+
+model FundSource {
+  id        String   @id @default(cuid())
+  fundId    String
+  fund      Fund     @relation(fields: [fundId], references: [id], onDelete: Cascade)
+  articleId String
+  article   Article  @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  evidence  String?
+  extracted Json?
+  createdAt DateTime @default(now())
+
+  @@unique([fundId, articleId])
+  @@index([articleId])
 }

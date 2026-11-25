@@ -384,7 +384,7 @@ export async function fillMissingBodies(items: RawArticle[]): Promise<number> {
 const MAX_LINK_RESOLVES = 60;
 
 // 구글 프록시 링크를 진짜 언론사 주소로 바꿔 끼운다. 실패한 건 손대지 않는다.
-async function resolveLinksInPlace(articles: RawArticle[]): Promise<void> {
+export async function resolveLinksInPlace(articles: RawArticle[]): Promise<void> {
   const proxied = articles
     .filter(a => a.link.includes('news.google.com'))
     // 카테고리 우선순위가 높은 것부터 — 한도에 걸려 일부만 고칠 때 스파크랩·포트폴리오

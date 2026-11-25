@@ -28,6 +28,7 @@ import {
 import { fillMissingBodies, splitStored, saveMissingBodies } from '@/lib/sparkscope/collector';
 import { classifyPolicyItems } from '@/lib/sparkscope/policy-classify';
 import { prisma } from '@/lib/prisma';
+import { collectDealArticles } from '@/lib/sparkscope/deal-collect';
 
 export const runtime = 'nodejs';
 export const maxDuration = 300;
@@ -39,6 +40,16 @@ export async function GET(request: NextRequest) {
   }
 
   const days = Number(request.nextUrl.searchParams.get('days') ?? 3);
+
+  // 투자 전문 매체(플래텀·와우테일) 수집 — 딜·펀드 DB 재료(deal-collect.ts, 2026-11-24). 같은 07:00 크론에 얹고
+  // 큐레이션 수집과 서로 실패를 막지 않게 따로 감싼다. 메일·브리핑에는 안 나간다(category deal_news).
+  let deals: unknown = null;
+  try {
+    deals = await collectDealArticles(days);
+  } catch (e: any) {
+    console.error('[cron:policy-collect] 투자 매체 수집 실패:', e);
+    deals = { error: String(e?.message ?? e) };
+  }
 
   try {
     const curated = await collectPolicyArticles(days);
@@ -60,7 +71,7 @@ export async function GET(request: NextRequest) {
     if (raw.length === 0) {
       // 블로그 글 형식이 바뀌면 조용히 0건이 된다 — 가장 위험한 실패라 로그를 남긴다.
       console.warn('[cron:policy-collect] 수집 0건 — 연속되면 블로그 글 형식·데모데이 사이트맵 확인 필요');
-      return NextResponse.json({ ok: true, collected: 0, saved: 0 });
+      return NextResponse.json({ ok: true, collected: 0, saved: 0, deals });
     }
 
     // 본문을 읽어 둔다 — 데일리 브리핑 정책 칸의 대본 재료(Article.bodyText). 예전엔 제목만 저장해서
@@ -111,7 +122,7 @@ export async function GET(request: NextRequest) {
     }
 
     console.log(`[cron:policy-collect] 합계 ${raw.length}건 → 신규 ${saved}건 · 기존 ${skipped}건`);
-    return NextResponse.json({ ok: true, collected: raw.length, saved, skipped });
+    return NextResponse.json({ ok: true, collected: raw.length, saved, skipped, deals });
   } catch (e: any) {
     console.error('[cron:policy-collect] 실패:', e);
     return NextResponse.json({ ok: false, error: String(e?.message ?? e) }, { status: 500 });

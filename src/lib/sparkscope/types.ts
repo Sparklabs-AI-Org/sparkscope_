@@ -11,7 +11,8 @@ export type Category =
   | 'competitor'
   | 'industry_trend'
   | 'policy_support'  // 정책·지원사업 큐레이션 — 회사가 아니라 주제로 모은다(policy-collect.ts)
-  | 'fund_invest';     // 투자 유치·펀드 결성 — 깡프로·데모데이 큐레이션을 나눈 것(policy-classify.ts)
+  | 'fund_invest'     // 투자 유치·펀드 결성 — 깡프로·데모데이 큐레이션을 나눈 것(policy-classify.ts)
+  | 'deal_news';      // 투자 딜·펀드 DB 재료 — 투자 전문 매체 수집(deal-collect.ts). 메일·브리핑에 안 나간다
 
 export type Importance = 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW';
 export type Tone = 'POSITIVE' | 'NEUTRAL' | 'NEGATIVE' | 'MIXED';
