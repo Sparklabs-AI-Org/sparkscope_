@@ -23,7 +23,7 @@ export interface BriefingVideoRecord {
   /** 소리만(m4a) — 화면이 꺼져도 재생된다. 없으면(예전 기록·추출 실패) 페이지에 '소리로 듣기'를 띄우지 않는다. */
   audioUrl?: string;
   seconds: number;
-  headlines: { title: string; url: string; label: string; source: string; headline?: string; brief?: string; points?: { label: string; text: string }[] }[];
+  headlines: { title: string; url: string; label: string; source: string; headline?: string; brief?: string; points?: { label: string; text: string }[]; bullets?: string[] }[];
   /** 더벨 형식 개요 한 문단 */
   overview?: string;
   script: string[];
@@ -80,7 +80,7 @@ export async function publishBriefingVideo(built: BuiltBriefing): Promise<string
     url,
     audioUrl,
     seconds: Math.round(built.seconds),
-    headlines: built.snapshot.headlines.map(h => ({ title: h.title, url: h.url, label: h.label, source: h.source, headline: h.headline, brief: h.brief, points: h.points })),
+    headlines: built.snapshot.headlines.map(h => ({ title: h.title, url: h.url, label: h.label, source: h.source, headline: h.headline, brief: h.brief, points: h.points, bullets: h.bullets })),
     overview: built.overview,
     script: built.segments.map(s => s.text),
     publishedAt: new Date().toISOString(),

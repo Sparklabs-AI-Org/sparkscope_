@@ -50,6 +50,8 @@ export interface BriefingHeadline {
   fixedHeadline?: string;
   /** 라벨을 단 사실 2~3개 — 더벨 데일리 브리핑 형식("투자 규모: …"). 영상을 만들 때 채워진다. */
   points?: { label: string; text: string }[];
+  /** 페이지 「자세히」에 보이는 요약 불렛 2~4줄 — 원문 본문에서 확인한 사실만(2026-11-26 은빛). 있으면 brief 대신 이것을 보여 준다. */
+  bullets?: string[];
 }
 
 export interface BriefingSnapshot {

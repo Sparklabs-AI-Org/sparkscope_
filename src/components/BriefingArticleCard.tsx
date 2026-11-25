@@ -26,7 +26,12 @@ export default function BriefingArticleCard({ h, feedback }: {
       {feedback ? <BriefingFeedback {...feedback} url={h.url}>{head}</BriefingFeedback> : head}
       <details className="mt-1 text-sm text-spark-ink-soft">
         <summary className="cursor-pointer text-xs font-semibold text-spark-muted">자세히</summary>
-        {h.brief && <p className="mt-1">{h.brief}</p>}
+        {/* 2026-11-26 은빛: 요약은 불렛으로. bullets가 없는 예전 회차는 한 문장(brief) 그대로 보여 준다. */}
+        {h.bullets && h.bullets.length > 0 ? (
+          <ul className="mt-1 list-disc space-y-1 pl-4">
+            {h.bullets.map((b, i) => <li key={i}>{b}</li>)}
+          </ul>
+        ) : h.brief && <p className="mt-1">{h.brief}</p>}
         {h.points && h.points.length > 0 && (
           <ul className="mt-1 space-y-1">
             {h.points.map(pt => (
