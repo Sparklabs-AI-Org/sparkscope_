@@ -1,18 +1,22 @@
 /**
  * 브리핑 섹션과 영상 색(2026-11-05 은빛) — 스파크랩 로고 불꽃의 네 색을 눈에 띄는 순서(핑크 → 주황 → 초록 → 파랑)로 쓴다.
  * 섹션이 일곱 개라 주황·초록·파랑은 밝은 톤을 하나씩 더해, 위 칸일수록 강한 색이 가게 했다.
+ * 2026-11-25 은빛: 투자·펀드(F)를 업계 동향에서 떼어 별도 칸으로 소개한다. 색은 대시보드 투자·펀드 칩과 같은 청록 계열.
  */
 import type { BriefingHeadline } from '../sparkscope/briefing';
 
-export type Section = 'S' | 'P' | 'E' | 'O' | 'R' | 'A' | 'T';
+export type Section = 'S' | 'P' | 'E' | 'O' | 'R' | 'F' | 'A' | 'T';
 
 export function sectionOf(h: Pick<BriefingHeadline, 'label'> & { kind?: BriefingHeadline['kind'] }): Section {
+  // AI 위클리(ai-weekly.ts)의 '실무 AI' 칸 — 데일리 라벨에는 없는 말이라 데일리에 영향이 없다. 색만 주황(P)을 빌린다.
+  if (/실무 AI/.test(h.label)) return 'P';
   if (/운영 사업/.test(h.label)) return 'R';
   if (/알럼나이/.test(h.label)) return 'E';
   if (/스파크랩/.test(h.label)) return 'S';
   if (/포트폴리오사 · (대만|글로벌)/.test(h.label)) return 'O';
   if (/포트폴리오/.test(h.label)) return 'P';
-  if (/정책|지원사업|투자·펀드|업계 동향/.test(h.label)) return 'T';
+  if (/투자·펀드/.test(h.label)) return 'F';
+  if (/정책|지원사업|업계 동향/.test(h.label)) return 'T';
   if (/AI|트렌드|해외/.test(h.label) || h.kind === 'trend' || h.kind === 'inter') return 'A';
   return 'T';
 }
@@ -24,6 +28,7 @@ export const SECTION_COLOR: Record<Section, { fill: string; ink: string }> = {
   E: { fill: '#FFA64D', ink: '#1A1A1A' },
   O: { fill: '#22BB00', ink: '#FFFFFF' },
   R: { fill: '#86DB73', ink: '#1A1A1A' },
+  F: { fill: '#008C8C', ink: '#FFFFFF' },
   T: { fill: '#0000BB', ink: '#FFFFFF' },
   A: { fill: '#6F8CFF', ink: '#1A1A1A' },
 };
