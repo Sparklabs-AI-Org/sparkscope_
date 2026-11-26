@@ -17,12 +17,17 @@ export async function GET(request: NextRequest) {
   }
   const sp = request.nextUrl.searchParams;
   try {
+    const dryRun = sp.get('dry') === '1';
     const r = await extractDeals({
       days: Number(sp.get('days') ?? 3),
       limit: Number(sp.get('limit') ?? 120),
-      dryRun: sp.get('dry') === '1',
+      dryRun,
+      budgetMs: 200_000,
     });
-    return NextResponse.json({ ok: true, ...r });
+    // 남는 시간에 지난 90일 투자·펀드 탭(fund_invest) 기사 중 아직 안 본 것을 채운다 — 펀드 결성 분석의 재료.
+    // 한 번 본 기사는 표시되므로 밀린 게 다 차면 매일 0건으로 끝난다(2026-11-26).
+    const backfill = dryRun ? null : await extractDeals({ days: 90, limit: 40, fundInvestOnly: true, budgetMs: 60_000 });
+    return NextResponse.json({ ok: true, ...r, backfill });
   } catch (e: any) {
     console.error('[cron:deal-extract] 실패:', e);
     return NextResponse.json({ ok: false, error: String(e?.message ?? e) }, { status: 500 });

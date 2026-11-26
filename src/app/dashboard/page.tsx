@@ -4,6 +4,8 @@ import { getLocale, getT } from '@/lib/i18n/server';
 import { ensureArticleEnDeep, ensureArticleKoDeep } from '@/lib/sparkscope/translate-content';
 import { articleTitle } from '@/lib/sparkscope/article-title';
 import { CuratedFeed, IndustryCuratedList } from '@/components/CuratedFeed';
+import { FundAnalysis } from '@/components/FundAnalysis';
+import { getFundStats } from '@/lib/sparkscope/fund-stats';
 import { cleanSnippet } from '@/lib/sparkscope/snippet';
 import { FUND_SOURCE_KEYWORDS, MARKET_KEYWORD } from '@/lib/sparkscope/policy-classify';
 import { prisma } from '@/lib/prisma';
@@ -1544,6 +1546,8 @@ export default async function DashboardPage({ searchParams }: { searchParams: { 
           오늘치가 아직 없으면(크론은 평일 10:10) 가장 최근 발행일을 대신 보여준다 —
           빈 칸을 띄우면 "수집이 멈췄나" 하고 헷갈린다. 날짜를 머리말에 적어 구분한다. */}
       {/* 정책·지원사업 / 투자·펀드 — 조회 기간의 기사를 날짜별로. 원본 표는 2026-10-28 뺐다(소윤). */}
+      {/* 펀드 결성 분석 — 기사 목록 위에 몇 개·얼마·어느 하우스·어디 돈인지 한눈에(2026-11-26 소윤). 사내 화면만. */}
+      {tab === 'fund' && !portfolioView && <FundAnalysis stats={await getFundStats(90).catch(() => ({ days: 90, total: 0 } as any))} t={tr} />}
       {(tab === 'policy' || tab === 'fund') && (
         <CuratedFeed kind={tab} items={data.policyArticles as any} roundups={data.weeklyRoundups as any} rangeLabel={range.label} />
       )}

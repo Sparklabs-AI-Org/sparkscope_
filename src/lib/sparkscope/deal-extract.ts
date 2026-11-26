@@ -275,7 +275,7 @@ export async function judgeArticle(a: { title: string; bodyText: string | null; 
 export interface DealExtractResult { checked: number; byVerdict: Record<string, number> }
 
 /** days 이내에 수집된 미처리 후보를 최대 limit건 처리한다. dryRun이면 LLM 결과만 돌려주고 DB에 쓰지 않는다. */
-export async function extractDeals(opts: { days?: number; limit?: number; dryRun?: boolean } = {}): Promise<DealExtractResult & { samples?: unknown[] }> {
+export async function extractDeals(opts: { days?: number; limit?: number; dryRun?: boolean; fundInvestOnly?: boolean; budgetMs?: number } = {}): Promise<DealExtractResult & { samples?: unknown[] }> {
   const days = opts.days ?? 3;
   const limit = opts.limit ?? 150;
   const since = new Date(Date.now() - days * 86_400_000);
@@ -286,12 +286,16 @@ export async function extractDeals(opts: { days?: number; limit?: number; dryRun
   });
   // 깡프로·데모데이가 이미 투자·펀드(fund_invest)로 나눈 기사도 재료로 쓴다 — 기존 분류는 그대로 두고 읽기만 한다.
   const candidates = pool
+    .filter(a => !opts.fundInvestOnly || a.category === 'fund_invest')
     .filter(a => a.category === DEAL_CATEGORY || (a.category === 'fund_invest' && a.curationTopic !== 'market') || CANDIDATE_TITLE.test(a.title))
     .slice(0, limit);
 
   const byVerdict: Record<string, number> = {};
   const samples: unknown[] = [];
+  const started = Date.now();
   for (const a of candidates) {
+    // 크론 300초 한도 — 시간이 모자라면 남은 건 다음 실행으로 넘긴다(표시 안 했으니 다시 후보가 된다).
+    if (opts.budgetMs && Date.now() - started > opts.budgetMs) break;
     const text = `${a.title}\n${a.bodyText ?? ''}`;
     let verdict: Verdict = 'ERROR';
     try {
