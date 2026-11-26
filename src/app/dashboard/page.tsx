@@ -12,6 +12,8 @@ import { getDealStats } from '@/lib/sparkscope/deal-stats';
 import { getMatchStats } from '@/lib/sparkscope/match-stats';
 import { MatchAnalysis } from '@/components/MatchAnalysis';
 import { DealInsightPanel } from '@/components/DealInsightPanel';
+import { parseDrill } from '@/components/DrillPanel';
+import type { DealFilter } from '@/lib/sparkscope/deal-links';
 import { getDealInsight } from '@/lib/sparkscope/deal-insight';
 import { cleanSnippet } from '@/lib/sparkscope/snippet';
 import { FUND_SOURCE_KEYWORDS, MARKET_KEYWORD } from '@/lib/sparkscope/policy-classify';
@@ -972,7 +974,7 @@ function sourcesFromArticles(articles: { source: string; tone: string | null }[]
 }
 
 
-export default async function DashboardPage({ searchParams }: { searchParams: { from?: string; to?: string; company?: string; tab?: string; scope?: string; domain?: string; country?: string; exit?: string; ana?: string; sec?: string; pc?: string } }) {
+export default async function DashboardPage({ searchParams }: { searchParams: { from?: string; to?: string; company?: string; tab?: string; scope?: string; domain?: string; country?: string; exit?: string; ana?: string; sec?: string; pc?: string; dd?: string } }) {
   const tr = getT();
   const isEn = getLocale() === 'en';
   const locale: 'ko' | 'en' = isEn ? 'en' : 'ko';
@@ -1562,7 +1564,14 @@ export default async function DashboardPage({ searchParams }: { searchParams: { 
         const ana = searchParams.ana === 'fund' || searchParams.ana === 'match' ? searchParams.ana : 'round';
         const hrefFor = (a: string) => {
           const q = new URLSearchParams(Object.entries(searchParams).filter(([, v]) => typeof v === 'string') as [string, string][]);
-          q.set('ana', a); q.delete('sec'); q.delete('pc');
+          q.set('ana', a); q.delete('sec'); q.delete('pc'); q.delete('dd');
+          return `/dashboard?${q.toString()}`;
+        };
+        // 그래프를 누르면 그 아래 펼치기(?dd=조건 JSON). null이면 접기.
+        const drill = parseDrill(searchParams.dd);
+        const ddHref = (f: DealFilter | null) => {
+          const q = new URLSearchParams(Object.entries(searchParams).filter(([, v]) => typeof v === 'string') as [string, string][]);
+          q.set('ana', ana); if (f) q.set('dd', JSON.stringify(f)); else q.delete('dd');
           return `/dashboard?${q.toString()}`;
         };
         // 포폴 매칭 안에서 분야·회사 고르기 — 나머지 조건은 그대로 둔다.
@@ -1584,8 +1593,8 @@ export default async function DashboardPage({ searchParams }: { searchParams: { 
                 </Link>
               ))}
             </div>
-            <Suspense key={`${ana}|${searchParams.sec ?? ''}|${searchParams.pc ?? ''}`} fallback={<SectionSkeleton h="h-96" />}>
-              {ana === 'fund' ? <FundSection t={tr} /> : ana === 'match' ? <MatchSection t={tr} sec={searchParams.sec} pc={searchParams.pc} hrefFor={matchHref} /> : <DealSection t={tr} />}
+            <Suspense key={`${ana}|${searchParams.sec ?? ''}|${searchParams.pc ?? ''}|${searchParams.dd ?? ''}`} fallback={<SectionSkeleton h="h-96" />}>
+              {ana === 'fund' ? <FundSection t={tr} dd={drill} ddHref={ddHref} /> : ana === 'match' ? <MatchSection t={tr} sec={searchParams.sec} pc={searchParams.pc} hrefFor={matchHref} /> : <DealSection t={tr} dd={drill} ddHref={ddHref} />}
             </Suspense>
           </>
         );
@@ -1946,13 +1955,14 @@ function SectionSkeleton({ h }: { h: string }) {
 }
 
 // 투자·펀드 분석 패널 — 집계 실패해도 대시보드는 살린다(빈 상태로 보인다).
-async function FundSection({ t }: { t: any }) {
+type DrillProps = { t: any; dd: DealFilter | null; ddHref: (f: DealFilter | null) => string };
+async function FundSection({ t, dd, ddHref }: DrillProps) {
   const stats = await getFundStats(90).catch(e => { console.error('[dashboard] 펀드 분석 실패', e); return { days: 90, total: 0 } as any; });
-  return <FundAnalysis stats={stats} t={t} />;
+  return <FundAnalysis stats={stats} t={t} dd={dd} ddHref={ddHref} />;
 }
-async function DealSection({ t }: { t: any }) {
+async function DealSection({ t, dd, ddHref }: DrillProps) {
   const stats = await getDealStats(90).catch(e => { console.error('[dashboard] 투자 유치 분석 실패', e); return { days: 90, total: 0 } as any; });
-  return <DealAnalysis stats={stats} t={t} />;
+  return <DealAnalysis stats={stats} t={t} dd={dd} ddHref={ddHref} />;
 }
 // 맨 위 3줄 요약 — 크론이 만든 AI 요약을 읽기만. 없으면 집계 숫자로 기본 요약(출처 표시를 다르게).
 async function InsightSection({ t }: { t: any }) {

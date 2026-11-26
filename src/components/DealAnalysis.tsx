@@ -8,11 +8,14 @@ const STAGE_COLOR: Record<string, string> = {
   SEED: '#ddd6fe', PRE_A: '#c4b5fd', A: '#a78bfa', B: '#8b5cf6', 'C+': '#6d28d9', ETC: '#a8a29e',
 };
 import { Card, Kpi, krw, type T } from './FundAnalysis';
-import { dealsHref } from '@/lib/sparkscope/deal-links';
-const H = (f: Parameters<typeof dealsHref>[1] = {}) => dealsHref('deals', f);
+import { dealsHref, type DealFilter } from '@/lib/sparkscope/deal-links';
+import { DealDrill, sameDrill } from './DrillPanel';
 
 
-export function DealAnalysis({ stats, t }: { stats: DealStats; t: T }) {
+export function DealAnalysis({ stats, t, dd, ddHref }: { stats: DealStats; t: T; dd?: DealFilter | null; ddHref?: (f: DealFilter | null) => string }) {
+  // 누르면 아래에 펼친다(ddHref가 있을 때). 같은 걸 다시 누르면 접는다. 없으면 예전처럼 전체 표로.
+  const H = (f: DealFilter = {}) => (ddHref ? (sameDrill(dd, f) ? ddHref(null) : `${ddHref(f)}#drill`) : dealsHref('deals', f));
+  const full = dealsHref('deals');
   if (stats.total === 0) {
     return (
       <div className="mb-4 rounded-2xl border border-spark-border bg-white p-5 text-[13px] text-spark-muted">
@@ -44,7 +47,7 @@ export function DealAnalysis({ stats, t }: { stats: DealStats; t: T }) {
       </div>
 
       <div className="mt-2.5 grid grid-cols-1 gap-2.5 lg:grid-cols-2">
-        <Card href={H()} title={t('분야별 딜 — 돈이 가는 곳')} hint={t('막대 길이 = 건수 · 색 = 단계 · 마우스 올리면 금액')}>
+        <Card href={full} title={t('분야별 딜 — 돈이 가는 곳')} hint={t('막대 길이 = 건수 · 색 = 단계 · 마우스 올리면 금액')}>
           <div className="mb-2.5 flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-spark-muted">
             {STAGES.map(s => (
               <span key={s.id} className="inline-flex items-center gap-1">
@@ -92,6 +95,7 @@ export function DealAnalysis({ stats, t }: { stats: DealStats; t: T }) {
         </Card>
       </div>
 
+      {dd && ddHref && <DealDrill stats={stats} f={dd} close={ddHref(null)} t={t} />}
     </section>
   );
 }
