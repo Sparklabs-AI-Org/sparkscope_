@@ -3,9 +3,9 @@
 import Link from 'next/link';
 import type { FundStats, FundStage } from '@/lib/sparkscope/fund-stats';
 
-type T = (s: string, v?: Record<string, string | number>) => string;
+export type T = (s: string, v?: Record<string, string | number>) => string;
 
-function krw(v: number, t: T): string {
+export function krw(v: number, t: T): string {
   if (v >= 1e12) return t('{n}조', { n: (v / 1e12).toFixed(v >= 1e13 ? 0 : 1).replace(/\.0$/, '') });
   if (v >= 1e8) return t('{n}억', { n: Math.round(v / 1e8).toLocaleString() });
   return v > 0 ? t('{n}억', { n: (v / 1e8).toFixed(1) }) : '—';
@@ -17,7 +17,7 @@ const STAGE: Record<FundStage, { label: string; cls: string; bar: string }> = {
   ANNOUNCED: { label: '출자 공고', cls: 'bg-amber-50 text-amber-700 border-amber-200', bar: 'bg-amber-400' },
 };
 
-function Kpi({ label, value, sub }: { label: string; value: string; sub?: string }) {
+export function Kpi({ label, value, sub }: { label: string; value: string; sub?: string }) {
   return (
     <div className="rounded-xl border border-spark-border bg-white px-4 py-3">
       <div className="text-[11.5px] font-semibold text-spark-muted">{label}</div>
@@ -27,7 +27,7 @@ function Kpi({ label, value, sub }: { label: string; value: string; sub?: string
   );
 }
 
-function Card({ title, hint, children }: { title: string; hint?: string; children: React.ReactNode }) {
+export function Card({ title, hint, children }: { title: string; hint?: string; children: React.ReactNode }) {
   return (
     <div className="rounded-xl border border-spark-border bg-white p-4">
       <div className="mb-3 flex items-baseline gap-2">
@@ -39,7 +39,7 @@ function Card({ title, hint, children }: { title: string; hint?: string; childre
   );
 }
 
-function HBars({ items, color }: { items: { label: string; value: number; right: string }[]; color: string }) {
+export function HBars({ items, color }: { items: { label: string; value: number; right: string }[]; color: string }) {
   const max = Math.max(1, ...items.map(i => i.value));
   return (
     <ul className="space-y-1.5">

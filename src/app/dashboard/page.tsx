@@ -6,6 +6,8 @@ import { articleTitle } from '@/lib/sparkscope/article-title';
 import { CuratedFeed, IndustryCuratedList } from '@/components/CuratedFeed';
 import { FundAnalysis } from '@/components/FundAnalysis';
 import { getFundStats } from '@/lib/sparkscope/fund-stats';
+import { DealAnalysis } from '@/components/DealAnalysis';
+import { getDealStats } from '@/lib/sparkscope/deal-stats';
 import { cleanSnippet } from '@/lib/sparkscope/snippet';
 import { FUND_SOURCE_KEYWORDS, MARKET_KEYWORD } from '@/lib/sparkscope/policy-classify';
 import { prisma } from '@/lib/prisma';
@@ -963,7 +965,7 @@ function sourcesFromArticles(articles: { source: string; tone: string | null }[]
 }
 
 
-export default async function DashboardPage({ searchParams }: { searchParams: { from?: string; to?: string; company?: string; tab?: string; scope?: string; domain?: string; country?: string; exit?: string } }) {
+export default async function DashboardPage({ searchParams }: { searchParams: { from?: string; to?: string; company?: string; tab?: string; scope?: string; domain?: string; country?: string; exit?: string; ana?: string } }) {
   const tr = getT();
   const isEn = getLocale() === 'en';
   const locale: 'ko' | 'en' = isEn ? 'en' : 'ko';
@@ -1546,8 +1548,29 @@ export default async function DashboardPage({ searchParams }: { searchParams: { 
           오늘치가 아직 없으면(크론은 평일 10:10) 가장 최근 발행일을 대신 보여준다 —
           빈 칸을 띄우면 "수집이 멈췄나" 하고 헷갈린다. 날짜를 머리말에 적어 구분한다. */}
       {/* 정책·지원사업 / 투자·펀드 — 조회 기간의 기사를 날짜별로. 원본 표는 2026-10-28 뺐다(소윤). */}
-      {/* 펀드 결성 분석 — 기사 목록 위에 몇 개·얼마·어느 하우스·어디 돈인지 한눈에(2026-11-26 소윤). 사내 화면만. */}
-      {tab === 'fund' && !portfolioView && <FundAnalysis stats={await getFundStats(90).catch(() => ({ days: 90, total: 0 } as any))} t={tr} />}
+      {/* 투자·펀드 분석 — 기사 목록 위에 투자 유치(어느 단계·분야, 누가 쓰나) / 펀드 결성(얼마·어느 하우스·어디 돈)을
+          한눈에(2026-11-26 소윤). ?ana=fund 로 전환, 기본은 투자 유치. 사내 화면만. */}
+      {tab === 'fund' && !portfolioView && (() => {
+        const ana = searchParams.ana === 'fund' ? 'fund' : 'round';
+        const hrefFor = (a: string) => {
+          const q = new URLSearchParams(Object.entries(searchParams).filter(([, v]) => typeof v === 'string') as [string, string][]);
+          q.set('ana', a);
+          return `/dashboard?${q.toString()}`;
+        };
+        return (
+          <>
+            <div className="mb-2 flex gap-1.5">
+              {[{ id: 'round', label: '📈 투자 유치 분석' }, { id: 'fund', label: '📊 펀드 결성 분석' }].map(x => (
+                <Link key={x.id} href={hrefFor(x.id)} scroll={false}
+                  className={`rounded-lg border px-3 py-1.5 text-[13px] font-bold transition-colors ${ana === x.id ? 'border-spark-purple bg-spark-purple text-white' : 'border-spark-border bg-white text-spark-ink-soft hover:border-spark-purple/40 hover:text-spark-purple'}`}>
+                  {tr(x.label)}
+                </Link>
+              ))}
+            </div>
+            {ana === 'fund' ? <FundSection t={tr} /> : <DealSection t={tr} />}
+          </>
+        );
+      })()}
       {(tab === 'policy' || tab === 'fund') && (
         <CuratedFeed kind={tab} items={data.policyArticles as any} roundups={data.weeklyRoundups as any} rangeLabel={range.label} />
       )}
@@ -1896,4 +1919,14 @@ function ToneRow({ label, count, total, color }: { label: string; count: number;
       <div className="w-10 text-right font-semibold">{count}</div>
     </div>
   );
+}
+
+// 투자·펀드 분석 패널 — 집계 실패해도 대시보드는 살린다(빈 상태로 보인다).
+async function FundSection({ t }: { t: any }) {
+  const stats = await getFundStats(90).catch(e => { console.error('[dashboard] 펀드 분석 실패', e); return { days: 90, total: 0 } as any; });
+  return <FundAnalysis stats={stats} t={t} />;
+}
+async function DealSection({ t }: { t: any }) {
+  const stats = await getDealStats(90).catch(e => { console.error('[dashboard] 투자 유치 분석 실패', e); return { days: 90, total: 0 } as any; });
+  return <DealAnalysis stats={stats} t={t} />;
 }
