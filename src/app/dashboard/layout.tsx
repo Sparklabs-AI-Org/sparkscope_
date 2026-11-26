@@ -7,6 +7,8 @@ import { countPending, canApproveAccess } from '@/lib/sparkscope/access-request'
 import { SignOutButton } from '@/components/SignOutButton';
 import { ScrollTopButton } from '@/components/ScrollTopButton';
 import { NavProgress } from '@/components/NavProgress';
+import { ChatPopup } from '@/components/ChatPopup';
+import { isInternal } from '@/lib/roles';
 import { Suspense } from 'react';
 import { DashboardTutorial } from '@/components/DashboardTutorial';
 import { LanguageSwitcher } from '@/components/LanguageSwitcher';
@@ -112,6 +114,8 @@ export default async function DashboardLayout({ children }: { children: React.Re
           기사 제목을 따라 읽기 어려워진다. */}
       <main className="max-w-[1800px] mx-auto px-6 sm:px-8 py-7 animate-rise">{children}</main>
       <Suspense fallback={null}><NavProgress /></Suspense>
+      {/* 챗봇은 사내 계정만 — 에이전트가 내부 판단(ourTake·위기)까지 본다 */}
+      {isInternal(user.role) && <Suspense fallback={null}><ChatPopup /></Suspense>}
       <ScrollTopButton />
     </div>
   );

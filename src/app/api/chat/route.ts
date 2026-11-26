@@ -139,8 +139,10 @@ export async function POST(req: Request) {
           return;
         }
 
+        // 대시보드 팝업에서 오면 지금 보는 화면을 앞에 붙인다 — "이거 왜 그래?" 같은 질문을 알아듣게(2026-11-26).
+        const context = typeof body?.context === 'string' ? body.context.trim().slice(0, 120) : '';
         const { summary, result, resultKind, digestHtml, followUps, title, steps, usage } = await runChatAgent({
-          question,
+          question: context ? `[사용자가 지금 보는 화면: ${context}]\n${question}` : question,
           history,
           period,
           scopes,

@@ -25,6 +25,10 @@ import {
 } from './chat-ops';
 import { proposeKeywordFix, listPendingSuggestions } from './chat-actions';
 import { runLiveSearch } from './chat-live';
+import { getDealStats, investorKey } from './deal-stats';
+import { getFundStats } from './fund-stats';
+import { getMatchStats } from './match-stats';
+import { getDealInsight } from './deal-insight';
 import {
   getCompetitorFundSummaries,
   getSparkLabsFundSummary,
@@ -488,6 +492,24 @@ const TOOLS: ChatCompletionTool[] = [
           },
         },
         required: ['competitors'],
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'deal_fund_market',
+      description:
+        '국내 투자 유치(딜)·펀드 결성 DB와 대시보드 투자·펀드 탭의 AI 요약을 돌려준다(최근 90일, 2026-11 수집 시작). ' +
+        '"요즘 어느 분야에 돈이 몰려?", "바이오는 왜 핫해?", "BNH는 최근 어디에 투자했어?", "새로 결성된 펀드 뭐 있어?", ' +
+        '"AI 포폴사랑 맞는 VC는?", "그 요약에서 말한 돈의 이동이 무슨 뜻이야?" 같은 투자 시장·펀드·매칭 질문에 먼저 써라. ' +
+        '분야(sector)나 하우스(house)를 주면 그 딜만 추려 준다. 딜 금액은 기사에 공개된 것만 있다.',
+      parameters: {
+        type: 'object',
+        properties: {
+          sector: { type: 'string', description: '분야 묶음. 예: 바이오·헬스, 반도체, AI, 커머스·소비재, 콘텐츠·게임, SW·SaaS, 로봇, 모빌리티·배터리' },
+          house: { type: 'string', description: '투자사(VC) 이름. 예: BNH인베스트먼트' },
+        },
       },
     },
   },
@@ -1174,6 +1196,30 @@ export async function runChatAgent(opts: {
             steps.push(`live(${keyword}) → ${r.total}건`);
             if (!uiResult || r.total > 0) { uiResult = r; resultKind = 'live'; }
             payload = compactResult(r);
+            break;
+          }
+          case 'deal_fund_market': {
+            const sector = typeof args.sector === 'string' ? args.sector.trim() : '';
+            const house = typeof args.house === 'string' ? args.house.trim() : '';
+            const [deal, fund, match, ins] = await Promise.all([getDealStats(90), getFundStats(90), getMatchStats({ days: 90 }), getDealInsight().catch(() => null)]);
+            const hk = house ? investorKey(house) : '';
+            const rows = deal.rows.filter(r => (!sector || r.sector === sector) && (!hk || r.investors.some(i => investorKey(i.name) === hk)));
+            steps.push(`딜·펀드DB → 딜 ${rows.length}건${sector ? ` (${sector})` : ''}${house ? ` (${house})` : ''}`);
+            payload = {
+              note: '최근 90일 · 딜 기록은 2026-11-24부터라 표본이 작다. 금액은 기사 공개분만(억원).',
+              aiSummary: ins ? { computedAt: ins.computedAt, summary: ins.insight.summary, flows: ins.insight.flows, why: ins.insight.why,
+                insights: ins.insight.insights, actions: ins.insight.actions,
+                sources: (ins.insight.sources ?? []).map(s => ({ n: s.n, title: s.title, source: s.source, link: s.link })) } : null,
+              totals: { deals: deal.total, disclosedSumEok: Math.round(deal.sumKrw / 1e8), medianEok: deal.medianKrw ? Math.round(deal.medianKrw / 1e8) : null, funds: fund.total, fundsByStage: fund.byStage },
+              sectors: deal.matrix.map(m => ({ sector: m.sector, deals: m.total, byStage: Object.fromEntries(Object.entries(m.cells).map(([k, c]) => [k, c.count])) })),
+              activeHouses: deal.investors.slice(0, 10).map(i => ({ name: i.name, deals: i.deals, leads: i.leads, topStage: i.topStage, topSector: i.topSector })),
+              coInvestPairs: deal.pairs,
+              deals: rows.slice(0, 25).map(r => ({ date: r.date, company: r.company, portfolio: r.portfolio, sector: r.sector, stage: r.stage, round: r.round,
+                amountEok: r.amountKrw ? Math.round(r.amountKrw / 1e8) : null, investors: r.investors.map(i => `${i.name}${i.role === 'LEAD' ? '(리드)' : ''}`), link: r.link })),
+              funds: fund.rows.slice(0, 15).map(f => ({ date: f.date, name: f.name, stage: f.stage, gps: f.gps, lps: f.lps.slice(0, 6), sectors: f.sectors, sizeEok: f.sizeKrw ? Math.round(f.sizeKrw / 1e8) : null, link: f.link })),
+              newFundsThisWeek: match.newFunds,
+              portfolioBySector: match.buckets,
+            };
             break;
           }
           case 'fund_info': {
