@@ -91,14 +91,20 @@ export function DealInsightPanel({ data, fallback, t }: {
                     {insightHref(x.link) ? <Link href={insightHref(x.link)!} className="text-[13px] font-bold text-spark-ink hover:text-spark-purple">{x.topic} ›</Link>
                       : <div className="text-[13px] font-bold text-spark-ink">{x.topic}</div>}
                     <div className="mt-0.5 text-[12px] leading-snug text-spark-ink-soft"><Cite text={x.reason} sources={srcs} /></div>
-                    <ul className="mt-1.5 space-y-0.5">
-                      {x.sources.map(n => srcs.find(s => s.n === n)).filter(Boolean).map(s => (
-                        <li key={s!.n} className="truncate text-[11px]">
-                          <a href={s!.link} target="_blank" rel="noopener noreferrer" className="text-spark-purple hover:underline">[{s!.n}] {s!.title}</a>
-                          <span className="ml-1 text-spark-muted">{s!.source} · {s!.date.slice(5)}</span>
-                        </li>
-                      ))}
-                    </ul>
+                    <details className="group/src mt-1.5">
+                      <summary className="inline-flex cursor-pointer list-none items-center gap-1 rounded-md border border-spark-border px-2 py-0.5 text-[11px] font-semibold text-spark-muted hover:border-spark-purple/40 hover:text-spark-purple [&::-webkit-details-marker]:hidden">
+                        📰 {t('기사 보기 {n}', { n: x.sources.length })}
+                        <span className="transition-transform group-open/src:rotate-180">▾</span>
+                      </summary>
+                      <ul className="mt-1.5 space-y-0.5 border-l-2 border-spark-purple/20 pl-2">
+                        {x.sources.map(n => srcs.find(s => s.n === n)).filter(Boolean).map(s => (
+                          <li key={s!.n} className="truncate text-[11px]">
+                            <a href={s!.link} target="_blank" rel="noopener noreferrer" className="text-spark-purple hover:underline">[{s!.n}] {s!.title}</a>
+                            <span className="ml-1 text-spark-muted">{s!.source} · {s!.date.slice(5)}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </details>
                   </li>
                 ))}
               </ul>
