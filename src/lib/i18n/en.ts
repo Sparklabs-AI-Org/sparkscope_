@@ -1593,6 +1593,7 @@ export const EN: Record<string, string> = {
   '📈 투자 유치 분석': '📈 Funding round analysis',
   '📊 펀드 결성 분석': '📊 Fund formation analysis',
   '🤝 포폴 매칭': '🤝 Portfolio matching',
+  '투자·펀드 분석': 'Deals & funds analysis',
   '요즘 돈의 흐름 — 한눈에': 'Where the money is going — at a glance',
   'AI 요약 · {d} 기준': 'AI summary · as of {d}',
   '기본 요약 · AI 분석 전': 'Basic summary · before AI analysis',

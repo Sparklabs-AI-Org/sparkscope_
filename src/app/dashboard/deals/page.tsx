@@ -136,7 +136,7 @@ export default async function DealsPage({ searchParams }: { searchParams: { tab?
             {t('투자 전문 매체와 수집 기사에서 AI가 뽑은 국내 투자 유치·펀드 결성 소식입니다. 값마다 근거 기사가 붙어 있습니다.')}
           </p>
         </div>
-        <Link href="/dashboard" className="rounded-lg border border-gray-200 px-3 py-1.5 text-sm font-semibold text-gray-600 hover:bg-gray-50">← {t('대시보드')}</Link>
+        <Link href={`/dashboard?tab=fund&ana=${tab === 'funds' ? 'fund' : 'round'}`} className="rounded-lg border border-gray-200 px-3 py-1.5 text-sm font-semibold text-gray-600 hover:bg-gray-50">← {t('투자·펀드 분석')}</Link>
       </div>
 
       <div className="flex flex-wrap items-center gap-2 mb-4">
