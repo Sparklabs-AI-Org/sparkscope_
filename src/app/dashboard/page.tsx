@@ -10,6 +10,8 @@ import { DealAnalysis } from '@/components/DealAnalysis';
 import { getDealStats } from '@/lib/sparkscope/deal-stats';
 import { getMatchStats } from '@/lib/sparkscope/match-stats';
 import { MatchAnalysis } from '@/components/MatchAnalysis';
+import { DealInsightPanel } from '@/components/DealInsightPanel';
+import { getDealInsight } from '@/lib/sparkscope/deal-insight';
 import { cleanSnippet } from '@/lib/sparkscope/snippet';
 import { FUND_SOURCE_KEYWORDS, MARKET_KEYWORD } from '@/lib/sparkscope/policy-classify';
 import { prisma } from '@/lib/prisma';
@@ -1568,6 +1570,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: { 
         };
         return (
           <>
+            <InsightSection t={tr} />
             <div className="mb-2 flex gap-1.5">
               {[{ id: 'round', label: '📈 투자 유치 분석' }, { id: 'fund', label: '📊 펀드 결성 분석' }, { id: 'match', label: '🤝 포폴 매칭' }].map(x => (
                 <Link key={x.id} href={hrefFor(x.id)} scroll={false}
@@ -1938,6 +1941,20 @@ async function FundSection({ t }: { t: any }) {
 async function DealSection({ t }: { t: any }) {
   const stats = await getDealStats(90).catch(e => { console.error('[dashboard] 투자 유치 분석 실패', e); return { days: 90, total: 0 } as any; });
   return <DealAnalysis stats={stats} t={t} />;
+}
+// 맨 위 3줄 요약 — 크론이 만든 AI 요약을 읽기만. 없으면 집계 숫자로 기본 요약(출처 표시를 다르게).
+async function InsightSection({ t }: { t: any }) {
+  const data = await getDealInsight().catch(() => null);
+  let fallback: string[] = [];
+  if (!data) {
+    const [d, f] = await Promise.all([getDealStats(90).catch(() => null), getFundStats(90).catch(() => null)]);
+    const topSec = d?.matrix.find(m => m.sector !== '미상');
+    if (d && d.total) fallback.push(t('최근 90일 국내 딜 {n}건 — 가장 많은 분야는 {s}({c}건).', { n: d.total, s: t(topSec?.sector ?? '—'), c: topSec?.total ?? 0 }));
+    if (d?.investors[0]) fallback.push(t('가장 활발한 하우스는 {h}({n}건 참여).', { h: d.investors[0].name, n: d.investors[0].deals }));
+    if (f && f.total) fallback.push(t('펀드 소식 {n}개 — 결성 완료 {c}, GP 선정 {g}, 출자 공고 {a}.', { n: f.total, c: f.byStage.CLOSED, g: f.byStage.GP_SELECTED, a: f.byStage.ANNOUNCED }));
+    if (!fallback.length) return null;
+  }
+  return <DealInsightPanel data={data} fallback={fallback} t={t} />;
 }
 async function MatchSection({ t, sec, pc, hrefFor }: { t: any; sec?: string; pc?: string; hrefFor: (p: { sec?: string; pc?: string }) => string }) {
   const stats = await getMatchStats({ days: 90, bucket: sec, companyId: pc })
