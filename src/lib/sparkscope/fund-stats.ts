@@ -38,10 +38,12 @@ export interface FundStats {
   closedSumKrw: number;
   targetSumKrw: number;      // 공고·GP선정 단계 목표액 합(앞으로 만들어질 돈)
   sizedCount: number;
-  weekly: { week: string; closed: number; pipeline: number; count: number }[];
+  weekly: { week: string; closed: number; pipeline: number; count: number; n: Record<FundStage, number> }[];
+  /** 하루 단위 건수(단계별) — 쌓인 기간이 짧을 때 그래프가 쓴다. */
+  daily: { day: string; n: Record<FundStage, number> }[];
   topGps: { name: string; count: number; sumKrw: number }[];
   lpMix: { id: string; label: string; funds: number }[];
-  topSectors: { name: string; count: number }[];
+  topSectors: { name: string; count: number; n: Record<FundStage, number> }[];
   rows: FundRow[];
 }
 
@@ -97,10 +99,12 @@ export async function getFundStats(days = 90): Promise<FundStats> {
 
   const byStage: Record<FundStage, number> = { ANNOUNCED: 0, GP_SELECTED: 0, CLOSED: 0 };
   let closedSumKrw = 0, targetSumKrw = 0, sizedCount = 0;
-  const weekMap = new Map<string, { closed: number; pipeline: number; count: number }>();
+  const zero = (): Record<FundStage, number> => ({ ANNOUNCED: 0, GP_SELECTED: 0, CLOSED: 0 });
+  const weekMap = new Map<string, { closed: number; pipeline: number; count: number; n: Record<FundStage, number> }>();
+  const dayMap = new Map<string, Record<FundStage, number>>();
   const gpMap = new Map<string, { count: number; sumKrw: number }>();
   const lpMap = new Map<string, { label: string; funds: number }>();
-  const secMap = new Map<string, number>();
+  const secMap = new Map<string, { count: number; n: Record<FundStage, number> }>();
 
   for (const r of rows) {
     byStage[r.stage] = (byStage[r.stage] ?? 0) + 1;
@@ -109,8 +113,9 @@ export async function getFundStats(days = 90): Promise<FundStats> {
     if (r.stage === 'CLOSED' && !r.sizeIsTarget) closedSumKrw += size; else targetSumKrw += size;
 
     const w = mondayOf(r.date);
-    const wk = weekMap.get(w) ?? { closed: 0, pipeline: 0, count: 0 };
-    wk.count++;
+    const wk = weekMap.get(w) ?? { closed: 0, pipeline: 0, count: 0, n: zero() };
+    wk.count++; wk.n[r.stage]++;
+    const dn = dayMap.get(r.date) ?? zero(); dn[r.stage]++; dayMap.set(r.date, dn);
     if (r.stage === 'CLOSED' && !r.sizeIsTarget) wk.closed += size; else wk.pipeline += size;
     weekMap.set(w, wk);
 
@@ -128,7 +133,7 @@ export async function getFundStats(days = 90): Promise<FundStats> {
       const e = lpMap.get(g.id) ?? { label: g.label, funds: 0 };
       e.funds++; lpMap.set(g.id, e);
     }
-    for (const s of new Set(r.sectors.map(normSector))) secMap.set(s, (secMap.get(s) ?? 0) + 1);
+    for (const s of new Set(r.sectors.map(normSector))) { const e = secMap.get(s) ?? { count: 0, n: zero() }; e.count++; e.n[r.stage]++; secMap.set(s, e); }
   }
 
   // 빈 주도 0으로 채워 그래프가 끊기지 않게.
@@ -136,7 +141,12 @@ export async function getFundStats(days = 90): Promise<FundStats> {
   const end = mondayOf(kstDay(new Date()));
   for (let d = new Date(`${mondayOf(kstDay(since))}T00:00:00Z`); d.toISOString().slice(0, 10) <= end; d.setUTCDate(d.getUTCDate() + 7)) {
     const k = d.toISOString().slice(0, 10);
-    weekly.push({ week: k, ...(weekMap.get(k) ?? { closed: 0, pipeline: 0, count: 0 }) });
+    weekly.push({ week: k, ...(weekMap.get(k) ?? { closed: 0, pipeline: 0, count: 0, n: zero() }) });
+  }
+  const daily: FundStats['daily'] = [];
+  const firstDay = [...dayMap.keys()].sort()[0];
+  if (firstDay) for (let d = new Date(`${firstDay}T00:00:00Z`); d.toISOString().slice(0, 10) <= kstDay(new Date()); d.setUTCDate(d.getUTCDate() + 1)) {
+    const k = d.toISOString().slice(0, 10); daily.push({ day: k, n: dayMap.get(k) ?? zero() });
   }
 
   return {
@@ -147,9 +157,10 @@ export async function getFundStats(days = 90): Promise<FundStats> {
     targetSumKrw,
     sizedCount,
     weekly,
+    daily,
     topGps: [...gpMap].map(([name, v]) => ({ name, ...v })).sort((a, b) => b.count - a.count || b.sumKrw - a.sumKrw).slice(0, 8),
     lpMix: [...lpMap].map(([id, v]) => ({ id, ...v })).sort((a, b) => b.funds - a.funds),
-    topSectors: [...secMap].map(([name, count]) => ({ name, count })).sort((a, b) => b.count - a.count).slice(0, 10),
+    topSectors: [...secMap].map(([name, v]) => ({ name, ...v })).sort((a, b) => b.count - a.count).slice(0, 10),
     rows,
   };
 }

@@ -7,7 +7,7 @@ import { STAGES, type DealStats } from '@/lib/sparkscope/deal-stats';
 const STAGE_COLOR: Record<string, string> = {
   SEED: '#ddd6fe', PRE_A: '#c4b5fd', A: '#a78bfa', B: '#8b5cf6', 'C+': '#6d28d9', ETC: '#a8a29e',
 };
-import { Card, Kpi, krw, type T } from './FundAnalysis';
+import { Card, Kpi, krw, TrendBars, type T } from './FundAnalysis';
 
 const ROLE: Record<string, string> = { LEAD: '리드', NEW: '신규', FOLLOW: '후속', EXISTING: '기존' };
 
@@ -20,7 +20,6 @@ export function DealAnalysis({ stats, t }: { stats: DealStats; t: T }) {
     );
   }
   const maxRow = Math.max(1, ...stats.matrix.map(m => m.total));
-  const maxWeek = Math.max(1, ...stats.weekly.map(w => w.count));
   // 금액은 1억~수천억이라 로그 눈금 — 큰 딜 하나가 나머지 막대를 왼쪽 끝으로 밀어붙이지 않게.
   const maxAmt = Math.max(1, ...stats.stageAmounts.map(s => s.max));
   const pos = (v: number) => (Math.log10(v / 1e8 + 1) / Math.log10(maxAmt / 1e8 + 1)) * 100;
@@ -148,18 +147,10 @@ export function DealAnalysis({ stats, t }: { stats: DealStats; t: T }) {
           <p className="mt-3 text-[11px] text-spark-muted">{t('리드 한 곳을 잡으면 따라 들어올 가능성이 큰 곳입니다.')}</p>
         </Card>
 
-        <Card title={t('주별 딜 건수')} hint={t('마우스 올리면 공개 금액')}>
-          <div className="flex h-32 items-end gap-1">
-            {stats.weekly.map(w => (
-              <div key={w.week} className="flex h-full flex-1 flex-col items-center justify-end gap-0.5" title={`${w.week} · ${w.count}${t('건')} · ${krw(w.sumKrw, t)}`}>
-                {w.count > 0 && <span className="text-[10px] tabular-nums text-spark-muted">{w.count}</span>}
-                <div className="w-full rounded-t bg-spark-purple/80" style={{ height: `${w.count ? Math.max(4, (w.count / maxWeek) * 100) : 0}%` }} />
-              </div>
-            ))}
-          </div>
-          <div className="mt-1 flex justify-between text-[10px] text-spark-muted">
-            <span>{stats.weekly[0]?.week.slice(5)}</span><span>{stats.weekly[stats.weekly.length - 1]?.week.slice(5)}</span>
-          </div>
+        <Card title={t('딜 추이')} hint={t('마우스 올리면 공개 금액')}>
+          <TrendBars t={t}
+            weekly={stats.weekly.map(w => ({ key: w.week, segs: [{ v: w.count, color: '#7c3aed' }], title: `${w.week} · ${w.count}${t('건')} · ${krw(w.sumKrw, t)}` }))}
+            daily={(stats.daily ?? []).map(d => ({ key: d.day, segs: [{ v: d.count, color: '#7c3aed' }], title: `${d.day} · ${d.count}${t('건')} · ${krw(d.sumKrw, t)}` }))} />
         </Card>
       </div>
 

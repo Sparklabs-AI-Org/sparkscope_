@@ -56,6 +56,44 @@ export function HBars({ items, color }: { items: { label: string; value: number;
   );
 }
 
+/** 추이 막대 — 쌓인 기간이 4주 미만이면 일별, 넘으면 주별. 앞쪽 빈 기간은 잘라낸다(2026-11-26: 수집 시작 전 12주가 0이라 막대가 오른쪽 끝에 몰렸다). */
+export interface TrendPoint { key: string; segs: { v: number; color: string }[]; title: string }
+export function TrendBars({ weekly, daily, t }: { weekly: TrendPoint[]; daily: TrendPoint[]; t: T }) {
+  const sum = (p: TrendPoint) => p.segs.reduce((a, x) => a + x.v, 0);
+  const firstW = weekly.findIndex(p => sum(p) > 0);
+  const weeks = firstW < 0 ? [] : weekly.slice(firstW);
+  const byDay = weeks.length < 4;
+  const pts = byDay ? daily.slice(-31) : weeks;
+  if (!pts.length) return <p className="text-[12px] text-spark-muted">{t('아직 쌓인 기록이 없습니다.')}</p>;
+  const max = Math.max(1, ...pts.map(sum));
+  const showEach = pts.length <= 16;
+  return (
+    <div>
+      <div className="mb-1 text-[10.5px] text-spark-muted">{byDay ? t('일별 · 기록이 4주 쌓이면 주별로 바뀝니다') : t('주별')}</div>
+      <div className="flex h-32 items-end justify-center gap-1.5">
+        {pts.map(p => {
+          const total = sum(p);
+          return (
+            <div key={p.key} className="flex h-full max-w-[2.75rem] flex-1 flex-col items-center justify-end gap-0.5" title={p.title}>
+              {total > 0 && <span className="text-[10px] tabular-nums text-spark-muted">{total}</span>}
+              <div className="flex w-full flex-col-reverse overflow-hidden rounded-t" style={{ height: `${total ? Math.max(4, (total / max) * 100) : 0}%` }}>
+                {p.segs.map((x, i) => x.v > 0 && <div key={i} style={{ height: `${(x.v / total) * 100}%`, background: x.color }} />)}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+      <div className={`mt-1 flex gap-1.5 text-[10px] tabular-nums text-spark-muted ${showEach ? 'justify-center' : 'justify-between'}`}>
+        {showEach ? pts.map(p => <span key={p.key} className="max-w-[2.75rem] flex-1 text-center">{p.key.slice(5)}</span>)
+          : <><span>{pts[0]!.key.slice(5)}</span><span>{pts[pts.length - 1]!.key.slice(5)}</span></>}
+      </div>
+    </div>
+  );
+}
+
+const STAGE_HEX: Record<FundStage, string> = { CLOSED: '#10b981', GP_SELECTED: '#0ea5e9', ANNOUNCED: '#fbbf24' };
+const ORDER: FundStage[] = ['CLOSED', 'GP_SELECTED', 'ANNOUNCED'];
+
 export function FundAnalysis({ stats, t }: { stats: FundStats; t: T }) {
   if (stats.total === 0) {
     return (
@@ -64,8 +102,13 @@ export function FundAnalysis({ stats, t }: { stats: FundStats; t: T }) {
       </div>
     );
   }
-  const maxWeek = Math.max(1, ...stats.weekly.map(w => w.closed + w.pipeline));
-  const maxCount = Math.max(1, ...stats.weekly.map(w => w.count));
+  const stageTitle = (k: string, n: Record<FundStage, number>) => `${k} · ${ORDER.filter(s => n[s]).map(s => `${t(STAGE[s].label)} ${n[s]}`).join(' · ')}`;
+  const legend = (
+    <div className="mb-2 flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-spark-muted">
+      {ORDER.map(s => <span key={s} className="inline-flex items-center gap-1"><span className="h-2.5 w-2.5 rounded-sm" style={{ background: STAGE_HEX[s] }} />{t(STAGE[s].label)}</span>)}
+    </div>
+  );
+  const maxSec = Math.max(1, ...stats.topSectors.map(x => x.count));
   const sizedPct = Math.round((stats.sizedCount / stats.total) * 100);
 
   return (
@@ -86,28 +129,11 @@ export function FundAnalysis({ stats, t }: { stats: FundStats; t: T }) {
       </div>
 
       <div className="mt-2.5 grid grid-cols-1 gap-2.5 lg:grid-cols-2">
-        <Card title={t('주별 펀드 금액')} hint={t('막대 = 금액(초록 결성 · 회색 예정), 숫자 = 건수')}>
-          <div className="flex h-36 items-end gap-1">
-            {stats.weekly.map(w => {
-              const total = w.closed + w.pipeline;
-              const h = total > 0 ? Math.max(4, (total / maxWeek) * 100) : w.count > 0 ? Math.max(4, (w.count / maxCount) * 20) : 0;
-              const closedShare = total > 0 ? (w.closed / total) * 100 : 0;
-              return (
-                <div key={w.week} className="flex h-full flex-1 flex-col items-center justify-end gap-0.5"
-                  title={`${w.week} · ${w.count}${t('건')} · ${krw(total, t)}`}>
-                  {w.count > 0 && <span className="text-[10px] tabular-nums text-spark-muted">{w.count}</span>}
-                  <div className="flex w-full flex-col-reverse overflow-hidden rounded-t" style={{ height: `${h}%` }}>
-                    <div className="bg-emerald-500" style={{ height: `${closedShare}%` }} />
-                    <div className="flex-1 bg-gray-300" />
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-          <div className="mt-1 flex justify-between text-[10px] text-spark-muted">
-            <span>{stats.weekly[0]?.week.slice(5)}</span>
-            <span>{stats.weekly[stats.weekly.length - 1]?.week.slice(5)}</span>
-          </div>
+        <Card title={t('펀드 소식 추이')} hint={t('막대 = 펀드 수 · 색 = 단계 · 마우스 올리면 내역')}>
+          {legend}
+          <TrendBars t={t}
+            weekly={stats.weekly.map(w => ({ key: w.week, segs: ORDER.map(s => ({ v: w.n[s], color: STAGE_HEX[s] })), title: stageTitle(w.week, w.n) }))}
+            daily={stats.daily.map(d => ({ key: d.day, segs: ORDER.map(s => ({ v: d.n[s], color: STAGE_HEX[s] })), title: stageTitle(d.day, d.n) }))} />
         </Card>
 
         <Card title={t('하우스(GP) 순위')} hint={t('펀드 수 · 금액(공동 GP는 나눠 계산)')}>
@@ -124,15 +150,19 @@ export function FundAnalysis({ stats, t }: { stats: FundStats; t: T }) {
           ) : <p className="text-[12px] text-spark-muted">{t('LP가 적힌 기사가 아직 없습니다.')}</p>}
         </Card>
 
-        <Card title={t('투자 분야')} hint={t('펀드가 내건 주목적 분야')}>
+        <Card title={t('투자 분야')} hint={t('펀드가 내건 주목적 분야 · 막대 = 펀드 수, 색 = 단계')}>
           {stats.topSectors.length ? (
-            <div className="flex flex-wrap gap-1.5">
-              {stats.topSectors.map(s => (
-                <span key={s.name} className="rounded-lg border border-spark-border bg-white px-2.5 py-1 text-[12px] font-semibold text-spark-ink-soft">
-                  {s.name} <span className="tabular-nums text-spark-muted">{s.count}</span>
-                </span>
+            <ul className="space-y-1.5">
+              {stats.topSectors.map(x => (
+                <li key={x.name} className="grid grid-cols-[minmax(0,9rem)_1fr_2.5rem] items-center gap-2 text-[12px]">
+                  <span className="truncate font-semibold text-spark-ink-soft" title={x.name}>{x.name}</span>
+                  <span className="flex h-4 overflow-hidden rounded" style={{ width: `${Math.max(6, (x.count / maxSec) * 100)}%` }} title={stageTitle(x.name, x.n)}>
+                    {ORDER.map(s => x.n[s] > 0 && <span key={s} className="h-full border-r border-white/70 last:border-0" style={{ width: `${(x.n[s] / x.count) * 100}%`, background: STAGE_HEX[s] }} />)}
+                  </span>
+                  <span className="text-right font-bold tabular-nums text-spark-ink">{x.count}{t('개')}</span>
+                </li>
               ))}
-            </div>
+            </ul>
           ) : <p className="text-[12px] text-spark-muted">{t('분야가 적힌 기사가 아직 없습니다.')}</p>}
         </Card>
       </div>

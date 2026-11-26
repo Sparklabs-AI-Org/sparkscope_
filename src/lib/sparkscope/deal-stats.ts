@@ -53,6 +53,8 @@ export interface InvestorStat {
 export interface DealStats {
   days: number; total: number; sized: number; sumKrw: number; medianKrw: number | null; portfolioDeals: number;
   weekly: { week: string; count: number; sumKrw: number }[];
+  /** 하루 단위 — 쌓인 기간이 짧을 때 그래프가 이걸 쓴다(첫 딜 날부터 오늘까지). */
+  daily: { day: string; count: number; sumKrw: number }[];
   matrix: { sector: string; cells: Record<string, { count: number; sumKrw: number }>; total: number }[];
   stageAmounts: { stage: string; label: string; n: number; min: number; median: number; max: number }[];
   investors: InvestorStat[];
@@ -116,6 +118,14 @@ export async function getDealStats(days = 90): Promise<DealStats> {
     weekly.push({ week: k, ...(wk.get(k) ?? { count: 0, sumKrw: 0 }) });
   }
 
+  const dd = new Map<string, { count: number; sumKrw: number }>();
+  for (const r of rows) { const e = dd.get(r.date) ?? { count: 0, sumKrw: 0 }; e.count++; e.sumKrw += r.amountKrw ?? 0; dd.set(r.date, e); }
+  const daily: DealStats['daily'] = [];
+  const firstDay = [...dd.keys()].sort()[0];
+  if (firstDay) for (let d = new Date(`${firstDay}T00:00:00Z`); d.toISOString().slice(0, 10) <= kstDay(new Date()); d.setUTCDate(d.getUTCDate() + 1)) {
+    const k = d.toISOString().slice(0, 10); daily.push({ day: k, ...(dd.get(k) ?? { count: 0, sumKrw: 0 }) });
+  }
+
   // 분야 × 단계
   const mx = new Map<string, Record<string, { count: number; sumKrw: number }>>();
   for (const r of rows) {
@@ -168,6 +178,6 @@ export async function getDealStats(days = 90): Promise<DealStats> {
   return {
     days, total: rows.length, sized: sizedAmounts.length, sumKrw: sizedAmounts.reduce((s, x) => s + x, 0),
     medianKrw: median(sizedAmounts), portfolioDeals: rows.filter(r => r.portfolio).length,
-    weekly, matrix, stageAmounts, investors, pairs, rows,
+    weekly, daily, matrix, stageAmounts, investors, pairs, rows,
   };
 }
