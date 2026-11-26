@@ -4,6 +4,7 @@ import Link from 'next/link';
 import type { DealInsight, InsightLink, InsightSource } from '@/lib/sparkscope/deal-insight';
 import { dealsHref } from '@/lib/sparkscope/deal-links';
 import type { T } from './FundAnalysis';
+import { InsightRefreshButton } from './InsightRefreshButton';
 
 const LINK_LABEL: Record<string, string> = { sector: '딜 표', stage: '딜 표', house: '딜 표', fundSector: '펀드 표', match: '포폴 매칭', newFunds: '새 펀드' };
 
@@ -51,9 +52,11 @@ export function DealInsightPanel({ data, fallback, t }: {
       <div className="mb-2 flex flex-wrap items-baseline gap-x-2.5 gap-y-1">
         <h2 className="text-[19px] font-extrabold tracking-tight">🧭 {t('요즘 돈의 흐름 — 한눈에')}</h2>
         <span className="text-[11.5px] text-spark-muted">
-          {ai ? `🤖 ${t('AI 요약 · {d} 기준', { d: time! })}` : `⚙️ ${t('기본 요약 · AI 분석 전')}`}
+          {ai ? `🤖 ${t('AI 분석 · {d} 기준', { d: time! })}` : `⚙️ ${t('기본 요약 · AI 분석 전')}`}
           {ai && ` · ${t('딜 {d}건 · 펀드 {f}개 바탕', { d: ai.basis.deals, f: ai.basis.funds })}`}
         </span>
+        <span className="ml-auto"><InsightRefreshButton computedAt={data ? data.computedAt.toISOString() : null}
+          label={{ run: t('AI 분석 실행'), rerun: t('최신으로 다시 분석'), busy: t('분석 중… (30~60초)'), confirm: t('오늘 이미 만든 분석이 있습니다. 다시 분석할까요? (회당 약 200원)') }} /></span>
       </div>
       {small && <p className="mb-2 text-[11.5px] text-amber-700">{t('기록이 아직 적어(딜 30건 미만) 초기 신호로만 보세요.')}</p>}
 

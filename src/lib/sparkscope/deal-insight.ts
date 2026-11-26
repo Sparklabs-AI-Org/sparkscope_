@@ -1,8 +1,10 @@
 // 투자·펀드 탭 맨 위 "한눈에 보는 요약"(2026-11-26 소윤): 요즘 돈의 흐름 3줄 + 눈여겨볼 신호(연관성·추이) + 지금 할 일.
 // 투자 유치·펀드 결성·포폴 매칭 집계를 사실 묶음으로 만들어 AI에 한 번 넘기고, 결과를 DashboardInsight에 저장한다.
-// 하루 1회(deal-extract 크론 끝)만 계산하고 대시보드는 읽기만 한다 — 대시보드 AI 요약 사전계산 규칙(CLAUDE.md)과 같다.
+// 자동으로 돌지 않는다 — 화면의 "최신으로 다시 분석" 버튼을 누를 때만 계산해 저장하고, 평소엔 마지막 결과를 읽기만 한다
+// (2026-11-26 소윤: 상위 모델은 비싸고 사실상 대표님 위주 기능이라 클릭할 때만). 모델은 Claude Opus 5.5 — GPT 3종과 같은 입력으로
+// 비교해 가장 구체적이었다(회당 약 $0.12~0.20).
 // AI는 사실 묶음에 있는 숫자·이름만 쓸 수 있고, 링크 대상(분야·하우스 등)도 묶음에 있는 값만 남긴다.
-import OpenAI from 'openai';
+import Anthropic from '@anthropic-ai/sdk';
 import { prisma } from '@/lib/prisma';
 import { getDealStats, STAGES, SECTORS } from './deal-stats';
 import { lpGroup } from './fund-stats';
@@ -11,7 +13,7 @@ import { getMatchStats } from './match-stats';
 
 const KIND = 'deal_insight';
 const KEY = 'latest';
-const MODEL = 'gpt-4.1';
+const MODEL = 'claude-opus-5-5';
 
 export type InsightLinkKind = 'sector' | 'stage' | 'house' | 'fundSector' | 'match' | 'newFunds';
 export interface InsightLink { kind: InsightLinkKind; value?: string }
@@ -134,12 +136,22 @@ function cleanLink(l: any, allowed: Awaited<ReturnType<typeof buildFacts>>['allo
 export async function computeAndStoreDealInsight(): Promise<DealInsight | null> {
   const { facts, allowed, sources, basis } = await buildFacts();
   if (basis.deals + basis.funds === 0) return null;
-  const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-  const resp = await openai.chat.completions.create({
-    model: MODEL, temperature: 0.2, response_format: { type: 'json_object' },
-    messages: [{ role: 'system', content: PROMPT }, { role: 'user', content: `사실 묶음:\n${JSON.stringify(facts)}` }],
-  });
-  const out = JSON.parse(resp.choices[0]?.message?.content ?? '{}');
+  if (!process.env.ANTHROPIC_API_KEY) throw new Error('ANTHROPIC_API_KEY가 설정되지 않았습니다.');
+  const client = new Anthropic();
+  // 생각(thinking)까지 출력 토큰으로 나가므로 넉넉히 + 스트리밍(긴 응답 타임아웃 방지).
+  // 안전 분류기가 거절하면 서버가 다른 모델로 이어 받게 한다(fallbacks: default).
+  const msg = await client.beta.messages.stream({
+    model: MODEL,
+    max_tokens: 16000,
+    betas: ['server-side-fallback-2026-07-01'],
+    fallbacks: 'default',
+    system: `${PROMPT}\n\n반드시 JSON 객체 하나만 출력한다(코드블록·설명 없이).`,
+    messages: [{ role: 'user', content: `사실 묶음:\n${JSON.stringify(facts)}` }],
+  } as any).finalMessage();
+  if (msg.stop_reason === 'refusal') throw new Error('모델이 분석을 거절했습니다.');
+  if (msg.stop_reason === 'max_tokens') throw new Error('응답이 길이 제한에 걸려 잘렸습니다.');
+  const text = msg.content.map((b: any) => (b.type === 'text' ? b.text : '')).join('');
+  const out = JSON.parse(text.slice(text.indexOf('{'), text.lastIndexOf('}') + 1) || '{}');
   const str = (v: any, n: number) => (typeof v === 'string' ? v.trim().slice(0, n) : '');
   const insight: DealInsight = {
     summary: (Array.isArray(out.summary) ? out.summary : []).map((s: any) => str(s, 240)).filter(Boolean).slice(0, 3),
@@ -169,19 +181,9 @@ export async function computeAndStoreDealInsight(): Promise<DealInsight | null> 
   return insight;
 }
 
-export async function getDealInsight(opts: { liveIfStale?: boolean } = {}): Promise<{ insight: DealInsight; computedAt: Date } | null> {
+export async function getDealInsight(_opts: { liveIfStale?: boolean } = {}): Promise<{ insight: DealInsight; computedAt: Date } | null> {
   const row = await prisma.dashboardInsight.findUnique({ where: { kind_key: { kind: KIND, key: KEY } } });
   let parsed: { insight: DealInsight; computedAt: Date } | null = null;
   if (row) try { parsed = { insight: JSON.parse(row.value), computedAt: row.computedAt }; } catch { parsed = null; }
-  // 크론 요약이 없거나 하루 넘게 묵었으면(배치 실패) 그 자리에서 한 번 만든다 — 대시보드 사전계산 규칙의 자동 대체와 같다.
-  // 만든 결과는 저장되므로 다음 사람부터는 읽기만 한다. 45초 넘으면 포기하고 기존 것/기본 요약으로.
-  const stale = !parsed || Date.now() - parsed.computedAt.getTime() > 26 * 3600e3 || !parsed.insight.flows || !parsed.insight.summaryLinks;
-  if (opts.liveIfStale && stale) {
-    const fresh = await Promise.race([
-      computeAndStoreDealInsight().catch(e => { console.error('[deal-insight] 실시간 계산 실패', e); return null; }),
-      new Promise<null>(r => setTimeout(() => r(null), 45_000)),
-    ]);
-    if (fresh) return { insight: fresh, computedAt: new Date() };
-  }
   return parsed;
 }
