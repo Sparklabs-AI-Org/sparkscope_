@@ -148,6 +148,7 @@ export async function POST(req: Request) {
           scopes,
           deep,
           asTable,
+          rich: modes.includes('rich'),
           userEmail: session.user.email,
           locale,
           onProgress: (e) => send({ type: 'progress', ...e }),

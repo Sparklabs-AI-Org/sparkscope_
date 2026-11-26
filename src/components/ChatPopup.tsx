@@ -10,6 +10,59 @@ type Msg = { role: 'user' | 'assistant'; text: string; articles?: { title: strin
 
 const SUGGEST = ['요즘 어느 분야에 돈이 몰려?', '바이오가 왜 핫한지 근거 기사랑 알려줘', '이번 주 새 펀드랑 맞는 우리 포폴은?', '최근 위기 감지된 포폴사 정리해줘'];
 
+/** 굵게·링크 — 한 줄 안. */
+function Inline({ text }: { text: string }) {
+  const parts = text.split(/(\*\*[^*]+\*\*|\[[^\]]+\]\(https?:\/\/[^)\s]+\))/g);
+  return <>{parts.map((p, i) => {
+    const b = p.match(/^\*\*([^*]+)\*\*$/);
+    if (b) return <strong key={i} className="font-bold text-spark-ink">{b[1]}</strong>;
+    const l = p.match(/^\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)$/);
+    if (l) return <a key={i} href={l[2]} target="_blank" rel="noopener noreferrer" className="text-spark-purple underline">{l[1]}</a>;
+    return <span key={i}>{p}</span>;
+  })}</>;
+}
+
+/** 답변용 작은 마크다운: 소제목(#), 글머리표(-·*·•), 번호 목록, 표(|), 빈 줄 = 문단. */
+function Md({ text }: { text: string }) {
+  const lines = text.replace(/\r/g, '').split('\n');
+  const out: React.ReactNode[] = [];
+  let i = 0, k = 0;
+  while (i < lines.length) {
+    const line = lines[i]!.trimEnd();
+    if (!line.trim()) { i++; continue; }
+    const h = line.match(/^#{1,4}\s+(.*)$/);
+    if (h) { out.push(<p key={k++} className="mt-2 text-[13px] font-extrabold text-spark-ink first:mt-0"><Inline text={h[1]!} /></p>); i++; continue; }
+    if (/^\s*[-*•]\s+/.test(line)) {
+      const items: string[] = [];
+      while (i < lines.length && /^\s*[-*•]\s+/.test(lines[i]!)) items.push(lines[i++]!.replace(/^\s*[-*•]\s+/, ''));
+      out.push(<ul key={k++} className="ml-4 list-disc space-y-0.5 marker:text-spark-purple">{items.map((t, j) => <li key={j}><Inline text={t} /></li>)}</ul>);
+      continue;
+    }
+    if (/^\s*\d+[.)]\s+/.test(line)) {
+      const items: string[] = [];
+      while (i < lines.length && /^\s*\d+[.)]\s+/.test(lines[i]!)) items.push(lines[i++]!.replace(/^\s*\d+[.)]\s+/, ''));
+      out.push(<ol key={k++} className="ml-4 list-decimal space-y-0.5 marker:font-bold marker:text-spark-purple">{items.map((t, j) => <li key={j}><Inline text={t} /></li>)}</ol>);
+      continue;
+    }
+    if (line.trim().startsWith('|')) {
+      const rows: string[][] = [];
+      while (i < lines.length && lines[i]!.trim().startsWith('|')) {
+        const cells = lines[i++]!.trim().replace(/^\||\|$/g, '').split('|').map(c => c.trim());
+        if (!cells.every(c => /^:?-{2,}:?$/.test(c))) rows.push(cells);
+      }
+      out.push(
+        <div key={k++} className="overflow-x-auto"><table className="w-full text-[12px]"><tbody>
+          {rows.map((r, j) => <tr key={j} className={j === 0 ? 'border-b border-spark-border font-bold' : 'border-b border-spark-border/50'}>{r.map((c, x) => <td key={x} className="px-1.5 py-1 align-top"><Inline text={c} /></td>)}</tr>)}
+        </tbody></table></div>);
+      continue;
+    }
+    const para: string[] = [];
+    while (i < lines.length && lines[i]!.trim() && !/^(#{1,4}\s|\s*[-*•]\s|\s*\d+[.)]\s|\s*\|)/.test(lines[i]!)) para.push(lines[i++]!.trim());
+    out.push(<p key={k++}><Inline text={para.join(' ')} /></p>);
+  }
+  return <div className="space-y-2">{out}</div>;
+}
+
 function screenLabel(path: string, sp: URLSearchParams): string {
   if (path.startsWith('/dashboard/deals')) return `투자 딜·펀드 표(${sp.get('tab') === 'funds' ? '펀드 결성' : '투자 유치'})`;
   const tab = sp.get('tab') ?? 'portfolio';
@@ -42,7 +95,7 @@ export function ChatPopup() {
     try {
       const res = await fetch('/api/chat', {
         method: 'POST', headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ question, history, period: 'quarter', scopes: [], modes: [], context: screenLabel(path, new URLSearchParams(sp.toString())) }),
+        body: JSON.stringify({ question, history, period: 'quarter', scopes: [], modes: ['rich'], context: screenLabel(path, new URLSearchParams(sp.toString())) }),
       });
       if (!res.ok || !res.body) throw new Error(String(res.status));
       const reader = res.body.getReader(); const dec = new TextDecoder(); let buf = ''; let done = false;
@@ -97,7 +150,7 @@ export function ChatPopup() {
             {msgs.map((m, i) => (
               <div key={i} className={m.role === 'user' ? 'flex justify-end' : ''}>
                 <div className={`max-w-[92%] rounded-2xl px-3 py-2 text-[13px] leading-relaxed ${m.role === 'user' ? 'bg-spark-purple text-white' : m.error ? 'bg-red-50 text-red-700' : 'bg-spark-subtle text-spark-ink'}`}>
-                  <div className="whitespace-pre-wrap">{m.text.replace(/\*\*(.+?)\*\*/g, '$1')}</div>
+                  {m.role === 'assistant' && !m.error ? <Md text={m.text} /> : <div className="whitespace-pre-wrap">{m.text}</div>}
                   {m.articles && m.articles.length > 0 && (
                     <details className="mt-2">
                       <summary className="cursor-pointer text-[11.5px] font-semibold text-spark-muted">📰 근거 기사 {m.articles.length}</summary>

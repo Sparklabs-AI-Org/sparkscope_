@@ -515,7 +515,7 @@ const TOOLS: ChatCompletionTool[] = [
   },
 ];
 
-function systemPrompt(uiPeriod: ChatPeriod, uiScopes: ChatScope[], deep: boolean, asTable: boolean, locale: 'ko' | 'en' = 'ko') {
+function systemPrompt(uiPeriod: ChatPeriod, uiScopes: ChatScope[], deep: boolean, asTable: boolean, locale: 'ko' | 'en' = 'ko', rich = false) {
   return `너는 스파크랩(초기투자 VC) 커뮤니케이션 본부의 뉴스 분석 담당이다.
 수집된 국내 뉴스 기사 DB를 도구로 조회해서 질문에 답한다.
 
@@ -638,14 +638,15 @@ ${uiScopes.includes('inter')
   정확히 지켜라 — 형식이 어긋나면 화면에 기호가 그대로 보인다.
 - 도구가 돌려준 숫자만 쓴다. 직접 계산하거나 추정하지 마라. 데이터에 없는 사실은 절대 지어내지 마라.
 - 퍼센트(%) 증감률은 쓰지 마라. "이번 기간 N건, 직전 기간 M건"처럼 건수로 말한다.
-- 굵게(**) 같은 마크다운 강조는 쓰지 마라. 평문으로 쓴다.
-- 회사 이름을 말할 땐 무슨 일이 있었는지까지 붙인다. 나열만 하지 마라.
+${rich ? `- [읽기 쉬운 형식] 짧은 첫 문장으로 결론부터 쓰고, 이어서 소제목(## 짧게)·글머리표(- )·번호 목록으로 나눠라.
+  문단 사이는 빈 줄. 핵심 숫자·회사·결론은 **굵게**. 한 글머리표는 한두 문장. 길게 이어 쓰지 마라.
+` : '- 굵게(**) 같은 마크다운 강조는 쓰지 마라. 평문으로 쓴다.\n'}- 회사 이름을 말할 땐 무슨 일이 있었는지까지 붙인다. 나열만 하지 마라.
 - 같은 사안을 여러 매체가 받아쓴 경우 그 사실을 짚어라(건수가 부풀어 보인다).
 - 표본 경고(sampled)가 있으면 그 집계를 전체인 것처럼 말하지 마라.
 - 기간 비교가 백필 구간에 걸리면 증감을 단정하지 말고 그 사실을 한 줄로 알려라.
 - 검색을 여러 번 바꿔서 시도했는데도 결과가 없으면, 무엇을 어떻게 찾아봤는지 밝히고
   검색 조건을 어떻게 바꾸면 좋을지 제안해라.
-${deep
+${rich ? '- 길이: 질문에 맞게 — 단순 질문은 3~6줄, 분석·비교 질문은 소제목 2~4개까지.' : deep
       ? '- [심층 분석 켜짐] 6~10문장으로 길게. 기사들을 주제별로 묶고, 왜 이런 흐름인지 원인·맥락까지 짚고, 본부가 무엇을 해야 하는지로 마무리한다.'
       : '- [심층 분석 꺼짐] 3~5문장으로 간결하게. 무엇이 잡혔는지와 눈에 띄는 건만 짚는다. ' +
         '사용자가 "시사점 뽑아줘", "~가지로 정리해줘"처럼 항목별 정리를 요청해도 이 길이 제한이 ' +
@@ -851,6 +852,8 @@ export async function runChatAgent(opts: {
   userEmail: string;
   deep: boolean;
   asTable: boolean;
+  /** 팝업 챗봇: 소제목·글머리표·굵게로 나눠 쓴다(2026-11-26). /chat 화면은 기존 평문 그대로. */
+  rich?: boolean;
   /**
    * 답변 언어. 'en'이면 답변만 영어로 쓴다 — 도구 호출·검색어는 계속 한국어를 쓴다
    * (DB와 감시 키워드가 한국어라, 검색어를 영어로 바꾸면 결과 자체가 나빠진다).
@@ -916,7 +919,7 @@ export async function runChatAgent(opts: {
   };
 
   const messages: ChatCompletionMessageParam[] = [
-    { role: 'system', content: systemPrompt(opts.period, opts.scopes, opts.deep, opts.asTable, opts.locale ?? 'ko') },
+    { role: 'system', content: systemPrompt(opts.period, opts.scopes, opts.deep, opts.asTable, opts.locale ?? 'ko', opts.rich ?? false) },
     // 이전 대화 — 후속 질문("그중 부정적인 것만")을 이해하려면 필요하다. 최근 6턴만.
     ...opts.history.slice(-6).map((t) => ({ role: t.role, content: t.text }) as ChatCompletionMessageParam),
     { role: 'user', content: opts.question },
