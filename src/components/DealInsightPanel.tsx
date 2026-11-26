@@ -21,7 +21,7 @@ export function insightHref(l?: InsightLink): string | null {
 }
 
 function Go({ href, children, className }: { href: string | null; children: React.ReactNode; className?: string }) {
-  return href ? <Link href={href} className={`${className ?? ''} group block rounded-lg transition-colors hover:bg-spark-purple/[0.04]`}>{children}</Link> : <div className={className}>{children}</div>;
+  return href ? <Link href={href} className={`${className ?? ''} group block h-full rounded-lg transition-colors hover:bg-spark-purple/[0.04]`}>{children}</Link> : <div className={`${className ?? ''} h-full`}>{children}</div>;
 }
 
 /** 문장 속 [n]을 근거 기사 링크(작은 번호)로 바꾼다. */
@@ -71,12 +71,12 @@ export function DealInsightPanel({ data, fallback, t }: {
       {ai && ((ai.flows?.length ?? 0) > 0 || (ai.why?.length ?? 0) > 0) && (
         <div className="mt-4 grid grid-cols-1 gap-3 lg:grid-cols-2">
           {(ai.flows?.length ?? 0) > 0 && (
-            <div>
+            <div className="flex flex-col">
               <h3 className="mb-2 text-[15px] font-extrabold text-spark-ink">💸 {t('돈의 이동 — 어디서 어디로')}</h3>
-              <ul className="space-y-1.5">
+              <ul className="flex flex-1 flex-col gap-1.5">
                 {ai.flows!.map((x, i) => (
-                  <li key={i} className="rounded-lg border border-spark-border bg-white">
-                    <Go href={insightHref(x.link)} className="px-3 py-2">
+                  <li key={i} className="flex flex-1 flex-col rounded-lg border border-spark-border bg-white">
+                    <Go href={insightHref(x.link)} className="flex-1 px-3 py-2">
                       <div className="flex flex-wrap items-center gap-1.5 text-[13px] font-bold">
                         <span className="rounded bg-sky-50 px-1.5 py-0.5 text-sky-800">{x.from}</span>
                         <span className="text-spark-muted">→</span>
@@ -90,11 +90,11 @@ export function DealInsightPanel({ data, fallback, t }: {
             </div>
           )}
           {(ai.why?.length ?? 0) > 0 && (
-            <div>
+            <div className="flex flex-col">
               <h3 className="mb-2 text-[15px] font-extrabold text-spark-ink">❓ {t('왜 지금 이 분야인가 — 뉴스 근거')}</h3>
-              <ul className="space-y-1.5">
+              <ul className="flex flex-1 flex-col gap-1.5">
                 {ai.why!.map((x, i) => (
-                  <li key={i} className="rounded-lg border border-spark-border bg-white px-3 py-2">
+                  <li key={i} className="flex-1 rounded-lg border border-spark-border bg-white px-3 py-2">
                     {insightHref(x.link) ? <Link href={insightHref(x.link)!} className="text-[13px] font-bold text-spark-ink hover:text-spark-purple">{x.topic} ›</Link>
                       : <div className="text-[13px] font-bold text-spark-ink">{x.topic}</div>}
                     <div className="mt-0.5 text-[12px] leading-snug text-spark-ink-soft"><Cite text={x.reason} sources={srcs} /></div>
@@ -122,14 +122,14 @@ export function DealInsightPanel({ data, fallback, t }: {
 
       {ai && (ai.insights.length > 0 || ai.actions.length > 0) && (
         <div className="mt-4 grid grid-cols-1 gap-3 lg:grid-cols-[1.3fr_1fr]">
-          <div>
+          <div className="flex flex-col">
             <h3 className="mb-2 text-[15px] font-extrabold text-spark-ink">🔎 {t('눈여겨볼 신호')}</h3>
-            <ul className="space-y-1.5">
+            <ul className="flex flex-1 flex-col gap-1.5">
               {ai.insights.map((x, i) => {
                 const href = insightHref(x.link);
                 return (
-                  <li key={i} className="rounded-lg border border-spark-border bg-white">
-                    <Go href={href} className="px-3 py-2">
+                  <li key={i} className="flex flex-1 flex-col rounded-lg border border-spark-border bg-white">
+                    <Go href={href} className="flex-1 px-3 py-2">
                       <div className="text-[13px] font-bold text-spark-ink group-hover:text-spark-purple">{x.title}{href && <span className="ml-1 text-spark-muted">›</span>}</div>
                       <div className="mt-0.5 text-[12px] leading-snug text-spark-ink-soft"><Cite text={x.detail} sources={srcs} /></div>
                     </Go>
@@ -138,14 +138,14 @@ export function DealInsightPanel({ data, fallback, t }: {
               })}
             </ul>
           </div>
-          <div>
+          <div className="flex flex-col">
             <h3 className="mb-2 text-[15px] font-extrabold text-spark-ink">✅ {t('지금 할 일')}</h3>
-            <ul className="space-y-1.5">
+            <ul className="flex flex-1 flex-col gap-1.5">
               {ai.actions.map((x, i) => {
                 const href = insightHref(x.link);
                 return (
-                  <li key={i} className="rounded-lg border border-emerald-200 bg-emerald-50/50">
-                    <Go href={href} className="px-3 py-2">
+                  <li key={i} className="flex flex-1 flex-col rounded-lg border border-emerald-200 bg-emerald-50/50">
+                    <Go href={href} className="flex-1 px-3 py-2">
                       <div className="text-[13px] font-bold text-emerald-900 group-hover:text-spark-purple">{x.title}{href && <span className="ml-1 text-emerald-700/70">→</span>}</div>
                       <div className="mt-0.5 text-[12px] leading-snug text-emerald-900/80">{x.why}</div>
                     </Go>
