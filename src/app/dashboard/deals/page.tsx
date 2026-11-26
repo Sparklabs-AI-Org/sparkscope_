@@ -11,6 +11,9 @@ import { prisma } from '@/lib/prisma';
 import { getT } from '@/lib/i18n/server';
 import { getSessionUser } from '@/lib/authz';
 import { isInternal } from '@/lib/roles';
+import { investorKey, sectorOf, stageOf, STAGES } from '@/lib/sparkscope/deal-stats';
+import { lpGroup, normSector } from '@/lib/sparkscope/fund-stats';
+import { dealsHref, kstDay, mondayOf, type DealFilter } from '@/lib/sparkscope/deal-links';
 
 export const dynamic = 'force-dynamic';
 export const preferredRegion = 'icn1';
@@ -39,7 +42,7 @@ function fmtKrw(v: bigint | null | undefined) {
   return `${eok >= 100 ? Math.round(eok).toLocaleString() : eok.toFixed(1).replace(/\.0$/, '')}억`;
 }
 
-export default async function DealsPage({ searchParams }: { searchParams: { tab?: string; days?: string } }) {
+export default async function DealsPage({ searchParams }: { searchParams: { tab?: string; days?: string } & DealFilter }) {
   const viewer = await getSessionUser();
   if (!viewer || !isInternal(viewer.role)) redirect('/dashboard');
   const t = getT();
@@ -69,22 +72,60 @@ export default async function DealsPage({ searchParams }: { searchParams: { tab?
       : [],
     tab === 'funds'
       ? prisma.fund.findMany({
-          where: { OR: [{ announcedAt: { gte: since } }, { closedAt: { gte: since } }], reviewStatus: { not: 'REJECTED' } },
+          where: { OR: [{ announcedAt: { gte: since } }, { closedAt: { gte: since } }, { createdAt: { gte: since } }], reviewStatus: { not: 'REJECTED' } },
           orderBy: { announcedAt: 'desc' },
           take: 300,
           include: {
             gps: { include: { investor: { select: { name: true } } } },
             lps: { include: { investor: { select: { name: true } } } },
-            sources: { include: { article: { select: { title: true, link: true, source: true } } } },
+            sources: { include: { article: { select: { title: true, link: true, source: true, pubDate: true } } } },
           },
         })
       : [],
     prisma.deal.count({ where: { announcedAt: { gte: since }, reviewStatus: { not: 'REJECTED' } } }),
-    prisma.fund.count({ where: { OR: [{ announcedAt: { gte: since } }, { closedAt: { gte: since } }], reviewStatus: { not: 'REJECTED' } } }),
+    prisma.fund.count({ where: { OR: [{ announcedAt: { gte: since } }, { closedAt: { gte: since } }, { createdAt: { gte: since } }], reviewStatus: { not: 'REJECTED' } } }),
   ]);
 
-  const q = (p: Partial<{ tab: string; days: number }>) =>
-    `/dashboard/deals?tab=${p.tab ?? tab}&days=${p.days ?? days}`;
+  // 분석 그래프에서 눌러 들어온 조건(분야·단계·하우스·날짜 등). 표 위에 칩으로 보이고 × 로 지운다.
+  const f: DealFilter = {};
+  for (const k of ['sec', 'st', 'inv', 'inv2', 'lp', 'day', 'week', 'pf', 'sized'] as const) {
+    const v = searchParams[k]; if (typeof v === 'string' && v) (f as any)[k] = v.slice(0, 100);
+  }
+  const hasInv = (names: string[], want?: string) => !want || names.some(n => investorKey(n) === investorKey(want));
+  const dateOk = (day: string) => (!f.day || day === f.day) && (!f.week || mondayOf(day) === f.week);
+  const shownDeals = deals.filter(d => {
+    const names = d.investors.map(i => i.investor.name);
+    return (!f.sec || sectorOf(d.company.sector) === f.sec) && (!f.st || stageOf(d.round) === f.st)
+      && hasInv(names, f.inv) && hasInv(names, f.inv2) && dateOk(kstDay(d.announcedAt))
+      && (!f.pf || !!d.company.monitoringTargetId) && (!f.sized || d.amountKrw != null);
+  });
+  const shownFunds = funds.filter(x => {
+    const gps = x.gps.map(g => g.investor.name);
+    return (!f.sec || x.sectors.some(s => normSector(s) === f.sec)) && (!f.st || x.stage === f.st || (f.st === 'PIPE' && x.stage !== 'CLOSED')) && hasInv(gps, f.inv)
+      && (!f.lp || x.lps.some(l => lpGroup(l.investor.name).id === f.lp)) && dateOk(kstDay(x.closedAt ?? x.announcedAt ?? x.sources[0]?.article.pubDate ?? x.createdAt))
+      && (!f.sized || x.closedSizeKrw != null || x.targetSizeKrw != null);
+  });
+  const stLabel = (v: string) => v === 'PIPE' ? '출자 공고·GP 선정' : STAGES.find(s => s.id === v)?.label ?? STAGE[v]?.label ?? v;
+  const LP_LABEL: Record<string, string> = { mother: '모태펀드', growth: '성장금융·산업은행', local: '지자체·지역', pension: '연기금·공제회', finance: '은행·증권·금융지주', corp: '기업(CVC·대기업)', other: '기타' };
+  const chips: { k: keyof DealFilter; label: string }[] = [
+    f.sec && { k: 'sec' as const, label: t(f.sec) }, f.st && { k: 'st' as const, label: t(stLabel(f.st)) },
+    f.inv && { k: 'inv' as const, label: f.inv }, f.inv2 && { k: 'inv2' as const, label: `+ ${f.inv2}` },
+    f.lp && { k: 'lp' as const, label: t(LP_LABEL[f.lp] ?? f.lp) }, f.day && { k: 'day' as const, label: f.day },
+    f.week && { k: 'week' as const, label: t('{d} 주', { d: f.week }) }, f.pf && { k: 'pf' as const, label: t('우리 포트폴리오') },
+    f.sized && { k: 'sized' as const, label: t('금액 공개') },
+  ].filter(Boolean) as any;
+  const without = (k: keyof DealFilter) => {
+    const u = new URLSearchParams({ tab, days: String(days) });
+    for (const [kk, v] of Object.entries(f)) if (v && kk !== k) u.set(kk, v);
+    return `/dashboard/deals?${u.toString()}`;
+  };
+  const invHref = (name: string) => dealsHref(tab, { inv: name });
+
+  const q = (p: Partial<{ tab: string; days: number }>) => {
+    const u = new URLSearchParams({ tab: p.tab ?? tab, days: String(p.days ?? days) });
+    if (!p.tab) for (const [k, v] of Object.entries(f)) if (v) u.set(k, v);
+    return `/dashboard/deals?${u.toString()}`;
+  };
 
   return (
     <>
@@ -114,9 +155,22 @@ export default async function DealsPage({ searchParams }: { searchParams: { tab?
         </div>
       </div>
 
+      {chips.length > 0 && (
+        <div className="mb-3 flex flex-wrap items-center gap-1.5 text-sm">
+          <span className="text-xs font-semibold text-gray-500">{t('조건')}</span>
+          {chips.map(c => (
+            <Link key={c.k} href={without(c.k)} className="inline-flex items-center gap-1 rounded-full border border-spark-purple/30 bg-spark-light-purple px-2.5 py-0.5 text-xs font-bold text-spark-purple hover:bg-white">
+              {c.label} <span aria-hidden>×</span>
+            </Link>
+          ))}
+          <span className="text-xs text-gray-500">{t('{n}건', { n: tab === 'deals' ? shownDeals.length : shownFunds.length })}</span>
+          <Link href={q({ tab })} className="ml-1 text-xs text-gray-400 underline hover:text-gray-600">{t('조건 모두 지우기')}</Link>
+        </div>
+      )}
+
       {tab === 'deals' ? (
         <section className="bg-white rounded-xl border border-gray-200 overflow-x-auto">
-          {deals.length === 0 ? (
+          {shownDeals.length === 0 ? (
             <p className="p-8 text-center text-sm text-gray-400">{t('이 기간에 정리된 투자 유치 소식이 없습니다. 매일 07:30에 새 기사를 정리합니다.')}</p>
           ) : (
             <table className="w-full text-sm">
@@ -131,7 +185,7 @@ export default async function DealsPage({ searchParams }: { searchParams: { tab?
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50">
-                {deals.map(d => {
+                {shownDeals.map(d => {
                   const c = d.company;
                   const prior = c.deals.filter(x => x.id !== d.id && x.announcedAt < d.announcedAt);
                   const sum = c.deals.filter(x => x.announcedAt <= d.announcedAt).reduce((s, x) => s + (x.amountKrw ?? 0n), 0n);
@@ -159,7 +213,7 @@ export default async function DealsPage({ searchParams }: { searchParams: { tab?
                           <ul className="space-y-0.5">
                             {investors.map(i => (
                               <li key={i.id} className="text-xs">
-                                <span className={i.role === 'LEAD' ? 'font-bold text-spark-ink' : 'text-gray-700'}>{i.investor.name}</span>
+                                <Link href={invHref(i.investor.name)} className={`hover:text-spark-purple hover:underline ${i.role === 'LEAD' ? 'font-bold text-spark-ink' : 'text-gray-700'}`}>{i.investor.name}</Link>
                                 {i.role && <span className="ml-1 text-gray-400">{t(ROLE_LABEL[i.role] ?? i.role)}</span>}
                                 {i.fundName && <div className="text-[11px] text-gray-500 pl-2">└ {i.fundName}</div>}
                               </li>
@@ -200,7 +254,7 @@ export default async function DealsPage({ searchParams }: { searchParams: { tab?
         </section>
       ) : (
         <section className="bg-white rounded-xl border border-gray-200 overflow-x-auto">
-          {funds.length === 0 ? (
+          {shownFunds.length === 0 ? (
             <p className="p-8 text-center text-sm text-gray-400">{t('이 기간에 정리된 펀드 소식이 없습니다. 매일 07:30에 새 기사를 정리합니다.')}</p>
           ) : (
             <table className="w-full text-sm">
@@ -216,7 +270,7 @@ export default async function DealsPage({ searchParams }: { searchParams: { tab?
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50">
-                {funds.map(f => {
+                {shownFunds.map(f => {
                   const st = STAGE[f.stage] ?? STAGE.CLOSED;
                   return (
                     <tr key={f.id} className="align-top">
@@ -225,12 +279,12 @@ export default async function DealsPage({ searchParams }: { searchParams: { tab?
                       <td className="px-4 py-3 min-w-[200px]">
                         <div className="font-bold text-spark-ink">{f.fundName ?? f.programName ?? '—'}</div>
                         {f.fundName && f.programName && <div className="text-xs text-gray-500">{f.programName}</div>}
-                        {f.sectors.length > 0 && <div className="mt-1 flex flex-wrap gap-1">{f.sectors.map(s => <span key={s} className="rounded bg-gray-100 px-1.5 py-0.5 text-[10px] text-gray-600">{s}</span>)}</div>}
+                        {f.sectors.length > 0 && <div className="mt-1 flex flex-wrap gap-1">{f.sectors.map(s => <Link key={s} href={dealsHref('funds', { sec: normSector(s) })} className="rounded bg-gray-100 px-1.5 py-0.5 text-[10px] text-gray-600 hover:bg-spark-light-purple hover:text-spark-purple">{s}</Link>)}</div>}
                       </td>
                       <td className="px-4 py-3 min-w-[160px] text-xs">
                         {f.gps.length === 0 ? <span className="text-gray-400">{f.stage === 'ANNOUNCED' ? t('선정 전') : '—'}</span> : (
                           <ul className="space-y-0.5">{f.gps.map(g => (
-                            <li key={g.id}><span className="font-semibold text-spark-ink">{g.investor.name}</span>{g.role === 'CO_GP' && <span className="ml-1 text-gray-400">Co-GP</span>}{g.amountKrw != null && <span className="ml-1 tabular-nums text-gray-500">{fmtKrw(g.amountKrw)}</span>}</li>
+                            <li key={g.id}><Link href={invHref(g.investor.name)} className="font-semibold text-spark-ink hover:text-spark-purple hover:underline">{g.investor.name}</Link>{g.role === 'CO_GP' && <span className="ml-1 text-gray-400">Co-GP</span>}{g.amountKrw != null && <span className="ml-1 tabular-nums text-gray-500">{fmtKrw(g.amountKrw)}</span>}</li>
                           ))}</ul>
                         )}
                       </td>

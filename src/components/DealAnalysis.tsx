@@ -8,6 +8,8 @@ const STAGE_COLOR: Record<string, string> = {
   SEED: '#ddd6fe', PRE_A: '#c4b5fd', A: '#a78bfa', B: '#8b5cf6', 'C+': '#6d28d9', ETC: '#a8a29e',
 };
 import { Card, Kpi, krw, TrendBars, type T } from './FundAnalysis';
+import { dealsHref } from '@/lib/sparkscope/deal-links';
+const H = (f: Parameters<typeof dealsHref>[1] = {}) => dealsHref('deals', f);
 
 const ROLE: Record<string, string> = { LEAD: '리드', NEW: '신규', FOLLOW: '후속', EXISTING: '기존' };
 
@@ -35,15 +37,15 @@ export function DealAnalysis({ stats, t }: { stats: DealStats; t: T }) {
       </div>
 
       <div className="grid grid-cols-2 gap-2.5 lg:grid-cols-4">
-        <Kpi label={t('딜 수')} value={String(stats.total)} sub={t('우리 포트폴리오 {n}건', { n: stats.portfolioDeals })} />
-        <Kpi label={t('공개 투자액 합')} value={krw(stats.sumKrw, t)} sub={t('금액 공개 {p}% ({n}건)', { p: sizedPct, n: stats.sized })} />
-        <Kpi label={t('딜 1건 중간값')} value={stats.medianKrw != null ? krw(stats.medianKrw, t) : '—'} sub={t('큰 딜 몇 건에 끌려가지 않는 값')} />
-        <Kpi label={t('가장 활발한 하우스')} value={lead?.name ?? '—'}
+        <Kpi href={H()} label={t('딜 수')} value={String(stats.total)} sub={t('우리 포트폴리오 {n}건', { n: stats.portfolioDeals })} />
+        <Kpi href={H({ sized: '1' })} label={t('공개 투자액 합')} value={krw(stats.sumKrw, t)} sub={t('금액 공개 {p}% ({n}건)', { p: sizedPct, n: stats.sized })} />
+        <Kpi href={H({ sized: '1' })} label={t('딜 1건 중간값')} value={stats.medianKrw != null ? krw(stats.medianKrw, t) : '—'} sub={t('큰 딜 몇 건에 끌려가지 않는 값')} />
+        <Kpi href={lead ? H({ inv: lead.name }) : undefined} label={t('가장 활발한 하우스')} value={lead?.name ?? '—'}
           sub={lead ? t('{n}건 참여 · 리드 {l}', { n: lead.deals, l: lead.leads }) : undefined} />
       </div>
 
       <div className="mt-2.5 grid grid-cols-1 gap-2.5 lg:grid-cols-2">
-        <Card title={t('분야별 딜 — 돈이 가는 곳')} hint={t('막대 길이 = 건수 · 색 = 단계 · 마우스 올리면 금액')}>
+        <Card href={H()} title={t('분야별 딜 — 돈이 가는 곳')} hint={t('막대 길이 = 건수 · 색 = 단계 · 마우스 올리면 금액')}>
           <div className="mb-2.5 flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-spark-muted">
             {STAGES.map(s => (
               <span key={s.id} className="inline-flex items-center gap-1">
@@ -54,19 +56,19 @@ export function DealAnalysis({ stats, t }: { stats: DealStats; t: T }) {
           <ul className="space-y-1.5">
             {stats.matrix.slice(0, 10).map(m => (
               <li key={m.sector} className="grid grid-cols-[6.5rem_1fr_2.5rem] items-center gap-2 text-[12px]">
-                <span className="truncate font-semibold text-spark-ink-soft" title={t(m.sector)}>{t(m.sector)}</span>
+                <Link href={H({ sec: m.sector })} className="truncate font-semibold text-spark-ink-soft hover:text-spark-purple hover:underline" title={t(m.sector)}>{t(m.sector)}</Link>
                 <span className="flex h-5 overflow-hidden rounded" style={{ width: `${Math.max(6, (m.total / maxRow) * 100)}%` }}>
                   {STAGES.map(s => {
                     const c = m.cells[s.id];
                     if (!c) return null;
                     return (
-                      <span key={s.id} title={`${t(m.sector)} · ${t(s.label)} · ${c.count}${t('건')}${c.sumKrw ? ` · ${krw(c.sumKrw, t)}` : ''}`}
-                        className="h-full border-r border-white/70 last:border-0"
+                      <Link key={s.id} href={H({ sec: m.sector, st: s.id })} title={`${t(m.sector)} · ${t(s.label)} · ${c.count}${t('건')}${c.sumKrw ? ` · ${krw(c.sumKrw, t)}` : ''}`}
+                        className="h-full border-r border-white/70 last:border-0 hover:opacity-75"
                         style={{ width: `${(c.count / m.total) * 100}%`, background: STAGE_COLOR[s.id] }} />
                     );
                   })}
                 </span>
-                <span className="text-right font-bold tabular-nums text-spark-ink">{m.total}{t('건')}</span>
+                <Link href={H({ sec: m.sector })} className="text-right font-bold tabular-nums text-spark-ink hover:text-spark-purple">{m.total}{t('건')}</Link>
               </li>
             ))}
           </ul>
@@ -75,7 +77,7 @@ export function DealAnalysis({ stats, t }: { stats: DealStats; t: T }) {
         <Card title={t('단계별 투자 금액대')} hint={t('막대 = 최소~최대, 점 = 중간값 · 로그 눈금')}>
           <ul className="space-y-2.5">
             {stats.stageAmounts.map(s => (
-              <li key={s.stage} className="grid grid-cols-[5.5rem_1fr_auto] items-center gap-2 text-[12px]">
+              <li key={s.stage}><Link href={H({ st: s.stage, sized: '1' })} className="grid grid-cols-[5.5rem_1fr_auto] items-center gap-2 rounded px-1 py-0.5 text-[12px] hover:bg-spark-subtle">
                 <span className="font-semibold text-spark-ink-soft">{t(s.label)} <span className="text-spark-muted">{s.n}</span></span>
                 <span className="relative h-2.5 rounded-full bg-spark-subtle">
                   <span className="absolute h-full rounded-full bg-violet-200"
@@ -84,7 +86,7 @@ export function DealAnalysis({ stats, t }: { stats: DealStats; t: T }) {
                     style={{ left: `${pos(s.median)}%` }} />
                 </span>
                 <span className="whitespace-nowrap tabular-nums text-spark-muted">{t('중간 {v}', { v: krw(s.median, t) })}</span>
-              </li>
+              </Link></li>
             ))}
           </ul>
           <p className="mt-3 text-[11px] text-spark-muted">{t('포트폴리오사 다음 라운드 규모를 잡을 때 기준점으로 씁니다. 금액 비공개 딜은 빠집니다.')}</p>
@@ -92,7 +94,7 @@ export function DealAnalysis({ stats, t }: { stats: DealStats; t: T }) {
       </div>
 
       <div className="mt-2.5">
-        <Card title={t('지금 실제로 투자하는 하우스')} hint={t('참여 건수 순 · 신규 = 기존 투자사가 아닌 새 돈')}>
+        <Card href={H()} title={t('지금 실제로 투자하는 하우스')} hint={t('참여 건수 순 · 신규 = 기존 투자사가 아닌 새 돈')}>
           <div className="-mx-1 overflow-x-auto">
             <table className="w-full min-w-[680px] text-[12.5px]">
               <thead>
@@ -111,14 +113,14 @@ export function DealAnalysis({ stats, t }: { stats: DealStats; t: T }) {
                 {stats.investors.map(i => (
                   <tr key={i.name} className="border-b border-spark-border/60 last:border-0">
                     <td className="px-1 py-1.5 font-semibold text-spark-ink">
-                      {i.name}
+                      <Link href={H({ inv: i.name })} className="hover:text-spark-purple hover:underline">{i.name}</Link>
                       {i.portfolioDeals > 0 && <span className="ml-1.5 rounded bg-spark-purple/10 px-1.5 py-0.5 text-[10px] font-bold text-spark-purple">{t('우리 포폴 {n}', { n: i.portfolioDeals })}</span>}
                     </td>
                     <td className="px-1 py-1.5 text-right tabular-nums font-bold">{i.deals}</td>
                     <td className="px-1 py-1.5 text-right tabular-nums">{i.leads || '—'}</td>
                     <td className="px-1 py-1.5 text-right tabular-nums">{i.newMoney || '—'}</td>
                     <td className="px-1 py-1.5 text-spark-ink-soft">{t(i.topStage)}</td>
-                    <td className="px-1 py-1.5 text-spark-ink-soft">{t(i.topSector)}</td>
+                    <td className="px-1 py-1.5 text-spark-ink-soft"><Link href={H({ inv: i.name, sec: i.topSector })} className="hover:text-spark-purple hover:underline">{t(i.topSector)}</Link></td>
                     <td className="whitespace-nowrap px-1 py-1.5 text-right tabular-nums">{krw(i.sumKrw, t)}</td>
                     <td className="whitespace-nowrap px-1 py-1.5 text-right tabular-nums text-spark-muted">{i.recent.slice(5)}</td>
                   </tr>
@@ -135,27 +137,27 @@ export function DealAnalysis({ stats, t }: { stats: DealStats; t: T }) {
           {stats.pairs.length ? (
             <ul className="space-y-1.5 text-[12.5px]">
               {stats.pairs.map(p => (
-                <li key={`${p.a}|${p.b}`} className="flex items-center gap-1.5">
+                <li key={`${p.a}|${p.b}`}><Link href={H({ inv: p.a, inv2: p.b })} className="flex items-center gap-1.5 rounded px-1 py-0.5 hover:bg-spark-subtle">
                   <span className="font-semibold text-spark-ink">{p.a}</span>
                   <span className="text-spark-muted">+</span>
                   <span className="font-semibold text-spark-ink">{p.b}</span>
                   <span className="ml-auto tabular-nums text-spark-muted">{p.count}{t('회')}</span>
-                </li>
+                </Link></li>
               ))}
             </ul>
           ) : <p className="text-[12px] text-spark-muted">{t('아직 두 번 이상 같이 들어간 하우스가 없습니다. 딜이 쌓이면 나타납니다.')}</p>}
           <p className="mt-3 text-[11px] text-spark-muted">{t('리드 한 곳을 잡으면 따라 들어올 가능성이 큰 곳입니다.')}</p>
         </Card>
 
-        <Card title={t('딜 추이')} hint={t('마우스 올리면 공개 금액')}>
+        <Card href={H()} title={t('딜 추이')} hint={t('마우스 올리면 공개 금액')}>
           <TrendBars t={t}
-            weekly={stats.weekly.map(w => ({ key: w.week, segs: [{ v: w.count, color: '#7c3aed' }], title: `${w.week} · ${w.count}${t('건')} · ${krw(w.sumKrw, t)}` }))}
-            daily={(stats.daily ?? []).map(d => ({ key: d.day, segs: [{ v: d.count, color: '#7c3aed' }], title: `${d.day} · ${d.count}${t('건')} · ${krw(d.sumKrw, t)}` }))} />
+            weekly={stats.weekly.map(w => ({ key: w.week, segs: [{ v: w.count, color: '#7c3aed' }], title: `${w.week} · ${w.count}${t('건')} · ${krw(w.sumKrw, t)}`, href: H({ week: w.week }) }))}
+            daily={(stats.daily ?? []).map(d => ({ key: d.day, segs: [{ v: d.count, color: '#7c3aed' }], title: `${d.day} · ${d.count}${t('건')} · ${krw(d.sumKrw, t)}`, href: H({ day: d.day }) }))} />
         </Card>
       </div>
 
       <div className="mt-2.5">
-        <Card title={t('최근 딜')} hint={t('최근 {n}건', { n: Math.min(15, stats.rows.length) })}>
+        <Card href={H()} title={t('최근 딜')} hint={t('최근 {n}건', { n: Math.min(15, stats.rows.length) })}>
           <div className="-mx-1 overflow-x-auto">
             <table className="w-full min-w-[680px] text-[12.5px]">
               <thead>
@@ -176,12 +178,12 @@ export function DealAnalysis({ stats, t }: { stats: DealStats; t: T }) {
                       {r.link ? <a href={r.link} target="_blank" rel="noopener noreferrer" className="hover:text-spark-purple">{r.company}</a> : r.company}
                       {r.portfolio && <span className="ml-1.5 rounded bg-spark-purple/10 px-1.5 py-0.5 text-[10px] font-bold text-spark-purple">{t('포폴')}</span>}
                     </td>
-                    <td className="whitespace-nowrap px-1 py-1.5 text-spark-ink-soft">{t(r.sector)}</td>
-                    <td className="whitespace-nowrap px-1 py-1.5 text-spark-ink-soft">{t(STAGES.find(s => s.id === r.stage)!.label)}</td>
+                    <td className="whitespace-nowrap px-1 py-1.5 text-spark-ink-soft"><Link href={H({ sec: r.sector })} className="hover:text-spark-purple hover:underline">{t(r.sector)}</Link></td>
+                    <td className="whitespace-nowrap px-1 py-1.5 text-spark-ink-soft"><Link href={H({ st: r.stage })} className="hover:text-spark-purple hover:underline">{t(STAGES.find(s => s.id === r.stage)!.label)}</Link></td>
                     <td className="whitespace-nowrap px-1 py-1.5 text-right tabular-nums font-semibold">{r.amountKrw != null ? krw(r.amountKrw, t) : <span className="font-normal text-spark-muted">{t('비공개')}</span>}</td>
                     <td className="px-1 py-1.5 text-[12px] text-spark-ink-soft">
                       {r.investors.length ? r.investors.map((i, k) => (
-                        <span key={i.name}>{k > 0 && ', '}<span className={i.role === 'LEAD' ? 'font-bold text-spark-ink' : ''}>{i.name}</span>
+                        <span key={i.name}>{k > 0 && ', '}<Link href={H({ inv: i.name })} className={`hover:text-spark-purple hover:underline ${i.role === 'LEAD' ? 'font-bold text-spark-ink' : ''}`}>{i.name}</Link>
                           {i.role && ROLE[i.role] && i.role !== 'NEW' && <span className="text-[10.5px] text-spark-muted">({t(ROLE[i.role]!)})</span>}</span>
                       )) : <span className="text-spark-muted">—</span>}
                     </td>

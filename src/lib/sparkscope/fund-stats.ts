@@ -54,7 +54,7 @@ function mondayOf(day: string): string {
   return d.toISOString().slice(0, 10);
 }
 // 섹터 표기 흔들림 정리(인공지능=AI 등) — 집계용.
-function normSector(s: string): string {
+export function normSector(s: string): string {
   const t = s.replace(/\s/g, '');
   if (/^(AI|인공지능)/i.test(t)) return 'AI';
   if (/반도체/.test(t)) return '반도체';

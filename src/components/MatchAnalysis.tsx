@@ -4,6 +4,7 @@ import Link from 'next/link';
 import type { MatchStats } from '@/lib/sparkscope/match-stats';
 import { Card, krw, type T } from './FundAnalysis';
 import { MatchActionButtons } from './MatchActionButtons';
+import { dealsHref } from '@/lib/sparkscope/deal-links';
 
 const ACT: Record<string, { label: string; cls: string }> = {
   INTERESTED: { label: '관심', cls: 'bg-amber-50 text-amber-700 border-amber-200' },
@@ -131,7 +132,7 @@ export function MatchAnalysis({ stats, t, hrefFor, bucket }: {
                         <span className="mt-0.5 w-5 shrink-0 text-right text-[12px] font-bold tabular-nums text-spark-muted">{i + 1}</span>
                         <div className="min-w-0 flex-1">
                           <div className="flex items-baseline gap-2">
-                            <span className="truncate text-[13px] font-bold text-spark-ink">{h.name}</span>
+                            <Link href={dealsHref('deals', { inv: h.name })} className="truncate text-[13px] font-bold text-spark-ink hover:text-spark-purple hover:underline">{h.name}</Link>
                             <span className="text-[11px] text-spark-muted">{t('주력 {s}', { s: t(h.topStage) })} · {h.recent}</span>
                           </div>
                           <div className="mt-1 flex flex-wrap gap-1">
