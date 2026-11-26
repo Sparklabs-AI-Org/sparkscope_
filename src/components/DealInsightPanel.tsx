@@ -65,7 +65,7 @@ export function DealInsightPanel({ data, fallback, t }: {
         <div className="mt-4 grid grid-cols-1 gap-3 lg:grid-cols-2">
           {(ai.flows?.length ?? 0) > 0 && (
             <div>
-              <h3 className="mb-1.5 text-[12px] font-extrabold tracking-wide text-spark-muted">💸 {t('돈의 이동 — 어디서 어디로')}</h3>
+              <h3 className="mb-2 text-[15px] font-extrabold text-spark-ink">💸 {t('돈의 이동 — 어디서 어디로')}</h3>
               <ul className="space-y-1.5">
                 {ai.flows!.map((x, i) => (
                   <li key={i} className="rounded-lg border border-spark-border bg-white">
@@ -84,7 +84,7 @@ export function DealInsightPanel({ data, fallback, t }: {
           )}
           {(ai.why?.length ?? 0) > 0 && (
             <div>
-              <h3 className="mb-1.5 text-[12px] font-extrabold tracking-wide text-spark-muted">❓ {t('왜 지금 이 분야인가 — 뉴스 근거')}</h3>
+              <h3 className="mb-2 text-[15px] font-extrabold text-spark-ink">❓ {t('왜 지금 이 분야인가 — 뉴스 근거')}</h3>
               <ul className="space-y-1.5">
                 {ai.why!.map((x, i) => (
                   <li key={i} className="rounded-lg border border-spark-border bg-white px-3 py-2">
@@ -116,7 +116,7 @@ export function DealInsightPanel({ data, fallback, t }: {
       {ai && (ai.insights.length > 0 || ai.actions.length > 0) && (
         <div className="mt-4 grid grid-cols-1 gap-3 lg:grid-cols-[1.3fr_1fr]">
           <div>
-            <h3 className="mb-1.5 text-[12px] font-extrabold uppercase tracking-wide text-spark-muted">🔎 {t('눈여겨볼 신호')}</h3>
+            <h3 className="mb-2 text-[15px] font-extrabold text-spark-ink">🔎 {t('눈여겨볼 신호')}</h3>
             <ul className="space-y-1.5">
               {ai.insights.map((x, i) => {
                 const href = insightHref(x.link);
@@ -132,7 +132,7 @@ export function DealInsightPanel({ data, fallback, t }: {
             </ul>
           </div>
           <div>
-            <h3 className="mb-1.5 text-[12px] font-extrabold uppercase tracking-wide text-spark-muted">✅ {t('지금 할 일')}</h3>
+            <h3 className="mb-2 text-[15px] font-extrabold text-spark-ink">✅ {t('지금 할 일')}</h3>
             <ul className="space-y-1.5">
               {ai.actions.map((x, i) => {
                 const href = insightHref(x.link);
