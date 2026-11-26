@@ -69,7 +69,7 @@ deal: company(회사명, 괄호 영문 빼고), ceoName(대표자 이름만, 없
 fund: programName(출자사업·사업명), fundName(정식 펀드명이 있을 때만), stage: ANNOUNCED(출자 공고)/GP_SELECTED(운용사 선정)/CLOSED(결성 완료),
   targetSizeKrw, closedSizeKrw, sizeText, sectors[], gps: [{name, role: SOLE/CO_GP, amountKrw}], lps: [{name, amountKrw}]
 
-규칙: 한 기사에 투자받은 회사가 여럿이면 deal을 배열로 줘. 투자 '협약'·MOU·검토·'추진' 단계(아직 투자를 받지 않음)는 딜이 아니다 — 빼라. 회사채·공모채·상장 공모도 딜이 아니다. 기사에 없는 값은 null. 추측 금지. 금액은 "1500억" → 150000000000. kind가 none이면 deal·fund를 넣지 마라.`;
+규칙: 한 기사에 투자받은 회사가 여럿이면 deal을 배열로 줘. 투자 '협약'·MOU·검토·'추진' 단계(아직 투자를 받지 않음)는 딜이 아니다 — 빼라. 회사채·공모채·상장 공모도 딜이 아니다. 기사에 없는 값은 null. 추측 금지. 금액은 "1500억" → 150000000000. amount는 이번 라운드에 들어온 투자금만 — 기업가치·몸값·밸류에이션·누적 투자액·매출은 amount가 아니다(투자금이 안 적혀 있으면 null). kind가 none이면 deal·fund를 넣지 마라.`;
 
 const norm = (s: string) => s.replace(/\s+/g, '').replace(/[“”"'‘’·.,…]/g, '');
 const normName = (s: string) =>
@@ -84,6 +84,13 @@ function inText(needle: string | null | undefined, hay: string): boolean {
 function amountInText(amountText: string | null | undefined, hay: string): boolean {
   const num = amountText?.match(/[\d,.]+/)?.[0]?.replace(/,/g, '');
   return !!num && hay.replace(/,/g, '').includes(num);
+}
+/** 금액 숫자 바로 앞이 "기업가치·몸값·밸류"면 투자금이 아니다(2026-11-26 퓨리오사AI 8,200억 — 기업가치를 투자금으로 저장). */
+function looksLikeValuation(amountText: string | null | undefined, hay: string): boolean {
+  const num = amountText?.match(/[\d,.]+/)?.[0]?.replace(/,/g, '');
+  if (!num) return false;
+  const re = new RegExp(`(기업\\s*가치|몸값|밸류에이션|평가\\s*가치|가치를|가치로|가치는)[^.。\\n]{0,20}${num.replace(/[.]/g, '\\.')}`);
+  return re.test(hay.replace(/,/g, ''));
 }
 const big = (n: number | null | undefined) => (typeof n === 'number' && Number.isFinite(n) && n > 0 ? BigInt(Math.round(n)) : null);
 
@@ -128,7 +135,7 @@ async function saveOneDeal(articleId: string, pubDate: Date, d: LlmDeal, out: Ll
   const companyId = await findOrCreateCompany(d);
   if (!companyId) return false;
   const round = ROUNDS.includes(d.round as any) ? d.round! : null;
-  const amountOk = amountInText(d.amountText, text);
+  const amountOk = amountInText(d.amountText, text) && !looksLikeValuation(d.amountText, text);
   const amountKrw = amountOk ? big(d.amountKrw) : null;
 
   const win = 60 * 86_400_000;
