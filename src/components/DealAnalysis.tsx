@@ -7,11 +7,10 @@ import { STAGES, type DealStats } from '@/lib/sparkscope/deal-stats';
 const STAGE_COLOR: Record<string, string> = {
   SEED: '#ddd6fe', PRE_A: '#c4b5fd', A: '#a78bfa', B: '#8b5cf6', 'C+': '#6d28d9', ETC: '#a8a29e',
 };
-import { Card, Kpi, krw, TrendBars, type T } from './FundAnalysis';
+import { Card, Kpi, krw, type T } from './FundAnalysis';
 import { dealsHref } from '@/lib/sparkscope/deal-links';
 const H = (f: Parameters<typeof dealsHref>[1] = {}) => dealsHref('deals', f);
 
-const ROLE: Record<string, string> = { LEAD: '리드', NEW: '신규', FOLLOW: '후속', EXISTING: '기존' };
 
 export function DealAnalysis({ stats, t }: { stats: DealStats; t: T }) {
   if (stats.total === 0) {
@@ -93,107 +92,6 @@ export function DealAnalysis({ stats, t }: { stats: DealStats; t: T }) {
         </Card>
       </div>
 
-      <div className="mt-2.5">
-        <Card href={H()} title={t('지금 실제로 투자하는 하우스')} hint={t('참여 건수 순 · 신규 = 기존 투자사가 아닌 새 돈')}>
-          <div className="-mx-1 overflow-x-auto">
-            <table className="w-full min-w-[680px] text-[12.5px]">
-              <thead>
-                <tr className="border-b border-spark-border text-left text-[11px] text-spark-muted">
-                  <th className="px-1 py-1.5 font-semibold">{t('하우스')}</th>
-                  <th className="px-1 py-1.5 text-right font-semibold">{t('참여')}</th>
-                  <th className="px-1 py-1.5 text-right font-semibold">{t('리드')}</th>
-                  <th className="px-1 py-1.5 text-right font-semibold">{t('신규')}</th>
-                  <th className="px-1 py-1.5 font-semibold">{t('주력 단계')}</th>
-                  <th className="px-1 py-1.5 font-semibold">{t('주력 분야')}</th>
-                  <th className="px-1 py-1.5 text-right font-semibold">{t('참여 딜 합계')}</th>
-                  <th className="px-1 py-1.5 text-right font-semibold">{t('최근')}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {stats.investors.map(i => (
-                  <tr key={i.name} className="border-b border-spark-border/60 last:border-0">
-                    <td className="px-1 py-1.5 font-semibold text-spark-ink">
-                      <Link href={H({ inv: i.name })} className="hover:text-spark-purple hover:underline">{i.name}</Link>
-                      {i.portfolioDeals > 0 && <span className="ml-1.5 rounded bg-spark-purple/10 px-1.5 py-0.5 text-[10px] font-bold text-spark-purple">{t('우리 포폴 {n}', { n: i.portfolioDeals })}</span>}
-                    </td>
-                    <td className="px-1 py-1.5 text-right tabular-nums font-bold">{i.deals}</td>
-                    <td className="px-1 py-1.5 text-right tabular-nums">{i.leads || '—'}</td>
-                    <td className="px-1 py-1.5 text-right tabular-nums">{i.newMoney || '—'}</td>
-                    <td className="px-1 py-1.5 text-spark-ink-soft">{t(i.topStage)}</td>
-                    <td className="px-1 py-1.5 text-spark-ink-soft"><Link href={H({ inv: i.name, sec: i.topSector })} className="hover:text-spark-purple hover:underline">{t(i.topSector)}</Link></td>
-                    <td className="whitespace-nowrap px-1 py-1.5 text-right tabular-nums">{krw(i.sumKrw, t)}</td>
-                    <td className="whitespace-nowrap px-1 py-1.5 text-right tabular-nums text-spark-muted">{i.recent.slice(5)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          <p className="mt-2 text-[11px] text-spark-muted">{t('참여 딜 합계는 그 하우스가 들어간 라운드 전체 금액의 합입니다(하우스별 지분은 기사에 거의 없음).')}</p>
-        </Card>
-      </div>
-
-      <div className="mt-2.5 grid grid-cols-1 gap-2.5 lg:grid-cols-[1fr_1.4fr]">
-        <Card title={t('자주 같이 들어가는 하우스')} hint={t('2번 이상 같은 라운드')}>
-          {stats.pairs.length ? (
-            <ul className="space-y-1.5 text-[12.5px]">
-              {stats.pairs.map(p => (
-                <li key={`${p.a}|${p.b}`}><Link href={H({ inv: p.a, inv2: p.b })} className="flex items-center gap-1.5 rounded px-1 py-0.5 hover:bg-spark-subtle">
-                  <span className="font-semibold text-spark-ink">{p.a}</span>
-                  <span className="text-spark-muted">+</span>
-                  <span className="font-semibold text-spark-ink">{p.b}</span>
-                  <span className="ml-auto tabular-nums text-spark-muted">{p.count}{t('회')}</span>
-                </Link></li>
-              ))}
-            </ul>
-          ) : <p className="text-[12px] text-spark-muted">{t('아직 두 번 이상 같이 들어간 하우스가 없습니다. 딜이 쌓이면 나타납니다.')}</p>}
-          <p className="mt-3 text-[11px] text-spark-muted">{t('리드 한 곳을 잡으면 따라 들어올 가능성이 큰 곳입니다.')}</p>
-        </Card>
-
-        <Card href={H()} title={t('딜 추이')} hint={t('마우스 올리면 공개 금액')}>
-          <TrendBars t={t}
-            weekly={stats.weekly.map(w => ({ key: w.week, segs: [{ v: w.count, color: '#7c3aed' }], title: `${w.week} · ${w.count}${t('건')} · ${krw(w.sumKrw, t)}`, href: H({ week: w.week }) }))}
-            daily={(stats.daily ?? []).map(d => ({ key: d.day, segs: [{ v: d.count, color: '#7c3aed' }], title: `${d.day} · ${d.count}${t('건')} · ${krw(d.sumKrw, t)}`, href: H({ day: d.day }) }))} />
-        </Card>
-      </div>
-
-      <div className="mt-2.5">
-        <Card href={H()} title={t('최근 딜')} hint={t('최근 {n}건', { n: Math.min(15, stats.rows.length) })}>
-          <div className="-mx-1 overflow-x-auto">
-            <table className="w-full min-w-[680px] text-[12.5px]">
-              <thead>
-                <tr className="border-b border-spark-border text-left text-[11px] text-spark-muted">
-                  <th className="px-1 py-1.5 font-semibold">{t('날짜')}</th>
-                  <th className="px-1 py-1.5 font-semibold">{t('회사')}</th>
-                  <th className="px-1 py-1.5 font-semibold">{t('분야')}</th>
-                  <th className="px-1 py-1.5 font-semibold">{t('단계')}</th>
-                  <th className="px-1 py-1.5 text-right font-semibold">{t('금액')}</th>
-                  <th className="px-1 py-1.5 font-semibold">{t('투자사')}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {stats.rows.slice(0, 15).map(r => (
-                  <tr key={r.id} className="border-b border-spark-border/60 align-top last:border-0">
-                    <td className="whitespace-nowrap px-1 py-1.5 tabular-nums text-spark-muted">{r.date.slice(5)}</td>
-                    <td className="px-1 py-1.5 font-semibold text-spark-ink">
-                      {r.link ? <a href={r.link} target="_blank" rel="noopener noreferrer" className="hover:text-spark-purple">{r.company}</a> : r.company}
-                      {r.portfolio && <span className="ml-1.5 rounded bg-spark-purple/10 px-1.5 py-0.5 text-[10px] font-bold text-spark-purple">{t('포폴')}</span>}
-                    </td>
-                    <td className="whitespace-nowrap px-1 py-1.5 text-spark-ink-soft"><Link href={H({ sec: r.sector })} className="hover:text-spark-purple hover:underline">{t(r.sector)}</Link></td>
-                    <td className="whitespace-nowrap px-1 py-1.5 text-spark-ink-soft"><Link href={H({ st: r.stage })} className="hover:text-spark-purple hover:underline">{t(STAGES.find(s => s.id === r.stage)!.label)}</Link></td>
-                    <td className="whitespace-nowrap px-1 py-1.5 text-right tabular-nums font-semibold">{r.amountKrw != null ? krw(r.amountKrw, t) : <span className="font-normal text-spark-muted">{t('비공개')}</span>}</td>
-                    <td className="px-1 py-1.5 text-[12px] text-spark-ink-soft">
-                      {r.investors.length ? r.investors.map((i, k) => (
-                        <span key={i.name}>{k > 0 && ', '}<Link href={H({ inv: i.name })} className={`hover:text-spark-purple hover:underline ${i.role === 'LEAD' ? 'font-bold text-spark-ink' : ''}`}>{i.name}</Link>
-                          {i.role && ROLE[i.role] && i.role !== 'NEW' && <span className="text-[10.5px] text-spark-muted">({t(ROLE[i.role]!)})</span>}</span>
-                      )) : <span className="text-spark-muted">—</span>}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </Card>
-      </div>
     </section>
   );
 }

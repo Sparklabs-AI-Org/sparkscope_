@@ -349,7 +349,8 @@ async function loadDashboardData(
   const needPortfolio = tab === 'portfolio';                         // 위기·TOP15·피칭·긍부정
   const needSparklabs = tab === 'sparklabs';                         // 매체 분포·톤·펀드
   const needCompetitor = tab === 'competitor';                       // 경쟁사 패널
-  const needPulses = tab === 'articles';                             // AC·VC / 스타트업계 한 줄
+  // AC·VC / 스타트업계 한 줄 — 수집 기사 DB 화면에서 뺐다(2026-11-26 소윤). 계산(LLM)도 하지 않는다.
+  const needPulses = false;
   const needPolicy = tab === 'policy' || tab === 'fund';             // 정책·지원사업 / 투자·펀드 큐레이션
   const EMPTY: never[] = [];
   // AI가 생성한 문장(위기 원인·경쟁사 트렌드)은 사전계산된 한국어를 저장해두므로,
@@ -1336,7 +1337,8 @@ export default async function DashboardPage({ searchParams }: { searchParams: { 
       {/* 스파크랩 탭에서는 그리지 않는다(2026-10-28 소윤) — 포트폴리오사 급증 배너·전체 KPI라 자사 화면과 맞지 않는다. */}
       {tab !== 'competitor' && tab !== SYNERGY_TAB && tab !== 'policy' && tab !== 'fund' && tab !== 'sparklabs' && (
         <>
-          {data.spikes.length > 0 && !portfolioView && (
+          {/* 수집 기사 DB 화면에선 급증 배너를 그리지 않는다(2026-11-26 소윤) */}
+          {data.spikes.length > 0 && !portfolioView && tab !== 'articles' && (
             <div data-tour="spike-banner" className="mb-6 space-y-2">
               {data.spikes.map(s => <SpikeBanner key={s.company} s={s} />)}
             </div>
@@ -1583,7 +1585,8 @@ export default async function DashboardPage({ searchParams }: { searchParams: { 
           </>
         );
       })()}
-      {(tab === 'policy' || tab === 'fund') && (
+      {/* 투자·펀드 탭은 분석·딜 표로 대신하고 기사 목록은 뺐다(2026-11-26 소윤). 정책·지원사업은 그대로. */}
+      {tab === 'policy' && (
         <CuratedFeed kind={tab} items={data.policyArticles as any} roundups={data.weeklyRoundups as any} rangeLabel={range.label} />
       )}
 
