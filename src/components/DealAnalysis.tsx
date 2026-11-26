@@ -2,6 +2,11 @@
 // 단계별로 보통 얼마 받나, 누가 누구와 같이 들어가나(2026-11-26 소윤). 집계는 deal-stats.ts, 여긴 그리기만.
 import Link from 'next/link';
 import { STAGES, type DealStats } from '@/lib/sparkscope/deal-stats';
+
+// 단계 색: 초기(연한 보라) → 후기(진한 보라), 전략·M&A·기타는 회색.
+const STAGE_COLOR: Record<string, string> = {
+  SEED: '#ddd6fe', PRE_A: '#c4b5fd', A: '#a78bfa', B: '#8b5cf6', 'C+': '#6d28d9', ETC: '#a8a29e',
+};
 import { Card, Kpi, krw, type T } from './FundAnalysis';
 
 const ROLE: Record<string, string> = { LEAD: '리드', NEW: '신규', FOLLOW: '후속', EXISTING: '기존' };
@@ -14,7 +19,7 @@ export function DealAnalysis({ stats, t }: { stats: DealStats; t: T }) {
       </div>
     );
   }
-  const maxCell = Math.max(1, ...stats.matrix.flatMap(m => Object.values(m.cells).map(c => c.count)));
+  const maxRow = Math.max(1, ...stats.matrix.map(m => m.total));
   const maxWeek = Math.max(1, ...stats.weekly.map(w => w.count));
   // 금액은 1억~수천억이라 로그 눈금 — 큰 딜 하나가 나머지 막대를 왼쪽 끝으로 밀어붙이지 않게.
   const maxAmt = Math.max(1, ...stats.stageAmounts.map(s => s.max));
@@ -39,35 +44,33 @@ export function DealAnalysis({ stats, t }: { stats: DealStats; t: T }) {
       </div>
 
       <div className="mt-2.5 grid grid-cols-1 gap-2.5 lg:grid-cols-2">
-        <Card title={t('분야 × 단계 — 돈이 몰리는 칸')} hint={t('숫자 = 건수, 진할수록 많음 · 마우스 올리면 금액')}>
-          <div className="-mx-1 overflow-x-auto">
-            <table className="w-full min-w-[460px] border-separate border-spacing-0.5 text-[11.5px]">
-              <thead>
-                <tr className="text-spark-muted">
-                  <th className="px-1 text-left font-semibold" />
-                  {STAGES.map(s => <th key={s.id} className="px-1 font-semibold">{t(s.label)}</th>)}
-                </tr>
-              </thead>
-              <tbody>
-                {stats.matrix.slice(0, 10).map(m => (
-                  <tr key={m.sector}>
-                    <td className="whitespace-nowrap px-1 font-semibold text-spark-ink-soft">{t(m.sector)}</td>
-                    {STAGES.map(s => {
-                      const c = m.cells[s.id];
-                      const a = c ? 0.12 + 0.88 * (c.count / maxCell) : 0;
-                      return (
-                        <td key={s.id} title={c ? `${t(m.sector)} · ${t(s.label)} · ${c.count}${t('건')} · ${krw(c.sumKrw, t)}` : ''}
-                          className="h-7 rounded text-center font-bold tabular-nums"
-                          style={{ background: c ? `rgba(109,40,217,${a})` : '#f5f5f4', color: a > 0.55 ? '#fff' : '#44403c' }}>
-                          {c?.count ?? ''}
-                        </td>
-                      );
-                    })}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+        <Card title={t('분야별 딜 — 돈이 가는 곳')} hint={t('막대 길이 = 건수 · 색 = 단계 · 마우스 올리면 금액')}>
+          <div className="mb-2.5 flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-spark-muted">
+            {STAGES.map(s => (
+              <span key={s.id} className="inline-flex items-center gap-1">
+                <span className="h-2.5 w-2.5 rounded-sm" style={{ background: STAGE_COLOR[s.id] }} />{t(s.label)}
+              </span>
+            ))}
           </div>
+          <ul className="space-y-1.5">
+            {stats.matrix.slice(0, 10).map(m => (
+              <li key={m.sector} className="grid grid-cols-[6.5rem_1fr_2.5rem] items-center gap-2 text-[12px]">
+                <span className="truncate font-semibold text-spark-ink-soft" title={t(m.sector)}>{t(m.sector)}</span>
+                <span className="flex h-5 overflow-hidden rounded" style={{ width: `${Math.max(6, (m.total / maxRow) * 100)}%` }}>
+                  {STAGES.map(s => {
+                    const c = m.cells[s.id];
+                    if (!c) return null;
+                    return (
+                      <span key={s.id} title={`${t(m.sector)} · ${t(s.label)} · ${c.count}${t('건')}${c.sumKrw ? ` · ${krw(c.sumKrw, t)}` : ''}`}
+                        className="h-full border-r border-white/70 last:border-0"
+                        style={{ width: `${(c.count / m.total) * 100}%`, background: STAGE_COLOR[s.id] }} />
+                    );
+                  })}
+                </span>
+                <span className="text-right font-bold tabular-nums text-spark-ink">{m.total}{t('건')}</span>
+              </li>
+            ))}
+          </ul>
         </Card>
 
         <Card title={t('단계별 투자 금액대')} hint={t('막대 = 최소~최대, 점 = 중간값 · 로그 눈금')}>

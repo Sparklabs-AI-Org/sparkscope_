@@ -1593,6 +1593,8 @@ export const EN: Record<string, string> = {
   '📈 투자 유치 분석': '📈 Funding round analysis',
   '📊 펀드 결성 분석': '📊 Fund formation analysis',
   '🤝 포폴 매칭': '🤝 Portfolio matching',
+  '분야별 딜 — 돈이 가는 곳': 'Deals by sector — where money goes',
+  '막대 길이 = 건수 · 색 = 단계 · 마우스 올리면 금액': 'Bar length = deals · color = stage · hover for amount',
   '관심': 'Interested',
   '연락함': 'Contacted',
   '미팅': 'Meeting',
