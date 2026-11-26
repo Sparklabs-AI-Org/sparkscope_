@@ -21,7 +21,7 @@ function Kpi({ label, value, sub }: { label: string; value: string; sub?: string
   return (
     <div className="rounded-xl border border-spark-border bg-white px-4 py-3">
       <div className="text-[11.5px] font-semibold text-spark-muted">{label}</div>
-      <div className="mt-0.5 text-[22px] font-extrabold tabular-nums tracking-tight text-spark-ink">{value}</div>
+      <div className="mt-0.5 truncate text-[22px] font-extrabold tabular-nums tracking-tight text-spark-ink" title={value}>{value}</div>
       {sub && <div className="mt-0.5 text-[11.5px] text-spark-muted">{sub}</div>}
     </div>
   );
