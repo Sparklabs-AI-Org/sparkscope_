@@ -177,38 +177,6 @@ export function FundAnalysis({ stats, t, dd, ddHref }: { stats: FundStats; t: T;
 
       {dd && ddHref && <FundDrill stats={stats} f={dd} close={ddHref(null)} t={t} />}
 
-      <div className="mt-2.5">
-      <Card href={dealsHref('funds')} title={t('펀드 목록')} hint={t('금액 있는 펀드 {p}%', { p: sizedPct })}>
-        <div className="-mx-1 overflow-x-auto">
-          <table className="w-full min-w-[640px] text-[12.5px]">
-            <thead>
-              <tr className="border-b border-spark-border text-left text-[11px] text-spark-muted">
-                <th className="px-1 py-1.5 font-semibold">{t('날짜')}</th>
-                <th className="px-1 py-1.5 font-semibold">{t('단계')}</th>
-                <th className="px-1 py-1.5 font-semibold">{t('펀드')}</th>
-                <th className="px-1 py-1.5 font-semibold">{t('운용사(GP)')}</th>
-                <th className="px-1 py-1.5 text-right font-semibold">{t('규모')}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {stats.rows.slice(0, 12).map(r => (
-                <tr key={r.id} className="border-b border-spark-border/60 last:border-0">
-                  <td className="whitespace-nowrap px-1 py-1.5 tabular-nums text-spark-muted">{r.date.slice(5)}</td>
-                  <td className="px-1 py-1.5"><Link href={D({ st: r.stage })} className={`whitespace-nowrap rounded border px-1.5 py-0.5 text-[10.5px] font-bold hover:opacity-80 ${STAGE[r.stage].cls}`}>{t(STAGE[r.stage].label)}</Link></td>
-                  <td className="px-1 py-1.5 font-semibold text-spark-ink">
-                    {r.link ? <a href={r.link} target="_blank" rel="noopener noreferrer" className="hover:text-spark-purple">{r.name}</a> : r.name}
-                  </td>
-                  <td className="px-1 py-1.5 text-spark-ink-soft">{r.gps.length ? r.gps.map((g, k) => <span key={g}>{k > 0 && ', '}<Link href={D({ inv: g })} className="hover:text-spark-purple hover:underline">{g}</Link></span>) : <span className="text-spark-muted">{t('선정 전')}</span>}</td>
-                  <td className="whitespace-nowrap px-1 py-1.5 text-right tabular-nums font-semibold">
-                    {r.sizeKrw != null ? <>{krw(r.sizeKrw, t)}{r.sizeIsTarget && <span className="ml-0.5 text-[10.5px] font-normal text-spark-muted">({t('목표')})</span>}</> : <span className="text-spark-muted">—</span>}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </Card>
-      </div>
     </section>
   );
 }

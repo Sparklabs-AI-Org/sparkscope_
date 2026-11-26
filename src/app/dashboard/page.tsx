@@ -1560,9 +1560,9 @@ export default async function DashboardPage({ searchParams }: { searchParams: { 
           빈 칸을 띄우면 "수집이 멈췄나" 하고 헷갈린다. 날짜를 머리말에 적어 구분한다. */}
       {/* 정책·지원사업 / 투자·펀드 — 조회 기간의 기사를 날짜별로. 원본 표는 2026-10-28 뺐다(소윤). */}
       {/* 투자·펀드 분석 — 기사 목록 위에 투자 유치(어느 단계·분야, 누가 쓰나) / 펀드 결성(얼마·어느 하우스·어디 돈)을
-          한눈에(2026-11-26 소윤). ?ana=fund 로 전환, ?ana=match 는 포폴 매칭(포폴사→맞는 하우스·펀드), 기본은 투자 유치. 사내 화면만. */}
+          한눈에(2026-11-26 소윤). 기본은 펀드 결성(11-26 소윤), ?ana=round 투자 유치, ?ana=match 포폴 매칭. 사내 화면만. */}
       {tab === 'fund' && !portfolioView && (() => {
-        const ana = searchParams.ana === 'fund' || searchParams.ana === 'match' ? searchParams.ana : 'round';
+        const ana = searchParams.ana === 'round' || searchParams.ana === 'match' ? searchParams.ana : 'fund';
         const hrefFor = (a: string) => {
           const q = new URLSearchParams(Object.entries(searchParams).filter(([, v]) => typeof v === 'string') as [string, string][]);
           q.set('ana', a); q.delete('sec'); q.delete('pc'); q.delete('dd');
@@ -1587,7 +1587,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: { 
             {/* 섹션마다 따로 흘려보낸다 — AI 요약·분석이 끝날 때까지 화면 전체가 멈추지 않게(2026-11-26) */}
             <Suspense fallback={<SectionSkeleton h="h-40" />}><InsightSection t={tr} /></Suspense>
             <div className="mb-2 flex gap-1.5">
-              {[{ id: 'round', label: '📈 투자 유치 분석' }, { id: 'fund', label: '📊 펀드 결성 분석' }, { id: 'match', label: '🤝 포폴 매칭' }].map(x => (
+              {[{ id: 'fund', label: '📊 펀드 결성 분석' }, { id: 'round', label: '📈 투자 유치 분석' }, { id: 'match', label: '🤝 포폴 매칭' }].map(x => (
                 <Link key={x.id} href={hrefFor(x.id)} scroll={false}
                   className={`rounded-lg border px-3 py-1.5 text-[13px] font-bold transition-colors ${ana === x.id ? 'border-spark-purple bg-spark-purple text-white' : 'border-spark-border bg-white text-spark-ink-soft hover:border-spark-purple/40 hover:text-spark-purple'}`}>
                   {tr(x.label)}
