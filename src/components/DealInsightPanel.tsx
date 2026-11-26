@@ -5,6 +5,8 @@ import type { DealInsight, InsightLink, InsightSource } from '@/lib/sparkscope/d
 import { dealsHref } from '@/lib/sparkscope/deal-links';
 import type { T } from './FundAnalysis';
 
+const LINK_LABEL: Record<string, string> = { sector: '딜 표', stage: '딜 표', house: '딜 표', fundSector: '펀드 표', match: '포폴 매칭', newFunds: '새 펀드' };
+
 export function insightHref(l?: InsightLink): string | null {
   if (!l) return null;
   switch (l.kind) {
@@ -57,7 +59,12 @@ export function DealInsightPanel({ data, fallback, t }: {
 
       <ul className="space-y-1.5 text-[14.5px] font-semibold leading-snug text-spark-ink">
         {(ai?.summary ?? fallback).map((s, i) => (
-          <li key={i} className="flex gap-2"><span className="tabular-nums text-spark-purple">{i + 1}.</span><span><Cite text={s.replace(/^\s*\d+\.\s*/, '')} sources={srcs} /></span></li>
+          <li key={i} className="flex gap-2"><span className="tabular-nums text-spark-purple">{i + 1}.</span><span>
+            <Cite text={s.replace(/^\s*\d+\.\s*/, '')} sources={srcs} />
+            {(() => { const l = ai?.summaryLinks?.[i]; const h = insightHref(l ?? undefined); return h && l ? (
+              <Link href={h} className="ml-1.5 inline-flex items-center rounded border border-spark-border bg-white px-1.5 py-px align-middle text-[10.5px] font-semibold text-spark-muted hover:border-spark-purple/40 hover:text-spark-purple">📊 {t(LINK_LABEL[l.kind])}{l.value ? ` · ${t(l.value)}` : ''} ›</Link>
+            ) : null; })()}
+          </span></li>
         ))}
       </ul>
 

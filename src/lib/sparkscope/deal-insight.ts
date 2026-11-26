@@ -18,6 +18,8 @@ export interface InsightLink { kind: InsightLinkKind; value?: string }
 export interface InsightSource { n: number; title: string; source: string; date: string; link: string }
 export interface DealInsight {
   summary: string[];
+  /** summary 줄마다 데이터 근거 화면(뉴스 근거는 문장 속 [n]). 없으면 null. */
+  summaryLinks?: (InsightLink | null)[];
   /** 돈의 이동 — 어디서(LP 재원·하우스) 어디로(분야·단계) */
   flows?: { from: string; to: string; detail: string; link?: InsightLink }[];
   /** 왜 지금 그 분야인가 — 일반 뉴스 근거 */
@@ -115,7 +117,8 @@ const PROMPT = `너는 벤처캐피털(스파크랩) 투자팀의 시니어 애�
   sector(투자유치.분야별의 분야) / stage(SEED·PRE_A·A·B·C+·ETC) / house(하우스·GP 이름) / fundSector(펀드결성.분야 이름) / match(우리포폴의 분야) / newFunds(value 없음).
 
 JSON으로만:
-{"summary": [3줄 — 각 줄이 '무엇이 일어나고 있고 왜 중요한지'. 예: "바이오 후기 라운드에 BNH·IBK 등이 같이 몰림 — 임상 성과 뉴스가 이어지며 회수 기대가 커진 초기 신호[3]" 처럼 이유를 붙인다],
+{"summary": [3줄 — 각 줄이 '무엇이 일어나고 있고 왜 중요한지'. 예: "바이오 후기 라운드에 BNH·IBK 등이 같이 몰림 — 임상 성과 뉴스가 이어지며 회수 기대가 커진 초기 신호[3]" 처럼 이유를 붙인다. 뉴스 근거가 있는 줄은 반드시 [n]을 단다],
+ "summaryLinks": [summary와 같은 순서·개수 — 각 줄의 데이터 근거 화면 {"kind","value"}. 모든 줄에 반드시 하나씩(뉴스만 근거인 줄도 관련 분야 sector로)],
  "flows": [2~4개 {"from": 돈이 나온 곳(LP 재원·하우스군), "to": 들어간 곳(분야·단계·펀드), "detail": 사실 묶음 근거 한 문장, "link"}],
  "why": [핫한 분야 1~3개 {"topic": 분야, "reason": 뉴스 근거로 2문장, "sources": [n...], "link"}],
  "insights": [2~4개 {"title", "detail", "link"}] — 연관성·어긋남(예: 펀드는 AI를 내걸었는데 딜은 바이오, 우리 포폴이 많은 분야에 돈이 없음, 특정 하우스 쌍이 같은 분야에 반복),
@@ -139,7 +142,8 @@ export async function computeAndStoreDealInsight(): Promise<DealInsight | null> 
   const out = JSON.parse(resp.choices[0]?.message?.content ?? '{}');
   const str = (v: any, n: number) => (typeof v === 'string' ? v.trim().slice(0, n) : '');
   const insight: DealInsight = {
-    summary: (Array.isArray(out.summary) ? out.summary : []).map((s: any) => str(s, 200)).filter(Boolean).slice(0, 3),
+    summary: (Array.isArray(out.summary) ? out.summary : []).map((s: any) => str(s, 240)).filter(Boolean).slice(0, 3),
+    summaryLinks: (Array.isArray(out.summaryLinks) ? out.summaryLinks : []).slice(0, 3).map((l: any) => cleanLink(l, allowed) ?? null),
     insights: (Array.isArray(out.insights) ? out.insights : []).slice(0, 4)
       .map((x: any) => ({ title: str(x?.title, 120), detail: str(x?.detail, 300), link: cleanLink(x?.link, allowed) })).filter((x: any) => x.title),
     flows: (Array.isArray(out.flows) ? out.flows : []).slice(0, 4)
@@ -171,7 +175,7 @@ export async function getDealInsight(opts: { liveIfStale?: boolean } = {}): Prom
   if (row) try { parsed = { insight: JSON.parse(row.value), computedAt: row.computedAt }; } catch { parsed = null; }
   // 크론 요약이 없거나 하루 넘게 묵었으면(배치 실패) 그 자리에서 한 번 만든다 — 대시보드 사전계산 규칙의 자동 대체와 같다.
   // 만든 결과는 저장되므로 다음 사람부터는 읽기만 한다. 45초 넘으면 포기하고 기존 것/기본 요약으로.
-  const stale = !parsed || Date.now() - parsed.computedAt.getTime() > 26 * 3600e3 || !parsed.insight.flows;
+  const stale = !parsed || Date.now() - parsed.computedAt.getTime() > 26 * 3600e3 || !parsed.insight.flows || !parsed.insight.summaryLinks;
   if (opts.liveIfStale && stale) {
     const fresh = await Promise.race([
       computeAndStoreDealInsight().catch(e => { console.error('[deal-insight] 실시간 계산 실패', e); return null; }),
