@@ -3,6 +3,14 @@
 import Link from 'next/link';
 import type { MatchStats } from '@/lib/sparkscope/match-stats';
 import { Card, krw, type T } from './FundAnalysis';
+import { MatchActionButtons } from './MatchActionButtons';
+
+const ACT: Record<string, { label: string; cls: string }> = {
+  INTERESTED: { label: '관심', cls: 'bg-amber-50 text-amber-700 border-amber-200' },
+  CONTACTED: { label: '연락함', cls: 'bg-sky-50 text-sky-700 border-sky-200' },
+  MEETING: { label: '미팅', cls: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
+  PASSED: { label: '보류', cls: 'bg-gray-50 text-gray-600 border-gray-200' },
+};
 
 const FUND_STAGE: Record<string, { label: string; cls: string }> = {
   CLOSED: { label: '결성 완료', cls: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
@@ -16,6 +24,8 @@ export function MatchAnalysis({ stats, t, hrefFor, bucket }: {
   const active = stats.selected?.bucket ?? bucket;
   const list = active ? stats.companies.filter(c => c.bucket === active) : [];
   const maxDeals = Math.max(1, ...stats.buckets.map(b => b.deals));
+  const btnLabels = Object.fromEntries(['관심', '연락함', '미팅', '보류', '저장 실패'].map(k => [k, t(k)]));
+  const sel = stats.selected;
 
   return (
     <section className="mb-4 rounded-2xl border border-spark-border bg-spark-subtle/40 p-5">
@@ -26,6 +36,43 @@ export function MatchAnalysis({ stats, t, hrefFor, bucket }: {
       <p className="mb-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-[12px] text-amber-800">
         {t('지금은 분야로만 맞춥니다. 포폴사 투자 단계(SLAB)가 연결되면 단계까지 맞춰 정확도가 올라갑니다.')}
       </p>
+
+      {stats.newFunds.length > 0 && (
+        <div className="mb-3 rounded-xl border border-emerald-200 bg-emerald-50/70 px-4 py-3">
+          <div className="mb-1.5 text-[13px] font-extrabold text-emerald-800">🆕 {t('이번 주 새 펀드 {n}개', { n: stats.newFunds.length })}</div>
+          <ul className="space-y-1">
+            {stats.newFunds.slice(0, 5).map(f => (
+              <li key={f.id} className="flex flex-wrap items-baseline gap-x-2 text-[12.5px]">
+                <span className={`rounded border px-1.5 py-0.5 text-[10.5px] font-bold ${FUND_STAGE[f.stage]?.cls ?? ''}`}>{t(FUND_STAGE[f.stage]?.label ?? f.stage)}</span>
+                {f.link ? <a href={f.link} target="_blank" rel="noopener noreferrer" className="font-bold text-spark-ink hover:text-spark-purple">{f.name}</a> : <span className="font-bold">{f.name}</span>}
+                <span className="text-spark-muted">{f.gps.join(', ') || t('GP 미정')}{f.sizeKrw != null && ` · ${krw(f.sizeKrw, t)}`}</span>
+                {f.buckets.length > 0 ? (
+                  <span className="text-emerald-800">→ {f.buckets.map(b => (
+                    <Link key={b} href={hrefFor({ sec: b })} scroll={false} className="mr-1 font-semibold underline-offset-2 hover:underline">{t(b)}</Link>
+                  ))}{t('포폴 {n}곳과 분야 일치', { n: f.matchCount })}</span>
+                ) : <span className="text-spark-muted">{t('분야 미기재')}</span>}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {stats.pipeline.length > 0 && (
+        <div className="mb-3 rounded-xl border border-spark-border bg-white px-4 py-3">
+          <div className="mb-1.5 text-[13px] font-extrabold text-spark-ink">📋 {t('팀 진행 현황')} <span className="text-[11px] font-normal text-spark-muted">{t('최근 기록 · 보류 제외')}</span></div>
+          <ul className="grid grid-cols-1 gap-x-4 gap-y-1 md:grid-cols-2">
+            {stats.pipeline.map((p, i) => (
+              <li key={i} className="flex items-baseline gap-2 text-[12px]">
+                <span className={`shrink-0 rounded border px-1.5 py-0.5 text-[10.5px] font-bold ${ACT[p.status]?.cls ?? ''}`}>{t(ACT[p.status]?.label ?? p.status)}</span>
+                <Link href={hrefFor({ pc: p.targetId })} scroll={false} className="truncate font-semibold text-spark-ink hover:text-spark-purple">{p.targetName}</Link>
+                <span className="text-spark-muted">↔</span>
+                <span className="truncate text-spark-ink-soft">{p.counterName}</span>
+                <span className="ml-auto shrink-0 tabular-nums text-[10.5px] text-spark-muted" title={p.by ?? undefined}>{p.at.slice(5)}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 gap-2.5 lg:grid-cols-[18rem_1fr]">
         <div className="space-y-2.5">
@@ -90,6 +137,8 @@ export function MatchAnalysis({ stats, t, hrefFor, bucket }: {
                           <div className="mt-1 flex flex-wrap gap-1">
                             {h.reasons.map(r => <span key={r} className="rounded bg-spark-subtle px-1.5 py-0.5 text-[10.5px] font-semibold text-spark-ink-soft">{r}</span>)}
                           </div>
+                          {sel && <MatchActionButtons targetId={sel.id} kind="HOUSE" counterKey={h.key} counterName={h.name}
+                            initial={stats.actions[`HOUSE|${h.key}`]?.status ?? null} by={stats.actions[`HOUSE|${h.key}`]?.by} labels={btnLabels} />}
                         </div>
                         <span className="shrink-0 rounded-md bg-spark-purple/10 px-2 py-0.5 text-[12px] font-extrabold tabular-nums text-spark-purple">{h.score}</span>
                       </li>
@@ -111,6 +160,8 @@ export function MatchAnalysis({ stats, t, hrefFor, bucket }: {
                         <div className="mt-1 flex flex-wrap gap-1">
                           {f.reasons.map(r => <span key={r} className="rounded bg-spark-subtle px-1.5 py-0.5 text-[10.5px] font-semibold text-spark-ink-soft">{r}</span>)}
                         </div>
+                        {sel && <MatchActionButtons targetId={sel.id} kind="FUND" counterKey={f.id} counterName={f.name}
+                          initial={stats.actions[`FUND|${f.id}`]?.status ?? null} by={stats.actions[`FUND|${f.id}`]?.by} labels={btnLabels} />}
                       </li>
                     ))}
                   </ul>

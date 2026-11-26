@@ -731,3 +731,20 @@ model FundSource {
   @@unique([fundId, articleId])
   @@index([articleId])
 }
+
+// 포폴 매칭 진행 기록 — 포폴사 × 하우스/펀드 짝마다 최신 상태 하나(2026-11-26). migration 20261126_match_action
+model MatchAction {
+  id          String   @id @default(cuid())
+  targetId    String
+  kind        String // HOUSE / FUND
+  counterKey  String // HOUSE: investorKey(이름), FUND: Fund.id
+  counterName String
+  status      String // INTERESTED / CONTACTED / MEETING / PASSED
+  note        String?
+  updatedBy   String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([targetId, kind, counterKey], map: "MatchAction_target_kind_counter_key")
+  @@index([status])
+}

@@ -1941,6 +1941,6 @@ async function DealSection({ t }: { t: any }) {
 }
 async function MatchSection({ t, sec, pc, hrefFor }: { t: any; sec?: string; pc?: string; hrefFor: (p: { sec?: string; pc?: string }) => string }) {
   const stats = await getMatchStats({ days: 90, bucket: sec, companyId: pc })
-    .catch(e => { console.error('[dashboard] 포폴 매칭 실패', e); return { days: 90, buckets: [], companies: [], selected: null, houses: [], funds: [] }; });
+    .catch(e => { console.error('[dashboard] 포폴 매칭 실패', e); return { days: 90, buckets: [], companies: [], selected: null, houses: [], funds: [], newFunds: [], actions: {}, pipeline: [] }; });
   return <MatchAnalysis stats={stats} t={t} hrefFor={hrefFor} bucket={sec ?? null} />;
 }

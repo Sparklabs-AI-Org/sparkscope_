@@ -6,7 +6,7 @@ import { prisma } from '@/lib/prisma';
 import { investorKey, sectorOf, stageOf, STAGES } from './deal-stats';
 
 export interface HouseMatch {
-  name: string; score: number; reasons: string[];
+  key: string; name: string; score: number; reasons: string[];
   sectorDeals: number; leads: number; recent: string; topStage: string; ourPortfolio: number;
 }
 export interface FundMatch {
@@ -20,6 +20,12 @@ export interface MatchStats {
   selected: PortfolioCo | null;
   houses: HouseMatch[];
   funds: FundMatch[];
+  /** 지난 7일 새로 결성·GP선정된 펀드와, 분야가 맞는 우리 포폴 수 — 화면 맨 위 알림. */
+  newFunds: { id: string; name: string; stage: string; gps: string[]; sizeKrw: number | null; date: string; buckets: string[]; matchCount: number; link: string | null }[];
+  /** 선택한 포폴사의 진행 기록. 키 = `${kind}|${counterKey}` */
+  actions: Record<string, { status: string; by: string | null; at: string }>;
+  /** 팀 전체 최근 진행 기록(보류 제외) */
+  pipeline: { targetId: string; targetName: string; kind: string; counterName: string; status: string; by: string | null; at: string }[];
 }
 
 const kstDay = (d: Date) => new Date(d.getTime() + 9 * 3600e3).toISOString().slice(0, 10);
@@ -72,7 +78,27 @@ export async function getMatchStats(opts: { days?: number; companyId?: string; b
 
   const selected = companies.find(c => c.id === opts.companyId) ?? null;
   const bucket = selected?.bucket ?? opts.bucket ?? null;
-  if (!bucket) return { days, buckets, companies, selected, houses: [], funds: [] };
+
+  // 새 펀드 알림: 지난 7일 안에 결성 완료·GP 선정으로 처음 잡힌 펀드.
+  const weekAgo = Date.now() - 7 * 86_400_000;
+  const newFunds = funds.filter(f => (f.stage === 'CLOSED' || f.stage === 'GP_SELECTED') && f.createdAt.getTime() >= weekAgo).map(f => {
+    const row = fundRows.find(r => r.id === f.id)!;
+    const bs = [...row.buckets].filter(b => b !== '기타' && b !== '미상');
+    return { id: f.id, name: row.name, stage: row.stage, gps: row.gps, sizeKrw: row.sizeKrw, date: row.date, buckets: bs,
+      matchCount: companies.filter(c => bs.includes(c.bucket)).length, link: row.link };
+  }).sort((a, b) => b.matchCount - a.matchCount || b.date.localeCompare(a.date));
+
+  const nameById = new Map(companies.map(c => [c.id, c.name]));
+  const [mine, recentActs] = await Promise.all([
+    selected ? prisma.matchAction.findMany({ where: { targetId: selected.id } }) : Promise.resolve([]),
+    prisma.matchAction.findMany({ where: { status: { not: 'PASSED' } }, orderBy: { updatedAt: 'desc' }, take: 12 }),
+  ]);
+  const actions: MatchStats['actions'] = {};
+  for (const a of mine) actions[`${a.kind}|${a.counterKey}`] = { status: a.status, by: a.updatedBy, at: kstDay(a.updatedAt) };
+  const pipeline = recentActs.map(a => ({ targetId: a.targetId, targetName: nameById.get(a.targetId) ?? '—', kind: a.kind,
+    counterName: a.counterName, status: a.status, by: a.updatedBy, at: kstDay(a.updatedAt) }));
+
+  if (!bucket) return { days, buckets, companies, selected, houses: [], funds: [], newFunds, actions, pipeline };
 
   // ── 하우스 점수: 같은 분야 딜 ×3, 리드 ×2, 최근 30일 +2, 우리 포폴에 들어온 적 +1.
   const known = new Set((selected?.lastDeal?.investors ?? []).map(investorKey));
@@ -100,7 +126,7 @@ export async function getMatchStats(opts: { days?: number; companyId?: string; b
     if (e.pf) reasons.push(`우리 포폴 ${e.pf}곳 투자`);
     if (known.has(k)) reasons.push('이미 이 회사 투자사');
     const score = e.sectorDeals * 3 + e.leads * 2 + (recentDays <= 30 ? 2 : 0) + (e.pf ? 1 : 0);
-    return { name: e.name, score, reasons, sectorDeals: e.sectorDeals, leads: e.leads, recent: e.recent, topStage, ourPortfolio: e.pf };
+    return { key: k, name: e.name, score, reasons, sectorDeals: e.sectorDeals, leads: e.leads, recent: e.recent, topStage, ourPortfolio: e.pf };
   }).sort((a, b) => b.score - a.score || b.recent.localeCompare(a.recent)).slice(0, 10);
 
   // ── 펀드: 같은 분야를 내건 펀드. 결성 완료(이제 막 투자 시작)·GP 선정(곧 결성) 순.
@@ -114,5 +140,5 @@ export async function getMatchStats(opts: { days?: number; companyId?: string; b
     return { id: f.id, name: f.name, stage: f.stage, gps: f.gps, sizeKrw: f.sizeKrw, date: f.date, reasons, link: f.link };
   }).sort((a, b) => (order[a.stage] ?? 9) - (order[b.stage] ?? 9) || b.date.localeCompare(a.date)).slice(0, 8);
 
-  return { days, buckets, companies, selected, houses, funds: fundsOut };
+  return { days, buckets, companies, selected, houses, funds: fundsOut, newFunds, actions, pipeline };
 }
