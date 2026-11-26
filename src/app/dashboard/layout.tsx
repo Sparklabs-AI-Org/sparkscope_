@@ -6,6 +6,8 @@ import { hasStaleSession } from '@/lib/session-cookie';
 import { countPending, canApproveAccess } from '@/lib/sparkscope/access-request';
 import { SignOutButton } from '@/components/SignOutButton';
 import { ScrollTopButton } from '@/components/ScrollTopButton';
+import { NavProgress } from '@/components/NavProgress';
+import { Suspense } from 'react';
 import { DashboardTutorial } from '@/components/DashboardTutorial';
 import { LanguageSwitcher } from '@/components/LanguageSwitcher';
 import { getT, getLocale } from '@/lib/i18n/server';
@@ -109,6 +111,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
           완전히 없애지 않은 이유: 초대형 모니터에서 한 줄이 지나치게 길어지면
           기사 제목을 따라 읽기 어려워진다. */}
       <main className="max-w-[1800px] mx-auto px-6 sm:px-8 py-7 animate-rise">{children}</main>
+      <Suspense fallback={null}><NavProgress /></Suspense>
       <ScrollTopButton />
     </div>
   );

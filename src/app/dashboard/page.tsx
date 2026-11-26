@@ -1,5 +1,6 @@
 // 메인 대시보드 — 기간 선택(달력) 기반. KPI/차트/위기감지/급증/스크랩 지표.
 import Link from 'next/link';
+import { Suspense } from 'react';
 import { getLocale, getT } from '@/lib/i18n/server';
 import { ensureArticleEnDeep, ensureArticleKoDeep } from '@/lib/sparkscope/translate-content';
 import { articleTitle } from '@/lib/sparkscope/article-title';
@@ -351,7 +352,8 @@ async function loadDashboardData(
   const needCompetitor = tab === 'competitor';                       // 경쟁사 패널
   // AC·VC / 스타트업계 한 줄 — 수집 기사 DB 화면에서 뺐다(2026-11-26 소윤). 계산(LLM)도 하지 않는다.
   const needPulses = false;
-  const needPolicy = tab === 'policy' || tab === 'fund';             // 정책·지원사업 / 투자·펀드 큐레이션
+  // 투자·펀드 탭은 기사 목록을 뺐으므로(2026-11-26) 정책·지원사업만 읽는다.
+  const needPolicy = tab === 'policy';
   const EMPTY: never[] = [];
   // AI가 생성한 문장(위기 원인·경쟁사 트렌드)은 사전계산된 한국어를 저장해두므로,
   // EN 화면이면 그 문장의 영어판을 채워서 읽는다(DashboardInsight JSON 안에 캐시된다).
@@ -816,7 +818,7 @@ async function loadDashboardData(
     ? (await prisma.article.findMany({
         // 투자·펀드는 국내 소식만 — 해외 딜은 Inter(해외 트렌드) 영역이다(2026-10-28 소윤). 판정 전 기사(null)는 보여준다.
         // 정책 탭에서 생태계·동향은 뺀다 — 업계 동향 탭이 보여준다(2026-10-28 소윤, DB 분류는 그대로).
-        where: { ...where, ...(tab === 'fund'
+        where: { ...where, ...((tab as string) === 'fund'
           ? { category: 'fund_invest', OR: [{ isOverseas: null }, { isOverseas: false }] }
           : { category: 'policy_support', OR: [{ curationTopic: null }, { curationTopic: { not: 'ecosystem' } }] }) },
         orderBy: [{ pubDate: 'desc' }],
@@ -1572,7 +1574,8 @@ export default async function DashboardPage({ searchParams }: { searchParams: { 
         };
         return (
           <>
-            <InsightSection t={tr} />
+            {/* 섹션마다 따로 흘려보낸다 — AI 요약·분석이 끝날 때까지 화면 전체가 멈추지 않게(2026-11-26) */}
+            <Suspense fallback={<SectionSkeleton h="h-40" />}><InsightSection t={tr} /></Suspense>
             <div className="mb-2 flex gap-1.5">
               {[{ id: 'round', label: '📈 투자 유치 분석' }, { id: 'fund', label: '📊 펀드 결성 분석' }, { id: 'match', label: '🤝 포폴 매칭' }].map(x => (
                 <Link key={x.id} href={hrefFor(x.id)} scroll={false}
@@ -1581,7 +1584,9 @@ export default async function DashboardPage({ searchParams }: { searchParams: { 
                 </Link>
               ))}
             </div>
-            {ana === 'fund' ? <FundSection t={tr} /> : ana === 'match' ? <MatchSection t={tr} sec={searchParams.sec} pc={searchParams.pc} hrefFor={matchHref} /> : <DealSection t={tr} />}
+            <Suspense key={`${ana}|${searchParams.sec ?? ''}|${searchParams.pc ?? ''}`} fallback={<SectionSkeleton h="h-96" />}>
+              {ana === 'fund' ? <FundSection t={tr} /> : ana === 'match' ? <MatchSection t={tr} sec={searchParams.sec} pc={searchParams.pc} hrefFor={matchHref} /> : <DealSection t={tr} />}
+            </Suspense>
           </>
         );
       })()}
@@ -1934,6 +1939,10 @@ function ToneRow({ label, count, total, color }: { label: string; count: number;
       <div className="w-10 text-right font-semibold">{count}</div>
     </div>
   );
+}
+
+function SectionSkeleton({ h }: { h: string }) {
+  return <div className={`mb-4 animate-pulse rounded-2xl border border-spark-border bg-spark-subtle/60 ${h}`} aria-busy="true" />;
 }
 
 // 투자·펀드 분석 패널 — 집계 실패해도 대시보드는 살린다(빈 상태로 보인다).
