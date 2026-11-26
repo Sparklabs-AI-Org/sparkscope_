@@ -1,7 +1,7 @@
 // 투자·펀드 탭 맨 위 "한눈에 보는 요약" — 3줄 요약 · 눈여겨볼 신호 · 지금 할 일(2026-11-26 소윤).
 // 매일 07:30 크론이 만든 AI 요약을 읽기만 한다. 아직 없으면 집계 숫자로 만든 기본 요약을 보여주고 출처를 구분해 표시한다.
 import Link from 'next/link';
-import type { DealInsight, InsightLink } from '@/lib/sparkscope/deal-insight';
+import type { DealInsight, InsightLink, InsightSource } from '@/lib/sparkscope/deal-insight';
 import { dealsHref } from '@/lib/sparkscope/deal-links';
 import type { T } from './FundAnalysis';
 
@@ -22,6 +22,18 @@ function Go({ href, children, className }: { href: string | null; children: Reac
   return href ? <Link href={href} className={`${className ?? ''} group block rounded-lg transition-colors hover:bg-spark-purple/[0.04]`}>{children}</Link> : <div className={className}>{children}</div>;
 }
 
+/** 문장 속 [n]을 근거 기사 링크(작은 번호)로 바꾼다. */
+function Cite({ text, sources }: { text: string; sources: InsightSource[] }) {
+  const parts = text.split(/(\[\d+\])/g);
+  return <>{parts.map((p, i) => {
+    const m = p.match(/^\[(\d+)\]$/);
+    const src = m ? sources.find(s => s.n === Number(m[1])) : null;
+    if (m && !src) return null;
+    return src ? <a key={i} href={src.link} target="_blank" rel="noopener noreferrer" title={`${src.title} · ${src.source}`}
+      className="mx-0.5 align-super text-[10px] font-bold text-spark-purple hover:underline">[{src.n}]</a> : <span key={i}>{p}</span>;
+  })}</>;
+}
+
 export function DealInsightPanel({ data, fallback, t }: {
   data: { insight: DealInsight; computedAt: Date } | null;
   fallback: string[];
@@ -30,6 +42,7 @@ export function DealInsightPanel({ data, fallback, t }: {
   const ai = data?.insight;
   const time = data ? new Date(data.computedAt.getTime() + 9 * 3600e3).toISOString().slice(5, 16).replace('T', ' ') : null;
   const small = ai && ai.basis.deals < 30;
+  const srcs = ai?.sources ?? [];
 
   return (
     <section className="mb-3 rounded-2xl border border-spark-purple/25 bg-gradient-to-br from-spark-purple/[0.06] to-white p-5">
@@ -42,11 +55,57 @@ export function DealInsightPanel({ data, fallback, t }: {
       </div>
       {small && <p className="mb-2 text-[11.5px] text-amber-700">{t('기록이 아직 적어(딜 30건 미만) 초기 신호로만 보세요.')}</p>}
 
-      <ol className="space-y-1 text-[14px] font-semibold leading-snug text-spark-ink">
+      <ul className="space-y-1.5 text-[14.5px] font-semibold leading-snug text-spark-ink">
         {(ai?.summary ?? fallback).map((s, i) => (
-          <li key={i} className="flex gap-2"><span className="tabular-nums text-spark-purple">{i + 1}.</span><span>{s}</span></li>
+          <li key={i} className="flex gap-2"><span className="tabular-nums text-spark-purple">{i + 1}.</span><span><Cite text={s.replace(/^\s*\d+\.\s*/, '')} sources={srcs} /></span></li>
         ))}
-      </ol>
+      </ul>
+
+      {ai && ((ai.flows?.length ?? 0) > 0 || (ai.why?.length ?? 0) > 0) && (
+        <div className="mt-4 grid grid-cols-1 gap-3 lg:grid-cols-2">
+          {(ai.flows?.length ?? 0) > 0 && (
+            <div>
+              <h3 className="mb-1.5 text-[12px] font-extrabold tracking-wide text-spark-muted">💸 {t('돈의 이동 — 어디서 어디로')}</h3>
+              <ul className="space-y-1.5">
+                {ai.flows!.map((x, i) => (
+                  <li key={i} className="rounded-lg border border-spark-border bg-white">
+                    <Go href={insightHref(x.link)} className="px-3 py-2">
+                      <div className="flex flex-wrap items-center gap-1.5 text-[13px] font-bold">
+                        <span className="rounded bg-sky-50 px-1.5 py-0.5 text-sky-800">{x.from}</span>
+                        <span className="text-spark-muted">→</span>
+                        <span className="rounded bg-spark-purple/10 px-1.5 py-0.5 text-spark-purple">{x.to}</span>
+                      </div>
+                      <div className="mt-1 text-[12px] leading-snug text-spark-ink-soft"><Cite text={x.detail} sources={srcs} /></div>
+                    </Go>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+          {(ai.why?.length ?? 0) > 0 && (
+            <div>
+              <h3 className="mb-1.5 text-[12px] font-extrabold tracking-wide text-spark-muted">❓ {t('왜 지금 이 분야인가 — 뉴스 근거')}</h3>
+              <ul className="space-y-1.5">
+                {ai.why!.map((x, i) => (
+                  <li key={i} className="rounded-lg border border-spark-border bg-white px-3 py-2">
+                    {insightHref(x.link) ? <Link href={insightHref(x.link)!} className="text-[13px] font-bold text-spark-ink hover:text-spark-purple">{x.topic} ›</Link>
+                      : <div className="text-[13px] font-bold text-spark-ink">{x.topic}</div>}
+                    <div className="mt-0.5 text-[12px] leading-snug text-spark-ink-soft"><Cite text={x.reason} sources={srcs} /></div>
+                    <ul className="mt-1.5 space-y-0.5">
+                      {x.sources.map(n => srcs.find(s => s.n === n)).filter(Boolean).map(s => (
+                        <li key={s!.n} className="truncate text-[11px]">
+                          <a href={s!.link} target="_blank" rel="noopener noreferrer" className="text-spark-purple hover:underline">[{s!.n}] {s!.title}</a>
+                          <span className="ml-1 text-spark-muted">{s!.source} · {s!.date.slice(5)}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
+      )}
 
       {ai && (ai.insights.length > 0 || ai.actions.length > 0) && (
         <div className="mt-4 grid grid-cols-1 gap-3 lg:grid-cols-[1.3fr_1fr]">
@@ -59,7 +118,7 @@ export function DealInsightPanel({ data, fallback, t }: {
                   <li key={i} className="rounded-lg border border-spark-border bg-white">
                     <Go href={href} className="px-3 py-2">
                       <div className="text-[13px] font-bold text-spark-ink group-hover:text-spark-purple">{x.title}{href && <span className="ml-1 text-spark-muted">›</span>}</div>
-                      <div className="mt-0.5 text-[12px] leading-snug text-spark-ink-soft">{x.detail}</div>
+                      <div className="mt-0.5 text-[12px] leading-snug text-spark-ink-soft"><Cite text={x.detail} sources={srcs} /></div>
                     </Go>
                   </li>
                 );

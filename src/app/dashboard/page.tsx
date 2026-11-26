@@ -1944,7 +1944,7 @@ async function DealSection({ t }: { t: any }) {
 }
 // 맨 위 3줄 요약 — 크론이 만든 AI 요약을 읽기만. 없으면 집계 숫자로 기본 요약(출처 표시를 다르게).
 async function InsightSection({ t }: { t: any }) {
-  const data = await getDealInsight().catch(() => null);
+  const data = await getDealInsight({ liveIfStale: true }).catch(() => null);
   let fallback: string[] = [];
   if (!data) {
     const [d, f] = await Promise.all([getDealStats(90).catch(() => null), getFundStats(90).catch(() => null)]);

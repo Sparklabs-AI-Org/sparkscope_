@@ -4,7 +4,8 @@
 // AI는 사실 묶음에 있는 숫자·이름만 쓸 수 있고, 링크 대상(분야·하우스 등)도 묶음에 있는 값만 남긴다.
 import OpenAI from 'openai';
 import { prisma } from '@/lib/prisma';
-import { getDealStats, STAGES } from './deal-stats';
+import { getDealStats, STAGES, SECTORS } from './deal-stats';
+import { lpGroup } from './fund-stats';
 import { getFundStats } from './fund-stats';
 import { getMatchStats } from './match-stats';
 
@@ -14,8 +15,14 @@ const MODEL = 'gpt-4.1';
 
 export type InsightLinkKind = 'sector' | 'stage' | 'house' | 'fundSector' | 'match' | 'newFunds';
 export interface InsightLink { kind: InsightLinkKind; value?: string }
+export interface InsightSource { n: number; title: string; source: string; date: string; link: string }
 export interface DealInsight {
   summary: string[];
+  /** 돈의 이동 — 어디서(LP 재원·하우스) 어디로(분야·단계) */
+  flows?: { from: string; to: string; detail: string; link?: InsightLink }[];
+  /** 왜 지금 그 분야인가 — 일반 뉴스 근거 */
+  why?: { topic: string; reason: string; sources: number[]; link?: InsightLink }[];
+  sources?: InsightSource[];
   insights: { title: string; detail: string; link?: InsightLink }[];
   actions: { title: string; why: string; link?: InsightLink }[];
   basis: { deals: number; funds: number; since: string | null };
@@ -28,6 +35,41 @@ async function buildFacts() {
   const firstDay = deal.daily[0]?.day ?? null;
   const pipeCounts: Record<string, number> = {};
   for (const p of match.pipeline) pipeCounts[p.status] = (pipeCounts[p.status] ?? 0) + 1;
+  // ── 돈의 이동 재료: 펀드(LP 재원 → GP → 분야), 딜(하우스 → 분야·단계)
+  const fundFlows = fund.rows.map(r => ({ 펀드: r.name, 단계: r.stage, LP재원: [...new Set(r.lps.map(l => lpGroup(l).label))], GP: r.gps, 분야: r.sectors, 규모억: r.sizeKrw ? Math.round(r.sizeKrw / 1e8) : null }));
+  const dealFlows = deal.rows.slice(0, 40).map(r => ({ 회사: r.company, 분야: r.sector, 단계: stageLabel(r.stage), 금액억: r.amountKrw ? Math.round(r.amountKrw / 1e8) : null,
+    리드: r.investors.filter(i => i.role === 'LEAD').map(i => i.name), 참여: r.investors.map(i => i.name) }));
+
+  // ── 일반 뉴스 근거: 딜·펀드가 몰린 분야의 최근 30일 기사(업계 동향·정책·투자 매체) + 벤처 자금 시장 전반.
+  const since30 = new Date(Date.now() - 30 * 86_400_000);
+  const cats = ['industry_trend', 'policy_support', 'fund_invest', 'deal_news'];
+  const hotSectors = deal.matrix.filter(m => m.sector !== '미상' && m.sector !== '기타').slice(0, 3).map(m => m.sector);
+  for (const s of fund.topSectors.slice(0, 2)) { const b = SECTORS.find(x => x.re.test(s.name))?.id; if (b && !hotSectors.includes(b)) hotSectors.push(b); }
+  const sources: InsightSource[] = [];
+  const news: Record<string, { n: number; 제목: string; 매체: string; 날짜: string; 요지: string }[]> = {};
+  const seen = new Set<string>();
+  const pull = async (label: string, words: string[], take: number) => {
+    const rows = await prisma.article.findMany({
+      where: { pubDate: { gte: since30 }, category: { in: cats }, bodyText: { not: null }, OR: words.map(w => ({ title: { contains: w } })) },
+      select: { title: true, link: true, source: true, pubDate: true, bodyText: true }, orderBy: { pubDate: 'desc' }, take: 60,
+    });
+    const out: (typeof news)[string] = [];
+    for (const a of rows) {
+      const k = a.title.replace(/\s|\[.*?\]/g, '').slice(0, 18);
+      if (seen.has(k)) continue; seen.add(k);
+      const n = sources.length + 1;
+      sources.push({ n, title: a.title, source: a.source, date: a.pubDate.toISOString().slice(0, 10), link: a.link });
+      out.push({ n, 제목: a.title, 매체: a.source, 날짜: a.pubDate.toISOString().slice(0, 10), 요지: (a.bodyText ?? '').replace(/\s+/g, ' ').slice(0, 280) });
+      if (out.length >= take) break;
+    }
+    news[label] = out;
+  };
+  for (const sec of hotSectors) {
+    const words = (SECTORS.find(x => x.id === sec)?.re.source ?? sec).split('|').filter(w => w.length >= 2).slice(0, 6);
+    await pull(sec, words, 7);
+  }
+  await pull('벤처자금시장', ['모태펀드', '정책펀드', '벤처투자', '출자사업', 'VC', '벤처캐피탈', 'IPO', '세컨더리'], 8);
+
   const facts = {
     기간: `최근 90일 (딜 기록 시작 ${firstDay ?? '없음'})`,
     투자유치: {
@@ -46,6 +88,9 @@ async function buildFacts() {
     },
     우리포폴: match.buckets.map(b => ({ 분야: b.id, 포폴수: b.companies, 최근90일딜: b.deals, 그분야펀드: b.funds })),
     매칭진행: pipeCounts,
+    돈의이동_펀드: fundFlows,
+    돈의이동_딜: dealFlows,
+    관련뉴스: news,
   };
   const allowed = {
     sector: new Set(deal.matrix.map(m => m.sector)),
@@ -54,24 +99,27 @@ async function buildFacts() {
     fundSector: new Set(fund.topSectors.map(s => s.name)),
     match: new Set(match.buckets.map(b => b.id)),
   };
-  return { facts, allowed, basis: { deals: deal.total, funds: fund.total, since: firstDay } };
+  return { facts, allowed, sources, basis: { deals: deal.total, funds: fund.total, since: firstDay } };
 }
 
-const PROMPT = `너는 벤처캐피털(스파크랩) 투자팀을 돕는 애널리스트다. 아래 "사실 묶음"은 최근 기사에서 뽑은 국내 투자 유치·펀드 결성 집계와 우리 포트폴리오 분포다.
-투자팀 실무자가 아침에 10초 보고 판단할 수 있게 써라.
+const PROMPT = `너는 벤처캐피털(스파크랩) 투자팀의 시니어 애널리스트다. "사실 묶음"에는 최근 기사에서 뽑은 국내 투자 유치·펀드 결성 집계,
+펀드별 LP 재원→GP→분야, 딜별 하우스→분야·단계, 우리 포트폴리오 분포, 그리고 관련 분야의 최근 일반 뉴스(관련뉴스, 번호 n)가 들어 있다.
+숫자 나열이 아니라 "돈이 어디서 어디로 움직이는지, 왜 그런지, 그래서 우리는 뭘 해야 하는지"를 써라. 표면적인 집계 반복("딜 19건, 바이오 5건")은 쓸모없다.
 
 규칙:
-- 숫자·회사·하우스 이름은 사실 묶음에 있는 것만 쓴다. 계산해서 새 숫자를 만들지 마라(비율·증감률 금지).
-- 표본이 적으면(딜 30건 미만) 단정하지 말고 "초기 신호"라고 표현한다.
-- 한국어, 짧은 문장, 존댓말 없이 보고서체.
-- link는 화면 이동용이다. kind와 value는 아래 중에서만 고르고, value는 사실 묶음에 적힌 값 그대로:
-  sector(투자유치.분야별의 분야) / stage(SEED·PRE_A·A·B·C+·ETC) / house(하우스·GP 이름) / fundSector(펀드결성.분야의 이름) /
-  match(우리포폴의 분야 — 그 분야 포폴 매칭 화면) / newFunds(value 없음 — 이번 주 새 펀드).
+- 숫자·회사·하우스·펀드 이름은 사실 묶음에 있는 것만. 새 숫자(비율·증감률)를 계산해 만들지 마라.
+- "왜"는 관련뉴스에 근거가 있을 때만 쓰고 근거 기사 번호를 sources에 넣는다. 뉴스에 근거가 없으면 그 이유는 쓰지 마라(추측 금지).
+- 딜 30건 미만이면 단정하지 말고 "초기 신호"로 표현한다.
+- 한국어 보고서체, 짧고 구체적으로.
+- link: kind/value는 아래 중에서만, value는 사실 묶음 값 그대로 —
+  sector(투자유치.분야별의 분야) / stage(SEED·PRE_A·A·B·C+·ETC) / house(하우스·GP 이름) / fundSector(펀드결성.분야 이름) / match(우리포폴의 분야) / newFunds(value 없음).
 
-JSON으로만 답한다:
-{"summary": [요즘 돈의 흐름 3줄 — 어디로(분야·단계), 누가(하우스·GP), 새로 생긴 돈(펀드)],
- "insights": [3~4개 {"title": 한 줄, "detail": 근거 숫자를 넣은 1~2문장, "link": {"kind","value"}}] — 연관성(예: 어떤 하우스가 어떤 분야·단계에 몰림, 펀드 분야와 딜 분야가 겹침/어긋남, 우리 포폴이 많은 분야인데 돈이 없음) 위주,
- "actions": [2~3개 {"title": 투자팀이 오늘 할 일 한 줄, "why": 이유 한 문장, "link": {"kind","value"}}] — 포폴 매칭 제안은 그중 하나일 뿐이다(하우스 미팅 준비, 다음 라운드 규모 기준 잡기, 새 펀드 GP 접촉 등).}`;
+JSON으로만:
+{"summary": [3줄 — 각 줄이 '무엇이 일어나고 있고 왜 중요한지'. 예: "바이오 후기 라운드에 BNH·IBK 등이 같이 몰림 — 임상 성과 뉴스가 이어지며 회수 기대가 커진 초기 신호[3]" 처럼 이유를 붙인다],
+ "flows": [2~4개 {"from": 돈이 나온 곳(LP 재원·하우스군), "to": 들어간 곳(분야·단계·펀드), "detail": 사실 묶음 근거 한 문장, "link"}],
+ "why": [핫한 분야 1~3개 {"topic": 분야, "reason": 뉴스 근거로 2문장, "sources": [n...], "link"}],
+ "insights": [2~4개 {"title", "detail", "link"}] — 연관성·어긋남(예: 펀드는 AI를 내걸었는데 딜은 바이오, 우리 포폴이 많은 분야에 돈이 없음, 특정 하우스 쌍이 같은 분야에 반복),
+ "actions": [2~3개 {"title": 투자팀이 이번 주 할 일, "why": 이유, "link"}] — 포폴 매칭은 그중 하나일 뿐(GP 접촉, 다음 라운드 규모 기준, 해당 분야 포폴 IR 준비 등).}`;
 
 function cleanLink(l: any, allowed: Awaited<ReturnType<typeof buildFacts>>['allowed']): InsightLink | undefined {
   if (!l || typeof l.kind !== 'string') return undefined;
@@ -81,7 +129,7 @@ function cleanLink(l: any, allowed: Awaited<ReturnType<typeof buildFacts>>['allo
 }
 
 export async function computeAndStoreDealInsight(): Promise<DealInsight | null> {
-  const { facts, allowed, basis } = await buildFacts();
+  const { facts, allowed, sources, basis } = await buildFacts();
   if (basis.deals + basis.funds === 0) return null;
   const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
   const resp = await openai.chat.completions.create({
@@ -94,10 +142,20 @@ export async function computeAndStoreDealInsight(): Promise<DealInsight | null> 
     summary: (Array.isArray(out.summary) ? out.summary : []).map((s: any) => str(s, 200)).filter(Boolean).slice(0, 3),
     insights: (Array.isArray(out.insights) ? out.insights : []).slice(0, 4)
       .map((x: any) => ({ title: str(x?.title, 120), detail: str(x?.detail, 300), link: cleanLink(x?.link, allowed) })).filter((x: any) => x.title),
+    flows: (Array.isArray(out.flows) ? out.flows : []).slice(0, 4)
+      .map((x: any) => ({ from: str(x?.from, 60), to: str(x?.to, 60), detail: str(x?.detail, 300), link: cleanLink(x?.link, allowed) })).filter((x: any) => x.from && x.to),
+    why: (Array.isArray(out.why) ? out.why : []).slice(0, 3)
+      .map((x: any) => ({ topic: str(x?.topic, 40), reason: str(x?.reason, 400), link: cleanLink(x?.link, allowed),
+        sources: (Array.isArray(x?.sources) ? x.sources : []).map(Number).filter((n: number) => sources.some(s => s.n === n)).slice(0, 4) }))
+      .filter((x: any) => x.topic && x.sources.length),
     actions: (Array.isArray(out.actions) ? out.actions : []).slice(0, 3)
       .map((x: any) => ({ title: str(x?.title, 120), why: str(x?.why, 300), link: cleanLink(x?.link, allowed) })).filter((x: any) => x.title),
     basis,
   };
+  // 본문에 실제로 인용된 기사만 남긴다(요약 문장 안의 [n] + why.sources).
+  const cited = new Set<number>(insight.why!.flatMap(w => w.sources));
+  for (const line of [...insight.summary, ...insight.insights.map(i => i.detail)]) for (const m of line.matchAll(/\[(\d+)\]/g)) cited.add(Number(m[1]));
+  insight.sources = sources.filter(s => cited.has(s.n));
   if (!insight.summary.length) return null;
   await prisma.dashboardInsight.upsert({
     where: { kind_key: { kind: KIND, key: KEY } },
@@ -107,8 +165,19 @@ export async function computeAndStoreDealInsight(): Promise<DealInsight | null> 
   return insight;
 }
 
-export async function getDealInsight(): Promise<{ insight: DealInsight; computedAt: Date } | null> {
+export async function getDealInsight(opts: { liveIfStale?: boolean } = {}): Promise<{ insight: DealInsight; computedAt: Date } | null> {
   const row = await prisma.dashboardInsight.findUnique({ where: { kind_key: { kind: KIND, key: KEY } } });
-  if (!row) return null;
-  try { return { insight: JSON.parse(row.value), computedAt: row.computedAt }; } catch { return null; }
+  let parsed: { insight: DealInsight; computedAt: Date } | null = null;
+  if (row) try { parsed = { insight: JSON.parse(row.value), computedAt: row.computedAt }; } catch { parsed = null; }
+  // 크론 요약이 없거나 하루 넘게 묵었으면(배치 실패) 그 자리에서 한 번 만든다 — 대시보드 사전계산 규칙의 자동 대체와 같다.
+  // 만든 결과는 저장되므로 다음 사람부터는 읽기만 한다. 45초 넘으면 포기하고 기존 것/기본 요약으로.
+  const stale = !parsed || Date.now() - parsed.computedAt.getTime() > 26 * 3600e3 || !parsed.insight.flows;
+  if (opts.liveIfStale && stale) {
+    const fresh = await Promise.race([
+      computeAndStoreDealInsight().catch(e => { console.error('[deal-insight] 실시간 계산 실패', e); return null; }),
+      new Promise<null>(r => setTimeout(() => r(null), 45_000)),
+    ]);
+    if (fresh) return { insight: fresh, computedAt: new Date() };
+  }
+  return parsed;
 }
