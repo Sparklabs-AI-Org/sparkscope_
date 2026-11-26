@@ -20,6 +20,7 @@
  *   - 펀드: 같은 사업명/펀드명, 또는 GP가 겹치고 규모가 ±10% 이내 — 180일 이내
  *   합칠 때는 빈 칸만 채우고, 펀드 단계는 더 뒤 단계(공고 → GP선정 → 결성)로만 올린다.
  */
+import { isGenericName } from './fund-stats';
 import OpenAI from 'openai';
 import { prisma } from '@/lib/prisma';
 import { DEAL_CATEGORY } from './deal-collect';
@@ -68,6 +69,7 @@ deal: company(회사명, 괄호 영문 빼고), ceoName(대표자 이름만, 없
   investors: [{name, role: LEAD/FOLLOW/NEW/EXISTING 또는 null, fund: 기사에 펀드명이 적혀 있을 때만, 아니면 null}]
 fund: programName(출자사업·사업명), fundName(정식 펀드명이 있을 때만), stage: ANNOUNCED(출자 공고)/GP_SELECTED(운용사 선정)/CLOSED(결성 완료),
   targetSizeKrw, closedSizeKrw, sizeText, sectors[], gps: [{name, role: SOLE/CO_GP, amountKrw}], lps: [{name, amountKrw}]
+  gps·lps에는 회사 이름이 기사에 나온 경우만 넣는다. "국내 VC", "금융권", "기관투자자"처럼 이름 없는 표현은 넣지 않는다.
 
 규칙: 한 기사에 투자받은 회사가 여럿이면 deal을 배열로 줘. 투자 '협약'·MOU·검토·'추진' 단계(아직 투자를 받지 않음)는 딜이 아니다 — 빼라. 회사채·공모채·상장 공모도 딜이 아니다. 기사에 없는 값은 null. 추측 금지. 금액은 "1500억" → 150000000000. amount는 이번 라운드에 들어온 투자금만 — 기업가치·몸값·밸류에이션·누적 투자액·매출은 amount가 아니다(투자금이 안 적혀 있으면 null). kind가 none이면 deal·fund를 넣지 마라.`;
 
@@ -192,7 +194,7 @@ async function saveFund(articleId: string, pubDate: Date, out: LlmOut, text: str
   const closed = sizeOk ? big(f.closedSizeKrw) : null;
   const size = closed ?? target;
 
-  const gpIds = (await Promise.all((f.gps ?? []).map(g => (g?.name ? findOrCreateInvestor(g.name) : null)))).filter(Boolean) as string[];
+  const gpIds = (await Promise.all((f.gps ?? []).map(g => (g?.name && !isGenericName(g.name) ? findOrCreateInvestor(g.name) : null)))).filter(Boolean) as string[];
   const win = 180 * 86_400_000;
   const recent = await prisma.fund.findMany({
     where: { OR: [{ announcedAt: { gte: new Date(pubDate.getTime() - win) } }, { closedAt: { gte: new Date(pubDate.getTime() - win) } }] },
@@ -242,7 +244,7 @@ async function saveFund(articleId: string, pubDate: Date, out: LlmOut, text: str
     });
   }
   for (const l of f.lps ?? []) {
-    const investorId = l?.name ? await findOrCreateInvestor(l.name) : null;
+    const investorId = l?.name && !isGenericName(l.name) ? await findOrCreateInvestor(l.name) : null;
     if (!investorId) continue;
     await prisma.fundLP.upsert({
       where: { fundId_investorId: { fundId: fund.id, investorId } },

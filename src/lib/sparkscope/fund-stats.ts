@@ -68,6 +68,11 @@ export function normSector(s: string): string {
   return s.trim();
 }
 
+// 기사가 이름을 밝히지 않은 "국내 VC"·"금융권" 같은 뭉뚱그린 표현은 회사가 아니다 — 순위·카드에서 뺀다(11-26).
+export function isGenericName(n: string): boolean {
+  return /^(국내|해외|글로벌|미국|일본|중국)?\s*(VC|벤처캐피(탈|털)|금융권|금융기관|기관투자자|투자자|운용사|LP|GP|민간|기타)(들)?$/i.test(n.replace(/\s+/g, ''));
+}
+
 export async function getFundStats(days = 90): Promise<FundStats> {
   const since = new Date(Date.now() - days * 86_400_000);
   const funds = await prisma.fund.findMany({
@@ -90,8 +95,8 @@ export async function getFundStats(days = 90): Promise<FundStats> {
       sizeKrw: closed ?? target,
       sizeIsTarget: closed == null && target != null,
       date: kstDay(when),
-      gps: f.gps.map(g => g.investor.name),
-      lps: f.lps.map(l => l.investor.name),
+      gps: f.gps.map(g => g.investor.name).filter(n => !isGenericName(n)),
+      lps: f.lps.map(l => l.investor.name).filter(n => !isGenericName(n)),
       sectors: f.sectors,
       link: f.sources[0]?.article.link ?? null,
     };
