@@ -11,7 +11,8 @@ import { DealAnalysis } from '@/components/DealAnalysis';
 import { getDealStats } from '@/lib/sparkscope/deal-stats';
 import { getMatchStats } from '@/lib/sparkscope/match-stats';
 import { MatchAnalysis } from '@/components/MatchAnalysis';
-import { DealInsightPanel } from '@/components/DealInsightPanel';
+import { DealInsightPanel, type FundFit } from '@/components/DealInsightPanel';
+import { sectorOf } from '@/lib/sparkscope/deal-stats';
 import { parseDrill } from '@/components/DrillPanel';
 import type { DealFilter } from '@/lib/sparkscope/deal-links';
 import { getDealInsight } from '@/lib/sparkscope/deal-insight';
@@ -1966,17 +1967,28 @@ async function DealSection({ t, dd, ddHref }: DrillProps) {
 }
 // 맨 위 3줄 요약 — 크론이 만든 AI 요약을 읽기만. 없으면 집계 숫자로 기본 요약(출처 표시를 다르게).
 async function InsightSection({ t }: { t: any }) {
-  const data = await getDealInsight({ liveIfStale: true }).catch(() => null);
+  const [data, f, m] = await Promise.all([
+    getDealInsight().catch(() => null),
+    getFundStats(90).catch(() => null),
+    getMatchStats({ days: 90 }).catch(() => null),
+  ]);
+  // 펀드마다 분야가 맞는 우리 포폴(이름·수) — AI 분석 전에도 카드에 보인다.
+  const fits: Record<string, FundFit> = {};
+  for (const r of f?.rows ?? []) {
+    const buckets = [...new Set(r.sectors.map(s => sectorOf(s)).filter(b => b !== '기타' && b !== '미상'))];
+    const names = (m?.companies ?? []).filter(c => buckets.includes(c.bucket)).map(c => c.name);
+    fits[r.name] = { count: names.length, names, bucket: buckets[0] ?? null };
+  }
   let fallback: string[] = [];
   if (!data) {
-    const [d, f] = await Promise.all([getDealStats(90).catch(() => null), getFundStats(90).catch(() => null)]);
-    const topSec = d?.matrix.find(m => m.sector !== '미상');
+    const d = await getDealStats(90).catch(() => null);
+    const topSec = d?.matrix.find(x => x.sector !== '미상');
     if (d && d.total) fallback.push(t('최근 90일 국내 딜 {n}건 — 가장 많은 분야는 {s}({c}건).', { n: d.total, s: t(topSec?.sector ?? '—'), c: topSec?.total ?? 0 }));
     if (d?.investors[0]) fallback.push(t('가장 활발한 하우스는 {h}({n}건 참여).', { h: d.investors[0].name, n: d.investors[0].deals }));
     if (f && f.total) fallback.push(t('펀드 소식 {n}개 — 결성 완료 {c}, GP 선정 {g}, 출자 공고 {a}.', { n: f.total, c: f.byStage.CLOSED, g: f.byStage.GP_SELECTED, a: f.byStage.ANNOUNCED }));
-    if (!fallback.length) return null;
+    if (!fallback.length && !(f?.rows.length)) return null;
   }
-  return <DealInsightPanel data={data} fallback={fallback} t={t} />;
+  return <DealInsightPanel data={data} fallback={fallback} t={t} funds={f?.rows ?? []} fits={fits} />;
 }
 async function MatchSection({ t, sec, pc, hrefFor }: { t: any; sec?: string; pc?: string; hrefFor: (p: { sec?: string; pc?: string }) => string }) {
   const stats = await getMatchStats({ days: 90, bucket: sec, companyId: pc })

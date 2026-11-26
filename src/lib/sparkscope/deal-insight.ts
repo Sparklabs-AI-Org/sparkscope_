@@ -6,7 +6,7 @@
 // AI는 사실 묶음에 있는 숫자·이름만 쓸 수 있고, 링크 대상(분야·하우스 등)도 묶음에 있는 값만 남긴다.
 import Anthropic from '@anthropic-ai/sdk';
 import { prisma } from '@/lib/prisma';
-import { getDealStats, STAGES, SECTORS } from './deal-stats';
+import { getDealStats, STAGES, SECTORS, sectorOf } from './deal-stats';
 import { lpGroup } from './fund-stats';
 import { getFundStats } from './fund-stats';
 import { getMatchStats } from './match-stats';
@@ -28,7 +28,9 @@ export interface DealInsight {
   why?: { topic: string; reason: string; sources: number[]; link?: InsightLink }[];
   sources?: InsightSource[];
   insights: { title: string; detail: string; link?: InsightLink }[];
-  actions: { title: string; why: string; link?: InsightLink }[];
+  actions?: { title: string; why: string; link?: InsightLink }[];
+  /** 펀드별 우리 대응(2026-11-26 실무 피드백: 갓 결성된 펀드가 가장 중요 — VC 입장에서 투자받을 곳). fund = 펀드 이름(FundRow.name과 같음) */
+  fundPlays?: { fund: string; what: string; position: string; targets: string[]; action: string }[];
   basis: { deals: number; funds: number; since: string | null };
 }
 
@@ -40,7 +42,16 @@ async function buildFacts() {
   const pipeCounts: Record<string, number> = {};
   for (const p of match.pipeline) pipeCounts[p.status] = (pipeCounts[p.status] ?? 0) + 1;
   // ── 돈의 이동 재료: 펀드(LP 재원 → GP → 분야), 딜(하우스 → 분야·단계)
-  const fundFlows = fund.rows.map(r => ({ 펀드: r.name, 단계: r.stage, LP재원: [...new Set(r.lps.map(l => lpGroup(l).label))], GP: r.gps, 분야: r.sectors, 규모억: r.sizeKrw ? Math.round(r.sizeKrw / 1e8) : null }));
+  // 펀드마다 분야가 맞는 우리 포폴(이름 15곳까지) — AI가 "어느 포폴을 소개할지"를 고르는 재료.
+  const fundTargets = new Map<string, string[]>();
+  const fundFlows = fund.rows.map(r => {
+    const buckets = new Set(r.sectors.map(s => sectorOf(s)).filter(b => b !== '기타' && b !== '미상'));
+    const fit = match.companies.filter(c => buckets.has(c.bucket));
+    fundTargets.set(r.name, fit.map(c => c.name));
+    return { 펀드: r.name, 단계: r.stage, 날짜: r.date, 규모억: r.sizeKrw ? Math.round(r.sizeKrw / 1e8) : null, 목표액여부: r.sizeIsTarget,
+      LP: r.lps, LP재원: [...new Set(r.lps.map(l => lpGroup(l).label))], GP: r.gps, 분야: r.sectors,
+      분야맞는우리포폴수: fit.length, 분야맞는우리포폴: fit.slice(0, 15).map(c => `${c.name}(${c.sector ?? c.bucket})`) };
+  });
   const dealFlows = deal.rows.slice(0, 40).map(r => ({ 회사: r.company, 분야: r.sector, 단계: stageLabel(r.stage), 금액억: r.amountKrw ? Math.round(r.amountKrw / 1e8) : null,
     리드: r.investors.filter(i => i.role === 'LEAD').map(i => i.name), 참여: r.investors.map(i => i.name) }));
 
@@ -92,7 +103,7 @@ async function buildFacts() {
     },
     우리포폴: match.buckets.map(b => ({ 분야: b.id, 포폴수: b.companies, 최근90일딜: b.deals, 그분야펀드: b.funds })),
     매칭진행: pipeCounts,
-    돈의이동_펀드: fundFlows,
+    펀드별_LP에서GP로: fundFlows,
     돈의이동_딜: dealFlows,
     관련뉴스: news,
   };
@@ -103,28 +114,33 @@ async function buildFacts() {
     fundSector: new Set(fund.topSectors.map(s => s.name)),
     match: new Set(match.buckets.map(b => b.id)),
   };
-  return { facts, allowed, sources, basis: { deals: deal.total, funds: fund.total, since: firstDay } };
+  return { facts, allowed, sources, fundTargets, basis: { deals: deal.total, funds: fund.total, since: firstDay } };
 }
 
-const PROMPT = `너는 벤처캐피털(스파크랩) 투자팀의 시니어 애널리스트다. "사실 묶음"에는 최근 기사에서 뽑은 국내 투자 유치·펀드 결성 집계,
-펀드별 LP 재원→GP→분야, 딜별 하우스→분야·단계, 우리 포트폴리오 분포, 그리고 관련 분야의 최근 일반 뉴스(관련뉴스, 번호 n)가 들어 있다.
-숫자 나열이 아니라 "돈이 어디서 어디로 움직이는지, 왜 그런지, 그래서 우리는 뭘 해야 하는지"를 써라. 표면적인 집계 반복("딜 19건, 바이오 5건")은 쓸모없다.
+const PROMPT = `너는 벤처캐피털(스파크랩) 투자팀의 시니어 애널리스트다. "사실 묶음"에는 최근 기사에서 뽑은 국내 펀드 결성(LP → GP, 분야, 분야가 맞는 우리 포폴),
+투자 유치 집계, 우리 포트폴리오 분포, 관련 분야 최근 뉴스(관련뉴스, 번호 n)가 들어 있다.
+
+가장 중요한 것은 "갓 결성된 펀드"다. 결성 직후 펀드는 투자기간 초기라 돈을 써야 하므로, 우리 포트폴리오사가 투자를 받을 수 있는 곳이다.
+그다음이 GP 선정(곧 결성), 출자 공고 순이다. 누구 돈(LP)이 어느 운용사(GP)로 갔는지가 핵심이고, GP가 어느 기업에 투자했는지는 부차적이다.
 
 규칙:
-- 숫자·회사·하우스·펀드 이름은 사실 묶음에 있는 것만. 새 숫자(비율·증감률)를 계산해 만들지 마라.
-- "왜"는 관련뉴스에 근거가 있을 때만 쓰고 근거 기사 번호를 sources에 넣는다. 뉴스에 근거가 없으면 그 이유는 쓰지 마라(추측 금지).
+- 숫자·회사·하우스·펀드·포폴 이름은 사실 묶음에 있는 것만. 새 숫자(비율·증감률)를 계산해 만들지 마라.
 - 딜 30건 미만이면 단정하지 말고 "초기 신호"로 표현한다.
+- 투자유치 딜은 국내 시장 전체의 딜이다. '우리 딜'이라고 쓰지 마라(우리 포폴 딜은 '우리포폴딜' 숫자뿐).
 - 한국어 보고서체, 짧고 구체적으로.
 - link: kind/value는 아래 중에서만, value는 사실 묶음 값 그대로 —
   sector(투자유치.분야별의 분야) / stage(SEED·PRE_A·A·B·C+·ETC) / house(하우스·GP 이름) / fundSector(펀드결성.분야 이름) / match(우리포폴의 분야) / newFunds(value 없음).
 
 JSON으로만:
-{"summary": [3줄 — 각 줄이 '무엇이 일어나고 있고 왜 중요한지'. 예: "바이오 후기 라운드에 BNH·IBK 등이 같이 몰림 — 임상 성과 뉴스가 이어지며 회수 기대가 커진 초기 신호[3]" 처럼 이유를 붙인다. 뉴스 근거가 있는 줄은 반드시 [n]을 단다],
- "summaryLinks": [summary와 같은 순서·개수 — 각 줄의 데이터 근거 화면 {"kind","value"}. 모든 줄에 반드시 하나씩(뉴스만 근거인 줄도 관련 분야 sector로)],
- "flows": [2~4개 {"from": 돈이 나온 곳(LP 재원·하우스군), "to": 들어간 곳(분야·단계·펀드), "detail": 사실 묶음 근거 한 문장, "link"}],
- "why": [핫한 분야 1~3개 {"topic": 분야, "reason": 뉴스 근거로 2문장, "sources": [n...], "link"}],
- "insights": [2~4개 {"title", "detail", "link"}] — 연관성·어긋남(예: 펀드는 AI를 내걸었는데 딜은 바이오, 우리 포폴이 많은 분야에 돈이 없음, 특정 하우스 쌍이 같은 분야에 반복),
- "actions": [2~3개 {"title": 투자팀이 이번 주 할 일, "why": 이유, "link"}] — 포폴 매칭은 그중 하나일 뿐(GP 접촉, 다음 라운드 규모 기준, 해당 분야 포폴 IR 준비 등).}`;
+{"fundPlays": [펀드별_LP에서GP로의 모든 펀드(결성 완료 → GP 선정 → 출자 공고 순) {
+   "fund": 펀드 이름(사실 묶음의 '펀드' 값 글자 그대로),
+   "what": 무엇을 위한 펀드인지 한 줄(분야·성격, 블라인드면 블라인드라고, 정책·공제회 자금이면 그 성격까지),
+   "position": 이 펀드 결성으로 스파크랩이 취할 포지션 1~2문장(우리 포폴 다음 라운드 소개처인지, 분야가 안 맞으면 어떻게 접근할지, 공동투자·출자 가능성 등),
+   "targets": [이 펀드 GP에 먼저 소개할 우리 포폴 이름 0~5개 — '분야맞는우리포폴'에 있는 이름만, 괄호 앞 회사명 그대로],
+   "action": 이번 주 바로 할 일 한 줄(누구에게 무엇을)}],
+ "summary": [3줄 — 지금 돈이 어디서 어디로 움직이고 우리에게 무슨 의미인지. 뉴스 근거가 있으면 [n]],
+ "summaryLinks": [summary와 같은 순서·개수 {"kind","value"}],
+ "insights": [2~3개 {"title", "detail", "link"}] — 연관성·어긋남(예: 펀드 분야와 우리 포폴 분포의 어긋남, 특정 LP 재원의 쏠림)}`;
 
 function cleanLink(l: any, allowed: Awaited<ReturnType<typeof buildFacts>>['allowed']): InsightLink | undefined {
   if (!l || typeof l.kind !== 'string') return undefined;
@@ -134,7 +150,7 @@ function cleanLink(l: any, allowed: Awaited<ReturnType<typeof buildFacts>>['allo
 }
 
 export async function computeAndStoreDealInsight(): Promise<DealInsight | null> {
-  const { facts, allowed, sources, basis } = await buildFacts();
+  const { facts, allowed, sources, fundTargets, basis } = await buildFacts();
   if (basis.deals + basis.funds === 0) return null;
   if (!process.env.ANTHROPIC_API_KEY) throw new Error('ANTHROPIC_API_KEY가 설정되지 않았습니다.');
   const client = new Anthropic();
@@ -158,18 +174,15 @@ export async function computeAndStoreDealInsight(): Promise<DealInsight | null> 
     summaryLinks: (Array.isArray(out.summaryLinks) ? out.summaryLinks : []).slice(0, 3).map((l: any) => cleanLink(l, allowed) ?? null),
     insights: (Array.isArray(out.insights) ? out.insights : []).slice(0, 4)
       .map((x: any) => ({ title: str(x?.title, 120), detail: str(x?.detail, 300), link: cleanLink(x?.link, allowed) })).filter((x: any) => x.title),
-    flows: (Array.isArray(out.flows) ? out.flows : []).slice(0, 4)
-      .map((x: any) => ({ from: str(x?.from, 60), to: str(x?.to, 60), detail: str(x?.detail, 300), link: cleanLink(x?.link, allowed) })).filter((x: any) => x.from && x.to),
-    why: (Array.isArray(out.why) ? out.why : []).slice(0, 3)
-      .map((x: any) => ({ topic: str(x?.topic, 40), reason: str(x?.reason, 400), link: cleanLink(x?.link, allowed),
-        sources: (Array.isArray(x?.sources) ? x.sources : []).map(Number).filter((n: number) => sources.some(s => s.n === n)).slice(0, 4) }))
-      .filter((x: any) => x.topic && x.sources.length),
-    actions: (Array.isArray(out.actions) ? out.actions : []).slice(0, 3)
-      .map((x: any) => ({ title: str(x?.title, 120), why: str(x?.why, 300), link: cleanLink(x?.link, allowed) })).filter((x: any) => x.title),
+    // 펀드 이름이 실제 펀드와 같을 때만, 소개 대상은 그 펀드 분야에 맞는 우리 포폴일 때만 남긴다.
+    fundPlays: (Array.isArray(out.fundPlays) ? out.fundPlays : []).slice(0, 12)
+      .filter((x: any) => typeof x?.fund === 'string' && fundTargets.has(x.fund))
+      .map((x: any) => ({ fund: x.fund, what: str(x?.what, 200), position: str(x?.position, 400), action: str(x?.action, 200),
+        targets: (Array.isArray(x?.targets) ? x.targets : []).map(String).filter((n: string) => fundTargets.get(x.fund)!.includes(n)).slice(0, 5) })),
     basis,
   };
   // 본문에 실제로 인용된 기사만 남긴다(요약 문장 안의 [n] + why.sources).
-  const cited = new Set<number>(insight.why!.flatMap(w => w.sources));
+  const cited = new Set<number>();
   for (const line of [...insight.summary, ...insight.insights.map(i => i.detail)]) for (const m of line.matchAll(/\[(\d+)\]/g)) cited.add(Number(m[1]));
   insight.sources = sources.filter(s => cited.has(s.n));
   if (!insight.summary.length) return null;
