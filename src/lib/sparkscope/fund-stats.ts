@@ -1,6 +1,7 @@
 // 투자·펀드 탭 위 "펀드 결성 분석" 집계(2026-11-26 소윤 — 기사 목록만으론 의미가 없다, 한눈에 보이게).
 // 재료는 deal-extract.ts가 기사에서 뽑아 둔 Fund·FundGP·FundLP 표. 숫자는 원문에 있던 것만 저장돼 있다.
 import { prisma } from '@/lib/prisma';
+import { getFundKindOverrides, inferFundKind, type FundKind } from './fund-kind';
 
 export type FundStage = 'ANNOUNCED' | 'GP_SELECTED' | 'CLOSED';
 
@@ -21,6 +22,10 @@ export function lpGroup(name: string): { id: string; label: string } {
 export interface FundRow {
   id: string;
   name: string;
+  /** 화면에 보이는 이름 — 사업명만 있는 자펀드는 'GP · 사업명'으로 적어 모펀드와 헷갈리지 않게 한다(11-27). */
+  label: string;
+  /** 모펀드·출자사업 / 자펀드 (fund-kind.ts) */
+  kind: FundKind;
   stage: FundStage;
   sizeKrw: number | null;   // 결성액 우선, 없으면 목표액
   sizeIsTarget: boolean;
@@ -75,6 +80,7 @@ export function isGenericName(n: string): boolean {
 
 export async function getFundStats(days = 90): Promise<FundStats> {
   const since = new Date(Date.now() - days * 86_400_000);
+  const kindOverrides = await getFundKindOverrides();
   const funds = await prisma.fund.findMany({
     where: { reviewStatus: { not: 'REJECTED' }, OR: [{ announcedAt: { gte: since } }, { closedAt: { gte: since } }, { createdAt: { gte: since } }] },
     include: {
@@ -88,14 +94,19 @@ export async function getFundStats(days = 90): Promise<FundStats> {
     const when = f.closedAt ?? f.announcedAt ?? f.sources[0]?.article.pubDate ?? f.createdAt;
     const closed = f.closedSizeKrw != null ? Number(f.closedSizeKrw) : null;
     const target = f.targetSizeKrw != null ? Number(f.targetSizeKrw) : null;
+    const gps = f.gps.map(g => g.investor.name).filter(n => !isGenericName(n));
+    const name = f.fundName ?? f.programName ?? (f.gps[0] ? `${f.gps[0].investor.name} 펀드` : '이름 미상 펀드');
+    const kind = kindOverrides.get(f.id) ?? inferFundKind({ fundName: f.fundName, programName: f.programName, stage: f.stage, gps });
     return {
       id: f.id,
-      name: f.fundName ?? f.programName ?? (f.gps[0] ? `${f.gps[0].investor.name} 펀드` : '이름 미상 펀드'),
+      name,
+      label: kind === 'CHILD' && !f.fundName && f.programName && gps.length ? `${gps.join('·')} · ${f.programName}` : name,
+      kind,
       stage: (f.stage as FundStage) ?? 'CLOSED',
       sizeKrw: closed ?? target,
       sizeIsTarget: closed == null && target != null,
       date: kstDay(when),
-      gps: f.gps.map(g => g.investor.name).filter(n => !isGenericName(n)),
+      gps,
       lps: f.lps.map(l => l.investor.name).filter(n => !isGenericName(n)),
       sectors: f.sectors,
       link: f.sources[0]?.article.link ?? null,

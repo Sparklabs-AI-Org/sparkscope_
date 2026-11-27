@@ -7,6 +7,7 @@ import { articleTitle } from '@/lib/sparkscope/article-title';
 import { CuratedFeed, IndustryCuratedList } from '@/components/CuratedFeed';
 import { FundAnalysis } from '@/components/FundAnalysis';
 import { getFundStats } from '@/lib/sparkscope/fund-stats';
+import { getFundFeedback } from '@/lib/sparkscope/fund-kind';
 import { DealAnalysis } from '@/components/DealAnalysis';
 import { getDealStats } from '@/lib/sparkscope/deal-stats';
 import { getMatchStats } from '@/lib/sparkscope/match-stats';
@@ -1585,7 +1586,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: { 
         return (
           <>
             {/* 섹션마다 따로 흘려보낸다 — AI 요약·분석이 끝날 때까지 화면 전체가 멈추지 않게(2026-11-26) */}
-            <Suspense fallback={<SectionSkeleton h="h-40" />}><InsightSection t={tr} /></Suspense>
+            <Suspense fallback={<SectionSkeleton h="h-40" />}><InsightSection t={tr} userEmail={sessionUser?.email ?? null} /></Suspense>
             <div className="mb-2 flex gap-1.5">
               {[{ id: 'fund', label: '📊 펀드 결성 분석' }, { id: 'round', label: '📈 투자 유치 분석' }, { id: 'match', label: '🤝 포폴 매칭' }].map(x => (
                 <Link key={x.id} href={hrefFor(x.id)} scroll={false}
@@ -1966,11 +1967,12 @@ async function DealSection({ t, dd, ddHref }: DrillProps) {
   return <DealAnalysis stats={stats} t={t} dd={dd} ddHref={ddHref} />;
 }
 // 맨 위 3줄 요약 — 크론이 만든 AI 요약을 읽기만. 없으면 집계 숫자로 기본 요약(출처 표시를 다르게).
-async function InsightSection({ t }: { t: any }) {
-  const [data, f, m] = await Promise.all([
+async function InsightSection({ t, userEmail }: { t: any; userEmail: string | null }) {
+  const [data, f, m, feedback] = await Promise.all([
     getDealInsight().catch(() => null),
     getFundStats(90).catch(() => null),
     getMatchStats({ days: 90 }).catch(() => null),
+    getFundFeedback(userEmail),
   ]);
   // 펀드마다 분야가 맞는 우리 포폴(이름·수) — AI 분석 전에도 카드에 보인다.
   const fits: Record<string, FundFit> = {};
@@ -1988,7 +1990,7 @@ async function InsightSection({ t }: { t: any }) {
     if (f && f.total) fallback.push(t('펀드 소식 {n}개 — 결성 완료 {c}, GP 선정 {g}, 출자 공고 {a}.', { n: f.total, c: f.byStage.CLOSED, g: f.byStage.GP_SELECTED, a: f.byStage.ANNOUNCED }));
     if (!fallback.length && !(f?.rows.length)) return null;
   }
-  return <DealInsightPanel data={data} fallback={fallback} t={t} funds={f?.rows ?? []} fits={fits} />;
+  return <DealInsightPanel data={data} fallback={fallback} t={t} funds={f?.rows ?? []} fits={fits} feedback={feedback} />;
 }
 async function MatchSection({ t, sec, pc, hrefFor }: { t: any; sec?: string; pc?: string; hrefFor: (p: { sec?: string; pc?: string }) => string }) {
   const stats = await getMatchStats({ days: 90, bucket: sec, companyId: pc })

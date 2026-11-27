@@ -8,11 +8,19 @@ import { InsightRefreshButton } from './InsightRefreshButton';
 import type { FundRow } from '@/lib/sparkscope/fund-stats';
 import { lpGroup } from '@/lib/sparkscope/fund-stats';
 import { krw } from './FundAnalysis';
+import { FundKindTabs } from './FundKindTabs';
+import { FundFeedbackButtons } from './FundFeedbackButtons';
+import type { FundFeedbackState } from '@/lib/sparkscope/fund-kind';
 
 const FSTAGE: Record<string, { label: string; cls: string; order: number }> = {
   CLOSED: { label: '결성 완료', cls: 'bg-emerald-50 text-emerald-700 border-emerald-200', order: 0 },
   GP_SELECTED: { label: 'GP 선정', cls: 'bg-sky-50 text-sky-700 border-sky-200', order: 1 },
   ANNOUNCED: { label: '출자 공고', cls: 'bg-amber-50 text-amber-700 border-amber-200', order: 2 },
+};
+// 같은 단계라도 모펀드와 자펀드는 뜻이 다르다 — GP를 뽑기 전인 재원에 '결성 완료'가 붙어 헷갈렸다(2026-11-27 벤처1본부).
+const STAGE_LABEL: Record<'CHILD' | 'MOTHER', Record<string, string>> = {
+  CHILD: { CLOSED: '결성 완료', GP_SELECTED: 'GP 선정 · 결성 전', ANNOUNCED: '결성 추진' },
+  MOTHER: { CLOSED: '재원 조성', GP_SELECTED: 'GP 선정', ANNOUNCED: '출자 공고' },
 };
 export type FundFit = { count: number; names: string[]; bucket: string | null };
 
@@ -47,7 +55,7 @@ function Cite({ text, sources }: { text: string; sources: InsightSource[] }) {
   })}</>;
 }
 
-export function DealInsightPanel({ data, fallback, t, funds = [], fits = {} }: {
+export function DealInsightPanel({ data, fallback, t, funds = [], fits = {}, feedback }: {
   data: { insight: DealInsight; computedAt: Date } | null;
   fallback: string[];
   t: T;
@@ -55,6 +63,8 @@ export function DealInsightPanel({ data, fallback, t, funds = [], fits = {} }: {
   funds?: FundRow[];
   /** 펀드 이름 → 분야가 맞는 우리 포폴 */
   fits?: Record<string, FundFit>;
+  /** 카드별 O/X(2026-11-27 벤처1본부). 표가 아직 없으면 ready=false라 버튼이 안 나온다. */
+  feedback?: FundFeedbackState;
 }) {
   const ai = data?.insight;
   const time = data ? new Date(data.computedAt.getTime() + 9 * 3600e3).toISOString().slice(5, 16).replace('T', ' ') : null;
@@ -77,12 +87,10 @@ export function DealInsightPanel({ data, fallback, t, funds = [], fits = {} }: {
       {funds.length > 0 && (() => {
         const sorted = [...funds].sort((a, b) => (FSTAGE[a.stage]?.order ?? 9) - (FSTAGE[b.stage]?.order ?? 9) || b.date.localeCompare(a.date));
         const plays = new Map((ai?.fundPlays ?? []).map(p => [p.fund, p]));
-        return (
-          <div className="mb-4">
-            <h3 className="mb-1 text-[15px] font-extrabold text-spark-ink">🆕 {t('갓 결성된 펀드 — 우리 포폴이 투자받을 곳')}</h3>
-            <p className="mb-2 text-[11.5px] text-spark-muted">{t('결성 직후 펀드는 투자기간 초기라 돈을 써야 합니다. 결성 완료 → GP 선정 → 출자 공고 순.')}</p>
+        const fbLabels = { ask: t('이 카드, 이 탭에 맞나요?'), o: t('맞아요'), x: t('생뚱맞아요'), note: t('이유 적기(선택)'), save: t('저장'), saved: t('저장됨'), fail: t('저장 실패') };
+        const cards = (kind: 'CHILD' | 'MOTHER') => (
             <ul className="space-y-2">
-              {sorted.map(f => {
+              {sorted.filter(f => f.kind === kind).map(f => {
                 const play = plays.get(f.name);
                 const fit = fits[f.name];
                 const lpGroups = new Map<string, string[]>();
@@ -91,12 +99,12 @@ export function DealInsightPanel({ data, fallback, t, funds = [], fits = {} }: {
                   <li key={f.id} className="grid grid-cols-1 overflow-hidden rounded-xl border border-spark-border bg-white lg:grid-cols-[1.05fr_1fr]">
                     <div className="p-3.5">
                       <div className="flex flex-wrap items-center gap-1.5">
-                        <span className={`rounded border px-1.5 py-0.5 text-[10.5px] font-bold ${FSTAGE[f.stage]?.cls ?? ''}`}>{t(FSTAGE[f.stage]?.label ?? f.stage)}</span>
+                        <span className={`rounded border px-1.5 py-0.5 text-[10.5px] font-bold ${FSTAGE[f.stage]?.cls ?? ''}`}>{t(STAGE_LABEL[kind][f.stage] ?? FSTAGE[f.stage]?.label ?? f.stage)}</span>
                         <span className="text-[11.5px] tabular-nums text-spark-muted">{f.date.slice(5)}</span>
                         <span className="ml-auto text-[15px] font-extrabold tabular-nums text-spark-ink">{f.sizeKrw != null ? krw(f.sizeKrw, t) : '—'}{f.sizeIsTarget && <span className="ml-0.5 text-[10.5px] font-normal text-spark-muted">({t('목표')})</span>}</span>
                       </div>
                       <div className="mt-1 text-[14px] font-extrabold text-spark-ink">
-                        {f.link ? <a href={f.link} target="_blank" rel="noopener noreferrer" className="hover:text-spark-purple hover:underline">{f.name} ↗</a> : f.name}
+                        {f.link ? <a href={f.link} target="_blank" rel="noopener noreferrer" className="hover:text-spark-purple hover:underline">{f.label} ↗</a> : f.label}
                       </div>
                       {play?.what && <div className="mt-0.5 text-[12.5px] text-spark-ink-soft">{play.what}</div>}
                       <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[12px]">
@@ -111,6 +119,8 @@ export function DealInsightPanel({ data, fallback, t, funds = [], fits = {} }: {
                       <div className="mt-1.5 text-[11.5px] text-spark-muted">
                         {t('분야')}: {f.sectors.length ? f.sectors.join(' · ') : t('지정 안 됨(블라인드)')}
                       </div>
+                      {feedback?.ready && <FundFeedbackButtons fundId={f.id} shownKind={kind} labels={fbLabels}
+                        initial={feedback.mine[f.id] ?? null} counts={feedback.counts[f.id] ?? { o: 0, x: 0 }} />}
                     </div>
                     <div className="border-t border-emerald-200 bg-emerald-50/50 p-3.5 lg:border-l lg:border-t-0">
                       <div className="mb-1 text-[11px] font-extrabold tracking-wide text-emerald-800">✅ {t('우리 포지션 · 할 일')}</div>
@@ -132,6 +142,17 @@ export function DealInsightPanel({ data, fallback, t, funds = [], fits = {} }: {
                 );
               })}
             </ul>
+        );
+        const n = (kind: 'CHILD' | 'MOTHER') => sorted.filter(f => f.kind === kind).length;
+        return (
+          <div className="mb-4">
+            <h3 className="mb-2 text-[15px] font-extrabold text-spark-ink">🆕 {t('새로 잡힌 펀드')}</h3>
+            <FundKindTabs emptyLabel={t('최근 90일에 잡힌 펀드가 없습니다.')} tabs={[
+              { id: 'CHILD', label: `🎯 ${t('자펀드 — 후속 투자 연결')}`, count: n('CHILD'), body: cards('CHILD'),
+                hint: t('GP가 스타트업에 투자하려고 만든 펀드입니다. 포폴 후속 투자를 연결할 곳을 찾을 때 봅니다. 결성 완료 → GP 선정 → 결성 추진 순.') },
+              { id: 'MOTHER', label: `🏦 ${t('모펀드·출자사업 — 큰 돈의 흐름')}`, count: n('MOTHER'), body: cards('MOTHER'),
+                hint: t('자펀드에 돈을 대는 재원입니다. 여기서 출자 공고가 나고 GP가 뽑히면 몇 달 뒤 자펀드가 결성됩니다.') },
+            ]} />
           </div>
         );
       })()}
