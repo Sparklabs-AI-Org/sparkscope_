@@ -3,7 +3,7 @@
  * 07:00 policy-collect가 투자 매체 기사(deal_news)를 모은 뒤, 05:50 수집분과 함께 Deal/Fund 테이블로 옮긴다.
  * 자세한 규칙은 lib/sparkscope/deal-extract.ts 머리말. 메일·브리핑과 무관하다.
  * ?days=N&limit=N 으로 범위 조절, ?dry=1 이면 판정만 돌려주고 DB에 쓰지 않는다.
- * 투자·펀드 탭 AI 요약(deal-insight.ts)은 여기서 자동으로 만들지 않는다 — 화면 버튼을 누를 때만(2026-11-26). ?insight=1 은 수동 재계산용.
+ * 투자·펀드 탭 AI 분석(deal-insight.ts)은 평일 07:50 KST에 ?insight=1 로 따로 한 번 돈다(추출이 끝난 뒤, 2026-11-27 소윤). 화면 버튼으로도 다시 돌릴 수 있다.
  */
 import { NextRequest, NextResponse } from 'next/server';
 import { extractDeals } from '@/lib/sparkscope/deal-extract';

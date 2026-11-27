@@ -62,6 +62,10 @@
     {
       "path": "/api/cron/deal-extract",
       "schedule": "30 22 * * 0-4"
+    },
+    {
+      "path": "/api/cron/deal-extract?insight=1",
+      "schedule": "50 22 * * 0-4"
     }
   ]
 }
